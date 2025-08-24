@@ -61,7 +61,7 @@ This project is configured for deployment to GitHub Pages.
 
 1. Push your code to the `main` branch of your GitHub repository
 2. GitHub Actions will automatically build and deploy your site
-3. Your site will be available at: `https://yourusername.github.io/restaurant-pos`
+3. Your site will be available at: `https://Hirun-HM.github.io/restaurant-pos`
 
 ### Manual Deployment
 

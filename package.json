@@ -2,7 +2,7 @@
   "name": "restaurant-pos",
   "version": "0.0.0",
   "type": "module",
-  "homepage": "https://yourusername.github.io/restaurant-pos",
+  "homepage": "https://Hirun-HM.github.io/restaurant-pos",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
