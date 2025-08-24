@@ -51,6 +51,34 @@ npm run dev
 - `npm run build` - Build for production
 - `npm run preview` - Preview production build
 - `npm run lint` - Run ESLint
+- `npm run deploy` - Deploy to GitHub Pages
+
+## Deployment
+
+This project is configured for deployment to GitHub Pages.
+
+### Automatic Deployment (Recommended)
+
+1. Push your code to the `main` branch of your GitHub repository
+2. GitHub Actions will automatically build and deploy your site
+3. Your site will be available at: `https://yourusername.github.io/restaurant-pos`
+
+### Manual Deployment
+
+Alternatively, you can deploy manually using:
+
+```bash
+npm run deploy
+```
+
+### GitHub Pages Setup
+
+1. Go to your GitHub repository settings
+2. Navigate to "Pages" in the left sidebar
+3. Under "Source", select "GitHub Actions" 
+4. The workflow will automatically deploy on every push to main
+
+**Note**: Make sure to update the `homepage` field in `package.json` with your actual GitHub username.
 
 ## Project Structure
 

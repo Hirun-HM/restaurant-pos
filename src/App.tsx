@@ -7,7 +7,7 @@ import './App.css'
 
 function App() {
   return (
-    <Router>
+    <Router basename="/restaurant-pos">
       <div className="app">
         <Header />
         <main className="main-content">
