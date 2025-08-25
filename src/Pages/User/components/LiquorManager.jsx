@@ -8,9 +8,8 @@ export default function LiquorManager() {
         { id: 2, name: 'Corona Extra', category: 'beer', quantity: 24, unit: 'bottle', pricePerUnit: 4.25 },
         { id: 3, name: 'Jack Daniels', category: 'hard_liquor', quantity: 6, unit: 'bottle', pricePerUnit: 45.99 },
         { id: 4, name: 'Johnnie Walker Black', category: 'hard_liquor', quantity: 3, unit: 'bottle', pricePerUnit: 65.00 },
-        { id: 5, name: 'Dunhill Blue', category: 'cigarette', cigaretteType: 'dunhill_blue', quantity: 20, unit: 'pack', pricePerUnit: 850.00 },
-        { id: 6, name: 'John Player Gold Leaf', category: 'cigarette', cigaretteType: 'john_player_gold_leaf_20', quantity: 15, unit: 'pack', pricePerUnit: 920.00 },
-        { id: 7, name: 'Dunhill Tube', category: 'cigarette', cigaretteType: 'dunhill_tube', quantity: 0, unit: 'pack', pricePerUnit: 900.00 }
+        { id: 6, name: 'John Player Gold Leaf (12)', category: 'cigarette', cigaretteType: 'john_player_gold_leaf_12', quantity: 15, unit: 'pack', pricePerUnit: 920.00 },
+        { id: 7, name: 'John Player Gold Leaf (20)', category: 'cigarette', cigaretteType: 'john_player_gold_leaf_20', quantity: 0, unit: 'pack', pricePerUnit: 900.00 }
     ]);
 
     const [editingItem, setEditingItem] = useState(null);
