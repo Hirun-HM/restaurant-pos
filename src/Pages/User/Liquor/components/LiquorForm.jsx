@@ -221,7 +221,7 @@ export default function LiquorForm({
 
                 {/* Cigarette Type - Only show for cigarette category */}
                 {formData.category === 'cigarette' && (
-                    <div className="w-1/4">
+                    <div className="w-full md:w-1/4">
                         <label className="block text-sm font-medium text-gray-700 mb-2">
                             Cigarette Type <span className="text-red">*</span>
                         </label>
