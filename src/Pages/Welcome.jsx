@@ -65,13 +65,13 @@ export default function Welcome() {
                 // Success - close popup and proceed
                 handleClosePopup();
                 
-                // Here you can add navigation logic based on user type
+                // Redirect to appropriate dashboard based on user type
                 if (selectedCard.name === 'Admin') {
                     console.log('Redirecting to Admin dashboard...');
-                    // Navigate to admin dashboard
+                    window.location.href = '/restaurant-pos/admin/dashboard';
                 } else if (selectedCard.name === 'Cashier') {
-                    console.log('Redirecting to Cashier POS...');
-                    // Navigate to cashier POS system
+                    console.log('Redirecting to Cashier dashboard...');
+                    window.location.href = '/restaurant-pos/user/dashboard';
                 }
                 
             } else {
