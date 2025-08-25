@@ -6,7 +6,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path = '/' element={<Welcome/>}/>
+        <Route path = '/restaurant-pos/' element={<Welcome/>}/>
       </Routes>
     </BrowserRouter>
   )
