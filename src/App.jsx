@@ -1,9 +1,13 @@
 import React from 'react'
+import { BrowserRouter, Route, Routes } from 'react-router-dom'
+import Welcome from './Pages/Welcome'
 
 export default function App() {
   return (
-    <div className='text-red-500 w-full flex text-center bg-black'>
-      app 
-    </div>
+    <BrowserRouter>
+      <Routes>
+        <Route path = '/' element={<Welcome/>}/>
+      </Routes>
+    </BrowserRouter>
   )
 }
