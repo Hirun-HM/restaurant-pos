@@ -3,8 +3,8 @@ import { FaUser, FaSignOutAlt, FaTools } from 'react-icons/fa';
 import Header from './components/Header';
 import TableCard from './Tables/Components/TableCard';
 import TableManagement from './Tables/TableManagement';
-import StockManager from './components/StockManager';
-import LiquorManager from './components/LiquorManager';
+import StockManager from './Stocks/StockManager';
+import LiquorManager from './Liquor/LiquorManager';
 
 const tableList = [
     { id: 1, tableNumber: "01", status: "available", customerCount: 0, orderTime: null },

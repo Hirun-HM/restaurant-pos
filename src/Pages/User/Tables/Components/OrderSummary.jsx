@@ -1,9 +1,9 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, memo } from 'react';
 import { PrimaryButton, SecondaryButton } from '../../../../components/Button';
 import { FaPlus, FaMinus, FaTrash, FaReceipt } from 'react-icons/fa';
 import MenuItem from './MenuItem';
 
-export default function OrderSummary({
+const OrderSummary = memo(function OrderSummary({
     selectedTable,
     bill,
     menuItems,
@@ -85,16 +85,58 @@ export default function OrderSummary({
         };
     }, [bill]);
 
-    if (!selectedTable) {
-        return (
-            <div className="h-full flex items-center justify-center">
-                <div className="text-center">
-                    <div className="text-6xl mb-4">🍽️</div>
-                    <h2 className="text-xl font-semibold mb-2">Select a Table</h2>
-                    <p className="text-text">Click on a table to view or create orders</p>
-                </div>
+    // Memoize date formatting function
+    const formatBillDate = useCallback((date) => {
+        return new Date(date).toLocaleString();
+    }, []);
+
+    // Memoize bill status checks
+    const billStatus = useMemo(() => {
+        return {
+            hasActiveBill: bill && bill.status === 'active',
+            hasItems: bill && bill.items && bill.items.length > 0,
+            isNoBill: !bill || bill.status === 'closed'
+        };
+    }, [bill]);
+
+    // Memoize the no table selected content
+    const noTableContent = useMemo(() => (
+        <div className="h-full flex items-center justify-center">
+            <div className="text-center">
+                <div className="text-6xl mb-4">🍽️</div>
+                <h2 className="text-xl font-semibold mb-2">Select a Table</h2>
+                <p className="text-text">Click on a table to view or create orders</p>
             </div>
-        );
+        </div>
+    ), []);
+
+    // Memoize the no active bill content
+    const noActiveBillContent = useMemo(() => (
+        <div className="flex-1 flex items-center justify-center">
+            <div className="flex flex-col items-center text-center">
+                <div className="text-6xl mb-4">📋</div>
+                <h2 className="text-xl font-semibold mb-4">No Active Bill</h2>
+                <p className="text-text mb-6">Create a new bill for Table {selectedTable?.tableNumber}</p>
+                <PrimaryButton onClick={handleCreateBill} className='flex items-center gap-1'>
+                    <FaReceipt className="mr-2" />
+                    Create New Bill
+                </PrimaryButton>
+            </div>
+        </div>
+    ), [selectedTable?.tableNumber, handleCreateBill]);
+
+    // Memoize the empty cart content
+    const emptyCartContent = useMemo(() => (
+        <div className="flex-1 flex items-center justify-center">
+            <div className="text-center">
+                <div className="text-4xl mb-2">🛒</div>
+                <p className="text-text">No items added yet</p>
+            </div>
+        </div>
+    ), []);
+
+    if (!selectedTable) {
+        return noTableContent;
     }
 
     return (
@@ -103,26 +145,16 @@ export default function OrderSummary({
                 <h1 className="text-[24px] font-[500]">
                     Table {selectedTable.tableNumber} - Order Summary
                 </h1>
-                {bill && bill.status === 'active' && (
+                {billStatus.hasActiveBill && (
                     <SecondaryButton onClick={handleCloseBill}>
                         Close Bill
                     </SecondaryButton>
                 )}
             </div>
 
-            {!bill || bill.status === 'closed' ? (
+            {billStatus.isNoBill ? (
                 // No active bill - show create bill option
-                <div className="flex-1 flex items-center justify-center">
-                    <div className="text-center">
-                        <div className="text-6xl mb-4">📋</div>
-                        <h2 className="text-xl font-semibold mb-4">No Active Bill</h2>
-                        <p className="text-text mb-6">Create a new bill for Table {selectedTable.tableNumber}</p>
-                            <PrimaryButton onClick={handleCreateBill} className='flex items-center gap-1'>
-                            <FaReceipt className="mr-2" />
-                            Create New Bill
-                        </PrimaryButton>
-                    </div>
-                </div>
+                noActiveBillContent
             ) : (
                 // Active bill exists - show order management
                 <div className="flex-1 flex flex-col md:flex-row gap-4 overflow-hidden">
@@ -166,13 +198,8 @@ export default function OrderSummary({
                     <div className="w-full md:w-80 bg-white rounded-lg p-4 border border-gray-200 flex flex-col">
                         <h3 className="text-lg font-semibold mb-3">Current Bill</h3>
                         
-                        {bill.items.length === 0 ? (
-                            <div className="flex-1 flex items-center justify-center">
-                                <div className="text-center">
-                                    <div className="text-4xl mb-2">🛒</div>
-                                    <p className="text-text">No items added yet</p>
-                                </div>
-                            </div>
+                        {!billStatus.hasItems ? (
+                            emptyCartContent
                         ) : (
                             <>
                                 {/* Bill Items */}
@@ -255,7 +282,7 @@ export default function OrderSummary({
 
                                 {/* Bill Info */}
                                 <div className="mt-4 text-xs text-gray-500">
-                                    <p>Bill Created: {new Date(bill.createdAt).toLocaleString()}</p>
+                                    <p>Bill Created: {formatBillDate(bill.createdAt)}</p>
                                     <p>Items: {billCalculations.itemCount}</p>
                                 </div>
                             </>
@@ -265,4 +292,6 @@ export default function OrderSummary({
             )}
         </div>
     );
-}
+});
+
+export default OrderSummary;

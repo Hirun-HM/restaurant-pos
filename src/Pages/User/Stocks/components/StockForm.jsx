@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { InputField } from '../../../components/InputField';
-import Select from '../../../components/Select';
-import { PrimaryButton, SecondaryButton } from '../../../components/Button';
-import { validateForm } from '../../../core/validattion';
+import { InputField } from '../../../../components/InputField';
+import Select from '../../../../components/Select';
+import { PrimaryButton, SecondaryButton } from '../../../../components/Button';
+import { validateForm } from '../../../../core/validattion';
 
 const categories = [
         { value: 'food', label: 'Food Items' },
@@ -131,7 +131,7 @@ export default function StockForm({
             </h2>
 
             <form onSubmit={handleSubmit} className="space-y-4">
-                <div className='w-full md:w-1/2 grid grid-cols-2 gap-4'>
+                <div className='w-full md:w-1/2 grid grids-cols-1 md:grid-cols-2 gap-4'>
                     {/* Mode Selection */}
                     {!editingItem && (
                         <div className="w-full">
@@ -171,7 +171,7 @@ export default function StockForm({
                 </div>
 
                 {/* Item Details */}
-                <div className="w-1/2 grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="w-full md:w-1/2 grid grid-cols-1 md:grid-cols-2 gap-4">
                     <InputField
                         label="Item Name"
                         type="text"

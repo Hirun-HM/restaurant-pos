@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
-import StockForm from './StockForm';
-import StockItemCard from './StockItemCard';
+import StockForm from './components/StockForm';
+import StockItemCard from './components/StockItemCard';
 
 export default function StockManager() {
     const [stockItems, setStockItems] = useState([

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import LiquorForm from './LiquorForm';
-import LiquorItemCard from './LiquorItemCard';
+import LiquorForm from './components/LiquorForm';
+import LiquorItemCard from './components/LiquorItemCard';
 
 export default function LiquorManager() {
     const [liquorItems, setLiquorItems] = useState([
