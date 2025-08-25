@@ -3,49 +3,57 @@ import TableCard from './Components/TableCard';
 import OrderSummary from './Components/OrderSummary';
 
 export default function TableManagement({tableList = []}) {
-    // Memoize menu items to prevent unnecessary re-renders
-    const menuItems = useMemo(() => [
-        // Foods
-        { id: 1, name: 'Chicken Rice', price: 450, category: 'Foods' },
-        { id: 2, name: 'Fried Rice', price: 380, category: 'Foods' },
-        { id: 3, name: 'Kottu', price: 500, category: 'Foods' },
-        { id: 6, name: 'Fish Curry', price: 650, category: 'Foods' },
-        { id: 7, name: 'Vegetable Curry', price: 350, category: 'Foods' },
-        { id: 9, name: 'Chicken Curry', price: 550, category: 'Foods' },
-        { id: 10, name: 'Noodles', price: 420, category: 'Foods' },
+    // Load menu items from localStorage (managed by MenuManager)
+    const menuItems = useMemo(() => {
+        const saved = localStorage.getItem('restaurant-menu-items');
+        if (saved) {
+            return JSON.parse(saved);
+        }
         
-        // Liquor
-        { id: 11, name: 'Beer', price: 350, category: 'Liquor' },
-        { id: 12, name: 'Whiskey', price: 1200, category: 'Liquor' },
-        { id: 13, name: 'Vodka', price: 1000, category: 'Liquor' },
-        { id: 14, name: 'Arrack', price: 800, category: 'Liquor' },
-        
-        // Cigarettes
-        { id: 15, name: 'Dunhill Blue', price: 850, category: 'Cigarettes' },
-        { id: 16, name: 'John Player Gold Leaf', price: 920, category: 'Cigarettes' },
-        { id: 17, name: 'Marlboro', price: 950, category: 'Cigarettes' },
-        
-        // Bites
-        { id: 18, name: 'Chicken Wings', price: 280, category: 'Bites' },
-        { id: 19, name: 'Fish Cutlets', price: 150, category: 'Bites' },
-        { id: 20, name: 'Deviled Chicken', price: 320, category: 'Bites' },
-        { id: 21, name: 'Prawn Crackers', price: 180, category: 'Bites' },
-        { id: 22, name: 'Vadai', price: 120, category: 'Bites' },
-        
-        // Sandy (Sandwiches)
-        { id: 23, name: 'Chicken Sandwich', price: 250, category: 'Sandy' },
-        { id: 24, name: 'Club Sandwich', price: 350, category: 'Sandy' },
-        { id: 25, name: 'Fish Sandwich', price: 280, category: 'Sandy' },
-        { id: 26, name: 'Egg Sandwich', price: 180, category: 'Sandy' },
-        
-        // Others
-        { id: 4, name: 'Coca Cola', price: 120, category: 'Others' },
-        { id: 5, name: 'Orange Juice', price: 150, category: 'Others' },
-        { id: 8, name: 'Ice Cream', price: 200, category: 'Others' },
-        { id: 27, name: 'Coffee', price: 100, category: 'Others' },
-        { id: 28, name: 'Tea', price: 80, category: 'Others' },
-        { id: 29, name: 'Fresh Lime', price: 120, category: 'Others' }
-    ], []);
+        // Fallback to default items if nothing saved
+        return [
+            // Foods
+            { id: 1, name: 'Chicken Rice', price: 450, category: 'Foods' },
+            { id: 2, name: 'Fried Rice', price: 380, category: 'Foods' },
+            { id: 3, name: 'Kottu', price: 500, category: 'Foods' },
+            { id: 6, name: 'Fish Curry', price: 650, category: 'Foods' },
+            { id: 7, name: 'Vegetable Curry', price: 350, category: 'Foods' },
+            { id: 9, name: 'Chicken Curry', price: 550, category: 'Foods' },
+            { id: 10, name: 'Noodles', price: 420, category: 'Foods' },
+            
+            // Liquor
+            { id: 11, name: 'Beer', price: 350, category: 'Liquor' },
+            { id: 12, name: 'Whiskey', price: 1200, category: 'Liquor' },
+            { id: 13, name: 'Vodka', price: 1000, category: 'Liquor' },
+            { id: 14, name: 'Arrack', price: 800, category: 'Liquor' },
+            
+            // Cigarettes
+            { id: 15, name: 'Dunhill Blue', price: 850, category: 'Cigarettes' },
+            { id: 16, name: 'John Player Gold Leaf', price: 920, category: 'Cigarettes' },
+            { id: 17, name: 'Marlboro', price: 950, category: 'Cigarettes' },
+            
+            // Bites
+            { id: 18, name: 'Chicken Wings', price: 280, category: 'Bites' },
+            { id: 19, name: 'Fish Cutlets', price: 150, category: 'Bites' },
+            { id: 20, name: 'Deviled Chicken', price: 320, category: 'Bites' },
+            { id: 21, name: 'Prawn Crackers', price: 180, category: 'Bites' },
+            { id: 22, name: 'Vadai', price: 120, category: 'Bites' },
+            
+            // Sandy (Sandwiches)
+            { id: 23, name: 'Chicken Sandwich', price: 250, category: 'Sandy' },
+            { id: 24, name: 'Club Sandwich', price: 350, category: 'Sandy' },
+            { id: 25, name: 'Fish Sandwich', price: 280, category: 'Sandy' },
+            { id: 26, name: 'Egg Sandwich', price: 180, category: 'Sandy' },
+            
+            // Others
+            { id: 4, name: 'Coca Cola', price: 120, category: 'Others' },
+            { id: 5, name: 'Orange Juice', price: 150, category: 'Others' },
+            { id: 8, name: 'Ice Cream', price: 200, category: 'Others' },
+            { id: 27, name: 'Coffee', price: 100, category: 'Others' },
+            { id: 28, name: 'Tea', price: 80, category: 'Others' },
+            { id: 29, name: 'Fresh Lime', price: 120, category: 'Others' }
+        ];
+    }, []);
 
     // Always start with no table selected (reset on page refresh)
     const [selectedTable, setSelectedTable] = useState(null);
