@@ -3,6 +3,7 @@ import { FaUser, FaSignOutAlt, FaTools } from 'react-icons/fa';
 import Header from './components/Header';
 import TableCard from './components/TableCard';
 import TableManagement from './components/TableManagement';
+import StockManager from './components/StockManager';
 
 const tableList = [
     { id: 1, tableNumber: "01", status: "available", customerCount: 0, orderTime: null },
@@ -31,6 +32,11 @@ export default function UserDashboard() {
             {
                 active === 'Table' && (
                     <TableManagement tableList={tableList}/>
+                )
+            }
+            {
+                active === 'Stocks' && (
+                    <StockManager/>
                 )
             }
         </div>
