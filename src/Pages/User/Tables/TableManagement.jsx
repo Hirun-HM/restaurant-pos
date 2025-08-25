@@ -2,7 +2,9 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import TableCard from './Components/TableCard';
 import OrderSummary from './Components/OrderSummary';
 
-const menuItems = [
+export default function TableManagement({tableList = []}) {
+    // Memoize menu items to prevent unnecessary re-renders
+    const menuItems = useMemo(() => [
         // Foods
         { id: 1, name: 'Chicken Rice', price: 450, category: 'Foods' },
         { id: 2, name: 'Fried Rice', price: 380, category: 'Foods' },
@@ -43,9 +45,8 @@ const menuItems = [
         { id: 27, name: 'Coffee', price: 100, category: 'Others' },
         { id: 28, name: 'Tea', price: 80, category: 'Others' },
         { id: 29, name: 'Fresh Lime', price: 120, category: 'Others' }
-];
+    ], []);
 
-export default function TableManagement({tableList = []}) {
     // Always start with no table selected (reset on page refresh)
     const [selectedTable, setSelectedTable] = useState(null);
     

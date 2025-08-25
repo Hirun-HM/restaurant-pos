@@ -77,11 +77,36 @@ const OrderSummary = memo(function OrderSummary({
         const total = subtotal + serviceCharge;
         const itemCount = bill.items.reduce((sum, item) => sum + item.quantity, 0);
         
+        // Calculate liquor shot totals
+        const liquorShotTotals = {};
+        bill.items.forEach(item => {
+            if (item.portion && item.originalItemId) {
+                if (!liquorShotTotals[item.originalItemId]) {
+                    liquorShotTotals[item.originalItemId] = {
+                        name: item.name.split(' (')[0], // Remove portion info from name
+                        totalMl: 0,
+                        totalQuantity: 0,
+                        shots: []
+                    };
+                }
+                const totalMl = item.portion.ml * item.quantity;
+                liquorShotTotals[item.originalItemId].totalMl += totalMl;
+                liquorShotTotals[item.originalItemId].totalQuantity += item.quantity;
+                liquorShotTotals[item.originalItemId].shots.push({
+                    portion: item.portion.type,
+                    ml: item.portion.ml,
+                    quantity: item.quantity,
+                    totalMl: totalMl
+                });
+            }
+        });
+        
         return {
             subtotal,
             serviceCharge,
             total,
-            itemCount
+            itemCount,
+            liquorShotTotals
         };
     }, [bill]);
 
@@ -89,6 +114,123 @@ const OrderSummary = memo(function OrderSummary({
     const formatBillDate = useCallback((date) => {
         return new Date(date).toLocaleString();
     }, []);
+
+    // Callback for printing bill
+    const handlePrintBill = useCallback(() => {
+        if (!bill || !selectedTable) return;
+        
+        // Create print content
+        const printContent = `
+            <div style="font-family: Arial, sans-serif; max-width: 400px; margin: 0 auto; padding: 20px;">
+                <div style="text-align: center; margin-bottom: 20px;">
+                    <h2 style="margin: 0; font-size: 24px;">Restaurant Bill</h2>
+                    <p style="margin: 5px 0;">Table ${selectedTable.tableNumber}</p>
+                    <p style="margin: 5px 0; font-size: 12px;">${formatBillDate(bill.createdAt)}</p>
+                </div>
+                
+                <div style="border-top: 2px solid #000; padding-top: 10px;">
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <thead>
+                            <tr style="border-bottom: 1px solid #000;">
+                                <th style="text-align: left; padding: 5px 0;">Item</th>
+                                <th style="text-align: center; padding: 5px 0;">Qty</th>
+                                <th style="text-align: right; padding: 5px 0;">Price</th>
+                                <th style="text-align: right; padding: 5px 0;">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${bill.items.map(item => `
+                                <tr>
+                                    <td style="padding: 3px 0; font-size: 12px;">
+                                        ${item.name}
+                                        ${item.portion ? `<br><small>(${item.portion.ml}ml ${item.portion.type})</small>` : ''}
+                                    </td>
+                                    <td style="text-align: center; padding: 3px 0;">${item.quantity}</td>
+                                    <td style="text-align: right; padding: 3px 0;">LKR ${item.price}</td>
+                                    <td style="text-align: right; padding: 3px 0;">LKR ${(item.price * item.quantity).toFixed(2)}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+                
+                ${Object.keys(billCalculations.liquorShotTotals).length > 0 ? `
+                    <div style="margin: 15px 0; padding: 10px; background-color: #f0f8ff; border: 1px solid #0066cc;">
+                        <h4 style="margin: 0 0 10px 0; color: #0066cc;">Liquor Summary</h4>
+                        ${Object.entries(billCalculations.liquorShotTotals).map(([itemId, summary]) => `
+                            <div style="margin-bottom: 8px;">
+                                <strong>${summary.name}:</strong> ${summary.totalMl}ml total<br>
+                                <small>${summary.shots.map(shot => `${shot.quantity}x ${shot.portion} (${shot.totalMl}ml)`).join(', ')}</small>
+                            </div>
+                        `).join('')}
+                    </div>
+                ` : ''}
+                
+                <div style="border-top: 2px solid #000; padding-top: 10px; margin-top: 15px;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                        <span>Subtotal:</span>
+                        <span>LKR ${billCalculations.subtotal.toFixed(2)}</span>
+                    </div>
+                    ${bill.serviceCharge ? `
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                            <span>Service Charge (10%):</span>
+                            <span>LKR ${billCalculations.serviceCharge.toFixed(2)}</span>
+                        </div>
+                    ` : ''}
+                    <div style="display: flex; justify-content: space-between; font-weight: bold; font-size: 18px; border-top: 1px solid #000; padding-top: 5px;">
+                        <span>Total:</span>
+                        <span>LKR ${billCalculations.total.toFixed(2)}</span>
+                    </div>
+                </div>
+                
+                <div style="text-align: center; margin-top: 20px; font-size: 12px;">
+                    <p>Thank you for dining with us!</p>
+                    <p>Items: ${billCalculations.itemCount}</p>
+                </div>
+            </div>
+        `;
+        
+        // Open print window
+        const printWindow = window.open('', '_blank');
+        printWindow.document.write(`
+            <html>
+                <head>
+                    <title>Bill - Table ${selectedTable.tableNumber}</title>
+                    <style>
+                        @media print {
+                            body { margin: 0; }
+                        }
+                    </style>
+                </head>
+                <body>
+                    ${printContent}
+                    <script>
+                        window.onload = function() {
+                            window.print();
+                            window.onafterprint = function() {
+                                window.close();
+                            }
+                        }
+                    </script>
+                </body>
+            </html>
+        `);
+        printWindow.document.close();
+    }, [bill, selectedTable, billCalculations, formatBillDate]);
+
+    // Callback for payment completion
+    const handlePaymentComplete = useCallback(() => {
+        if (!selectedTable || !bill) return;
+        
+        const confirmPayment = window.confirm(
+            `Complete payment for Table ${selectedTable.tableNumber}?\n\nTotal: LKR ${billCalculations.total.toFixed(2)}\n\nThis will close the bill and cannot be undone.`
+        );
+        
+        if (confirmPayment) {
+            // Call the onCloseBill function to close the bill
+            handleCloseBill();
+        }
+    }, [selectedTable, bill, billCalculations, handleCloseBill]);
 
     // Memoize bill status checks
     const billStatus = useMemo(() => {
@@ -208,7 +350,14 @@ const OrderSummary = memo(function OrderSummary({
                                         <div key={item.id} className="flex justify-between items-center py-2 border-b border-gray-100">
                                             <div className="flex-1">
                                                 <h5 className="font-medium text-sm">{item.name}</h5>
-                                                <p className="text-xs text-gray-600">LKR {item.price} each</p>
+                                                <p className="text-xs text-gray-600">
+                                                    LKR {item.price} each
+                                                    {item.portion && (
+                                                        <span className="text-blue-600 ml-1">
+                                                            • {item.portion.ml}ml {item.portion.type.toLowerCase()}
+                                                        </span>
+                                                    )}
+                                                </p>
                                             </div>
                                             <div className="flex items-center gap-2">
                                                 <button
@@ -234,6 +383,28 @@ const OrderSummary = memo(function OrderSummary({
                                         </div>
                                     ))}
                                 </div>
+
+                                {/* Liquor Shot Summary */}
+                                {Object.keys(billCalculations.liquorShotTotals).length > 0 && (
+                                    <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                                        <h4 className="text-sm font-semibold text-blue-800 mb-2">Liquor Shot Summary - Table {selectedTable.tableNumber}</h4>
+                                        {Object.entries(billCalculations.liquorShotTotals).map(([itemId, summary]) => (
+                                            <div key={itemId} className="mb-2 last:mb-0">
+                                                <div className="flex justify-between items-center">
+                                                    <span className="font-medium text-sm text-blue-700">{summary.name}</span>
+                                                    <span className="text-sm text-blue-600 font-medium">{summary.totalMl}ml total</span>
+                                                </div>
+                                                <div className="text-xs text-blue-600 mt-1">
+                                                    {summary.shots.map((shot, index) => (
+                                                        <span key={index} className="mr-2">
+                                                            {shot.quantity}x {shot.portion} ({shot.totalMl}ml)
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
 
                                 {/* Bill Total */}
                                 <div className="border-t border-gray-200 pt-4">
@@ -278,6 +449,29 @@ const OrderSummary = memo(function OrderSummary({
                                             LKR {billCalculations.total.toFixed(2)}
                                         </span>
                                     </div>
+                                </div>
+
+                                {/* Action Buttons */}
+                                <div className="mt-4 space-y-2">
+                                    <PrimaryButton 
+                                        onClick={() => handlePrintBill()}
+                                        className="w-full flex items-center justify-center gap-2"
+                                    >
+                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a1 1 0 001-1v-4a1 1 0 00-1-1H9a1 1 0 00-1 1v4a1 1 0 001 1zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                                        </svg>
+                                        Print Receipt
+                                    </PrimaryButton>
+                                    
+                                    <SecondaryButton 
+                                        onClick={() => handlePaymentComplete()}
+                                        className="w-full flex items-center justify-center gap-2 bg-green-500 hover:bg-green-600 border-green-500 hover:border-green-600"
+                                    >
+                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                        </svg>
+                                        Payment Complete
+                                    </SecondaryButton>
                                 </div>
 
                                 {/* Bill Info */}
