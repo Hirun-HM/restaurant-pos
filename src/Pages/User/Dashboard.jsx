@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { FaUser, FaSignOutAlt, FaTools } from 'react-icons/fa';
 import Header from './components/Header';
-import TableCard from './components/TableCard';
-import TableManagement from './components/TableManagement';
+import TableCard from './Tables/Components/TableCard';
+import TableManagement from './Tables/TableManagement';
 import StockManager from './components/StockManager';
 import LiquorManager from './components/LiquorManager';
 
