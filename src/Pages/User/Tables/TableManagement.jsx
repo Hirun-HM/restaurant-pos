@@ -7,7 +7,13 @@ export default function TableManagement({tableList = []}) {
     const menuItems = useMemo(() => {
         const saved = localStorage.getItem('restaurant-menu-items');
         if (saved) {
-            return JSON.parse(saved);
+            const parsedData = JSON.parse(saved);
+            // Migrate old "Sandy" categories to "Beverage"
+            const migratedData = parsedData.map(item => ({
+                ...item,
+                category: item.category === 'Sandy' ? 'Beverage' : item.category
+            }));
+            return migratedData;
         }
         
         // Fallback to default items if nothing saved
@@ -39,11 +45,11 @@ export default function TableManagement({tableList = []}) {
             { id: 21, name: 'Prawn Crackers', price: 180, category: 'Bites' },
             { id: 22, name: 'Vadai', price: 120, category: 'Bites' },
             
-            // Sandy (Sandwiches)
-            { id: 23, name: 'Chicken Sandwich', price: 250, category: 'Sandy' },
-            { id: 24, name: 'Club Sandwich', price: 350, category: 'Sandy' },
-            { id: 25, name: 'Fish Sandwich', price: 280, category: 'Sandy' },
-            { id: 26, name: 'Egg Sandwich', price: 180, category: 'Sandy' },
+            // Beverage
+            { id: 23, name: 'Chicken Sandwich', price: 250, category: 'Beverage' },
+            { id: 24, name: 'Club Sandwich', price: 350, category: 'Beverage' },
+            { id: 25, name: 'Fish Sandwich', price: 280, category: 'Beverage' },
+            { id: 26, name: 'Egg Sandwich', price: 180, category: 'Beverage' },
             
             // Others
             { id: 4, name: 'Coca Cola', price: 120, category: 'Others' },

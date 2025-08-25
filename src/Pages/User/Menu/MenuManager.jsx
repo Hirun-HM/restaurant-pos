@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, memo } from 'react';
 import { PrimaryButton, SecondaryButton } from '../../../components/Button';
 import { FaPlus, FaEdit, FaTrash, FaSearch } from 'react-icons/fa';
 import MenuForm from './components/MenuForm';
@@ -35,11 +35,11 @@ const initialMenuItems = [
     { id: 21, name: 'Prawn Crackers', price: 180, category: 'Bites', description: 'Crispy prawn crackers' },
     { id: 22, name: 'Vadai', price: 120, category: 'Bites', description: 'Traditional vadai snack' },
     
-    // Sandy (Sandwiches)
-    { id: 23, name: 'Chicken Sandwich', price: 250, category: 'Sandy', description: 'Grilled chicken sandwich' },
-    { id: 24, name: 'Club Sandwich', price: 350, category: 'Sandy', description: 'Multi-layer club sandwich' },
-    { id: 25, name: 'Fish Sandwich', price: 280, category: 'Sandy', description: 'Fresh fish sandwich' },
-    { id: 26, name: 'Egg Sandwich', price: 180, category: 'Sandy', description: 'Boiled egg sandwich' },
+    // Beverage
+    { id: 23, name: 'Chicken Sandwich', price: 250, category: 'Beverage', description: 'Grilled chicken sandwich' },
+    { id: 24, name: 'Club Sandwich', price: 350, category: 'Beverage', description: 'Multi-layer club sandwich' },
+    { id: 25, name: 'Fish Sandwich', price: 280, category: 'Beverage', description: 'Fresh fish sandwich' },
+    { id: 26, name: 'Egg Sandwich', price: 180, category: 'Beverage', description: 'Boiled egg sandwich' },
     
     // Others
     { id: 4, name: 'Coca Cola', price: 120, category: 'Others', description: 'Chilled Coca Cola' },
@@ -50,18 +50,45 @@ const initialMenuItems = [
     { id: 29, name: 'Fresh Lime', price: 120, category: 'Others', description: 'Fresh lime juice' }
 ];
 
-export default function MenuManager() {
-    const [menuItems, setMenuItems] = useState(() => {
-        // Load from localStorage if available
+export default memo(function MenuManager() {
+    // Memoize initial menu items to prevent recreation
+    const initialMenuData = useMemo(() => {
         const saved = localStorage.getItem('restaurant-menu-items');
-        return saved ? JSON.parse(saved) : initialMenuItems;
-    });
-    
+        if (saved) {
+            const parsedData = JSON.parse(saved);
+            // Migrate old "Sandy" categories to "Beverage"
+            const migratedData = parsedData.map(item => ({
+                ...item,
+                category: item.category === 'Sandy' ? 'Beverage' : item.category
+            }));
+            return migratedData;
+        }
+        return initialMenuItems;
+    }, []);
+
+    const [menuItems, setMenuItems] = useState(initialMenuData);
     const [showForm, setShowForm] = useState(false);
     const [editingItem, setEditingItem] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedCategory, setSelectedCategory] = useState('All');
     const [deleteConfirm, setDeleteConfirm] = useState({ show: false, itemId: null, itemName: '' });
+    
+    // One-time migration effect to update localStorage with migrated data
+    React.useEffect(() => {
+        const saved = localStorage.getItem('restaurant-menu-items');
+        if (saved) {
+            const parsedData = JSON.parse(saved);
+            const hasOldSandyCategory = parsedData.some(item => item.category === 'Sandy');
+            if (hasOldSandyCategory) {
+                const migratedData = parsedData.map(item => ({
+                    ...item,
+                    category: item.category === 'Sandy' ? 'Beverage' : item.category
+                }));
+                localStorage.setItem('restaurant-menu-items', JSON.stringify(migratedData));
+                setMenuItems(migratedData);
+            }
+        }
+    }, []); // Run only once on mount
     
     // Save to localStorage whenever menu items change
     React.useEffect(() => {
@@ -83,12 +110,21 @@ export default function MenuManager() {
         });
     }, [menuItems, searchTerm, selectedCategory]);
     
+    // Memoized handlers to prevent unnecessary re-renders
+    const handleSearchChange = useCallback((e) => {
+        setSearchTerm(e.target.value);
+    }, []);
+
+    const handleCategoryChange = useCallback((category) => {
+        setSelectedCategory(category);
+    }, []);
+    
     // Memoize category buttons
     const categoryButtons = useMemo(() => {
         return categories.map(category => (
             <button
                 key={category}
-                onClick={() => setSelectedCategory(category)}
+                onClick={() => handleCategoryChange(category)}
                 className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap ${
                     selectedCategory === category
                         ? 'bg-primaryColor text-white'
@@ -98,7 +134,7 @@ export default function MenuManager() {
                 {category}
             </button>
         ));
-    }, [categories, selectedCategory]);
+    }, [categories, selectedCategory, handleCategoryChange]);
     
     const handleAddItem = useCallback(() => {
         setEditingItem(null);
@@ -129,6 +165,34 @@ export default function MenuManager() {
     const cancelDelete = useCallback(() => {
         setDeleteConfirm({ show: false, itemId: null, itemName: '' });
     }, []);
+
+    // Memoize delete confirmation state to prevent object recreation
+    const deleteConfirmState = useMemo(() => deleteConfirm, [deleteConfirm]);
+
+    // Memoize empty state component
+    const emptyState = useMemo(() => (
+        <div className="flex items-center justify-center h-64">
+            <div className="text-center">
+                <div className="text-6xl mb-4">🍽️</div>
+                <h2 className="text-xl font-semibold text-gray-600 mb-2">No menu items found</h2>
+                <p className="text-gray-500">Try adjusting your search or filters</p>
+            </div>
+        </div>
+    ), []);
+
+    // Memoize menu items grid
+    const menuItemsGrid = useMemo(() => (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {filteredItems.map(item => (
+                <MenuItemCard
+                    key={item.id}
+                    item={item}
+                    onEdit={handleEditItem}
+                    onDelete={handleDeleteItem}
+                />
+            ))}
+        </div>
+    ), [filteredItems, handleEditItem, handleDeleteItem]);
     
     const handleFormSubmit = useCallback((formData) => {
         if (editingItem) {
@@ -171,7 +235,7 @@ export default function MenuManager() {
                             <InputField 
                                 placeholder="Search menu items..."
                                 value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
+                                onChange={handleSearchChange}
                             />
                         </div>
                     </div>
@@ -186,26 +250,9 @@ export default function MenuManager() {
             {/* Content Section */}
             <div className="flex-1 overflow-hidden">
                 <div className="h-full overflow-y-auto">
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                        {filteredItems.map(item => (
-                            <MenuItemCard
-                                key={item.id}
-                                item={item}
-                                onEdit={handleEditItem}
-                                onDelete={handleDeleteItem}
-                            />
-                        ))}
-                    </div>
+                    {menuItemsGrid}
                     
-                    {filteredItems.length === 0 && (
-                        <div className="flex items-center justify-center h-64">
-                            <div className="text-center">
-                                <div className="text-6xl mb-4">🍽️</div>
-                                <h2 className="text-xl font-semibold text-gray-600 mb-2">No menu items found</h2>
-                                <p className="text-gray-500">Try adjusting your search or filters</p>
-                            </div>
-                        </div>
-                    )}
+                    {filteredItems.length === 0 && emptyState}
                 </div>
             </div>
             
@@ -225,15 +272,15 @@ export default function MenuManager() {
             
             {/* Delete Confirmation Modal */}
             <ConfirmModal
-                isOpen={deleteConfirm.show}
+                isOpen={deleteConfirmState.show}
                 onClose={cancelDelete}
                 onConfirm={confirmDelete}
                 title="Delete Menu Item"
-                message={`Are you sure you want to delete "${deleteConfirm.itemName}"? This action cannot be undone.`}
+                message={`Are you sure you want to delete "${deleteConfirmState.itemName}"? This action cannot be undone.`}
                 confirmText="Delete"
                 cancelText="Cancel"
                 confirmButtonClass="bg-red-500 hover:bg-red-600"
             />
         </div>
     );
-}
+});

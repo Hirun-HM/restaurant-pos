@@ -9,7 +9,7 @@ const MenuItemCard = memo(function MenuItemCard({ item, onEdit, onDelete }) {
             'Liquor': 'bg-purple-100 text-purple-800',
             'Cigarettes': 'bg-gray-100 text-gray-800',
             'Bites': 'bg-orange-100 text-orange-800',
-            'Sandy': 'bg-yellow-100 text-yellow-800',
+            'Beverage': 'bg-yellow-100 text-yellow-800',
             'Others': 'bg-blue-100 text-blue-800'
         };
         return colors[category] || 'bg-gray-100 text-gray-800';

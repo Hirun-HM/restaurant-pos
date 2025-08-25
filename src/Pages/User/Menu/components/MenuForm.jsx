@@ -1,18 +1,19 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, memo, useMemo } from 'react';
 import { PrimaryButton, SecondaryButton } from '../../../../components/Button';
 import { InputField } from '../../../../components/InputField';
-import SelectField from '../../../../components/SelectField';
+import Select from '../../../../components/Select';
 
+// Memoize categories array to prevent recreation
 const categories = [
     { value: 'Foods', label: 'Foods' },
     { value: 'Liquor', label: 'Liquor' },
     { value: 'Cigarettes', label: 'Cigarettes' },
     { value: 'Bites', label: 'Bites' },
-    { value: 'Sandy', label: 'Sandwiches' },
+    { value: 'Beverage', label: 'Beverage' },
     { value: 'Others', label: 'Others' }
 ];
 
-export default function MenuForm({ item, onSubmit, onCancel }) {
+export default memo(function MenuForm({ item, onSubmit, onCancel }) {
     const [formData, setFormData] = useState({
         name: item?.name || '',
         price: item?.price || '',
@@ -80,6 +81,28 @@ export default function MenuForm({ item, onSubmit, onCancel }) {
         }
     }, [formData, validateForm, onSubmit]);
     
+    // Memoize preview component to prevent unnecessary re-renders
+    const previewComponent = useMemo(() => {
+        if (!formData.name || !formData.price) return null;
+        
+        return (
+            <div className="bg-gray-50 rounded-lg p-4 border">
+                <h3 className="text-sm font-medium text-gray-700 mb-2">Preview:</h3>
+                <div className="bg-white p-3 rounded border">
+                    <h4 className="font-semibold text-gray-800">{formData.name}</h4>
+                    <p className="text-sm text-gray-600">{formData.category}</p>
+                    <p className="text-xs text-gray-500 mt-1">{formData.description}</p>
+                    <div className="flex justify-between items-center mt-2">
+                        <span className="font-medium text-gray-800">LKR {formData.price}</span>
+                        <span className="text-xs bg-primaryColor text-white px-2 py-1 rounded">
+                            {formData.category}
+                        </span>
+                    </div>
+                </div>
+            </div>
+        );
+    }, [formData.name, formData.price, formData.category, formData.description]);
+    
     return (
         <div className="p-6">
             <div className="mb-6">
@@ -120,7 +143,7 @@ export default function MenuForm({ item, onSubmit, onCancel }) {
                 
                 {/* Category */}
                 <div>
-                    <SelectField
+                    <Select
                         label="Category"
                         value={formData.category}
                         onChange={(e) => handleInputChange('category', e.target.value)}
@@ -141,9 +164,13 @@ export default function MenuForm({ item, onSubmit, onCancel }) {
                         onChange={(e) => handleInputChange('description', e.target.value)}
                         placeholder="Enter item description"
                         rows={3}
-                        className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primaryColor focus:border-primaryColor resize-none ${
+                        className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primaryColor focus:border-primaryColor focus:outline-none resize-none ${
                             errors.description ? 'border-red-500' : 'border-gray-300'
                         }`}
+                        style={{ 
+                            borderColor: errors.description ? '#ef4444' : '#d1d5db',
+                            outline: 'none'
+                        }}
                     />
                     {errors.description && (
                         <p className="text-red-500 text-sm mt-1">{errors.description}</p>
@@ -151,22 +178,7 @@ export default function MenuForm({ item, onSubmit, onCancel }) {
                 </div>
                 
                 {/* Preview */}
-                {formData.name && formData.price && (
-                    <div className="bg-gray-50 rounded-lg p-4 border">
-                        <h3 className="text-sm font-medium text-gray-700 mb-2">Preview:</h3>
-                        <div className="bg-white p-3 rounded border">
-                            <h4 className="font-semibold text-gray-800">{formData.name}</h4>
-                            <p className="text-sm text-gray-600">{formData.category}</p>
-                            <p className="text-xs text-gray-500 mt-1">{formData.description}</p>
-                            <div className="flex justify-between items-center mt-2">
-                                <span className="font-medium text-gray-800">LKR {formData.price}</span>
-                                <span className="text-xs bg-primaryColor text-white px-2 py-1 rounded">
-                                    {formData.category}
-                                </span>
-                            </div>
-                        </div>
-                    </div>
-                )}
+                {previewComponent}
                 
                 {/* Action Buttons */}
                 <div className="flex gap-4 pt-4">
@@ -180,4 +192,4 @@ export default function MenuForm({ item, onSubmit, onCancel }) {
             </form>
         </div>
     );
-}
+});
