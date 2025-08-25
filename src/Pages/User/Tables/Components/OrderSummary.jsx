@@ -77,36 +77,11 @@ const OrderSummary = memo(function OrderSummary({
         const total = subtotal + serviceCharge;
         const itemCount = bill.items.reduce((sum, item) => sum + item.quantity, 0);
         
-        // Calculate liquor shot totals
-        const liquorShotTotals = {};
-        bill.items.forEach(item => {
-            if (item.portion && item.originalItemId) {
-                if (!liquorShotTotals[item.originalItemId]) {
-                    liquorShotTotals[item.originalItemId] = {
-                        name: item.name.split(' (')[0], // Remove portion info from name
-                        totalMl: 0,
-                        totalQuantity: 0,
-                        shots: []
-                    };
-                }
-                const totalMl = item.portion.ml * item.quantity;
-                liquorShotTotals[item.originalItemId].totalMl += totalMl;
-                liquorShotTotals[item.originalItemId].totalQuantity += item.quantity;
-                liquorShotTotals[item.originalItemId].shots.push({
-                    portion: item.portion.type,
-                    ml: item.portion.ml,
-                    quantity: item.quantity,
-                    totalMl: totalMl
-                });
-            }
-        });
-        
         return {
             subtotal,
             serviceCharge,
             total,
-            itemCount,
-            liquorShotTotals
+            itemCount
         };
     }, [bill]);
 
@@ -143,7 +118,6 @@ const OrderSummary = memo(function OrderSummary({
                                 <tr>
                                     <td style="padding: 3px 0; font-size: 12px;">
                                         ${item.name}
-                                        ${item.portion ? `<br><small>(${item.portion.ml}ml ${item.portion.type})</small>` : ''}
                                     </td>
                                     <td style="text-align: center; padding: 3px 0;">${item.quantity}</td>
                                     <td style="text-align: right; padding: 3px 0;">LKR ${item.price}</td>
@@ -153,18 +127,6 @@ const OrderSummary = memo(function OrderSummary({
                         </tbody>
                     </table>
                 </div>
-                
-                ${Object.keys(billCalculations.liquorShotTotals).length > 0 ? `
-                    <div style="margin: 15px 0; padding: 10px; background-color: #f0f8ff; border: 1px solid #0066cc;">
-                        <h4 style="margin: 0 0 10px 0; color: #0066cc;">Liquor Summary</h4>
-                        ${Object.entries(billCalculations.liquorShotTotals).map(([itemId, summary]) => `
-                            <div style="margin-bottom: 8px;">
-                                <strong>${summary.name}:</strong> ${summary.totalMl}ml total<br>
-                                <small>${summary.shots.map(shot => `${shot.quantity}x ${shot.portion} (${shot.totalMl}ml)`).join(', ')}</small>
-                            </div>
-                        `).join('')}
-                    </div>
-                ` : ''}
                 
                 <div style="border-top: 2px solid #000; padding-top: 10px; margin-top: 15px;">
                     <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
@@ -337,7 +299,7 @@ const OrderSummary = memo(function OrderSummary({
                     </div>
 
                     {/* Current Bill Section */}
-                    <div className="w-full md:w-80 bg-white rounded-lg p-4 border border-gray-200 flex flex-col">
+                    <div className="w-full overflow-y-auto md:w-80 bg-white rounded-lg p-4 border border-gray-200 flex flex-col">
                         <h3 className="text-lg font-semibold mb-3">Current Bill</h3>
                         
                         {!billStatus.hasItems ? (
@@ -352,11 +314,6 @@ const OrderSummary = memo(function OrderSummary({
                                                 <h5 className="font-medium text-sm">{item.name}</h5>
                                                 <p className="text-xs text-gray-600">
                                                     LKR {item.price} each
-                                                    {item.portion && (
-                                                        <span className="text-blue-600 ml-1">
-                                                            • {item.portion.ml}ml {item.portion.type.toLowerCase()}
-                                                        </span>
-                                                    )}
                                                 </p>
                                             </div>
                                             <div className="flex items-center gap-2">
@@ -383,28 +340,6 @@ const OrderSummary = memo(function OrderSummary({
                                         </div>
                                     ))}
                                 </div>
-
-                                {/* Liquor Shot Summary */}
-                                {Object.keys(billCalculations.liquorShotTotals).length > 0 && (
-                                    <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                                        <h4 className="text-sm font-semibold text-blue-800 mb-2">Liquor Shot Summary - Table {selectedTable.tableNumber}</h4>
-                                        {Object.entries(billCalculations.liquorShotTotals).map(([itemId, summary]) => (
-                                            <div key={itemId} className="mb-2 last:mb-0">
-                                                <div className="flex justify-between items-center">
-                                                    <span className="font-medium text-sm text-blue-700">{summary.name}</span>
-                                                    <span className="text-sm text-blue-600 font-medium">{summary.totalMl}ml total</span>
-                                                </div>
-                                                <div className="text-xs text-blue-600 mt-1">
-                                                    {summary.shots.map((shot, index) => (
-                                                        <span key={index} className="mr-2">
-                                                            {shot.quantity}x {shot.portion} ({shot.totalMl}ml)
-                                                        </span>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
 
                                 {/* Bill Total */}
                                 <div className="border-t border-gray-200 pt-4">
