@@ -30,36 +30,40 @@ export default function UserDashboard() {
             <div className='flex items-center justify-center'>
                 <Header active={active} setActive={setActive}/>
             </div>
-            <div className='grid grid-cols-1 md:grid-cols-3 gap-2 h-full md:h-[78vh] mt-5'>
+            {
+                active === 'Table' && (
+                    <div className='grid grid-cols-1 md:grid-cols-3 gap-2 h-full md:h-[78vh] mt-5'>
 
-                {/* for tables */}
-                <div className='p-6 w-full overflow-y-auto bg-fourthColor rounded-[32px]'>
-                    <h1 className='text-[24px] font-[500]'>1. Table List</h1>
-                    <div className='grid grid-cols-1 gap-2 md:grid-cols-2'>
-                        {
-                            tableList.map((table) => (
-                                <TableCard
-                                    key={table.id}
-                                    tableNumber={table.tableNumber}
-                                    status={table.status}
-                                    customerCount={table.customerCount}
-                                    orderTime={table.orderTime}
-                                />
-                            ))
-                        }
+                        {/* for tables */}
+                        <div className='p-6 w-full overflow-y-auto bg-fourthColor rounded-[32px]'>
+                            <h1 className='text-[24px] font-[500]'>1. Table List</h1>
+                            <div className='grid grid-cols-1 gap-2 md:grid-cols-2'>
+                                {
+                                    tableList.map((table) => (
+                                        <TableCard
+                                            key={table.id}
+                                            tableNumber={table.tableNumber}
+                                            status={table.status}
+                                            customerCount={table.customerCount}
+                                            orderTime={table.orderTime}
+                                        />
+                                    ))
+                                }
+                            </div>
+                        </div>
+
+                        {/* for food items */}
+                        <div className='p-6 w-full overflow-hidden bg-fourthColor rounded-[32px]'>
+                            <h1 className='text-[24px] font-[500]'>2. Food Menu</h1>
+                        </div>
+
+                        {/* for liquor items */}
+                        <div className='p-6 w-full overflow-hidden bg-fourthColor rounded-[32px]'>
+                            <h1 className='text-[24px] font-[500]'>3. Liquor Menu</h1>
+                        </div>
                     </div>
-                </div>
-
-                {/* for food items */}
-                <div className='p-6 w-full overflow-hidden bg-fourthColor rounded-[32px]'>
-                    <h1 className='text-[24px] font-[500]'>2. Food Menu</h1>
-                </div>
-
-                {/* for liquor items */}
-                <div className='p-6 w-full overflow-hidden bg-fourthColor rounded-[32px]'>
-                    <h1 className='text-[24px] font-[500]'>3. Liquor Menu</h1>
-                </div>
-            </div>
+                )
+            }
         </div>
     );
 }
