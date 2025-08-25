@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
-import StockForm from '../../../components/StockForm';
-import StockItemCard from '../../../components/StockItemCard';
+import StockForm from './StockForm';
+import StockItemCard from './StockItemCard';
 
 export default function StockManager() {
     const [stockItems, setStockItems] = useState([
@@ -40,6 +40,11 @@ export default function StockManager() {
 
     const handleEditItem = (item) => {
         setEditingItem(item);
+        // Scroll to top of the page
+        window.scrollTo({
+            top: 0,
+            behavior: 'smooth'
+        });
     };
 
     const handleDeleteItem = (itemId) => {

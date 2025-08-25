@@ -1,4 +1,3 @@
-import PropTypes from 'prop-types';
 import { useMemo } from 'react';
 
 const Select = ({ options, value, onChange, isDisabled }) => {
@@ -14,10 +13,11 @@ const Select = ({ options, value, onChange, isDisabled }) => {
     return (
         <div className="relative w-full font-poppins">
             <select
-                className={`border-2 w-full py-2 px-4 rounded-md
+                className={`border-2 w-full py-2 px-4 rounded-lg
                 focus:border-primaryColor focus:outline-none
-                appearance-none pr-10 cursor-pointer
-                ${isDisabled ? 'bg-gray-200 cursor-not-allowed' : ''}`}
+                appearance-none pr-10 cursor-pointer transition-all duration-200
+                ${value ? 'border-primaryColor' : 'border-gray-300'}
+                ${isDisabled ? 'bg-gray-200 cursor-not-allowed border-gray-300' : 'bg-white'}`}
                 value={value}
                 onChange={onChange}
                 disabled={isDisabled} // Disables the select input when isDisabled is true
@@ -42,16 +42,5 @@ const Select = ({ options, value, onChange, isDisabled }) => {
     );
 };
 
-Select.propTypes = {
-    options: PropTypes.arrayOf(
-        PropTypes.shape({
-        value: PropTypes.string.isRequired,
-        label: PropTypes.string.isRequired,
-        }),
-    ).isRequired,
-    value: PropTypes.string.isRequired,
-    onChange: PropTypes.func.isRequired,
-    isDisabled: PropTypes.bool, // Added prop validation for isDisabled
-};
 
 export default Select;
