@@ -4,6 +4,7 @@ import { FaPlus, FaEdit, FaTrash, FaSearch } from 'react-icons/fa';
 import MenuForm from './components/MenuForm';
 import MenuItemCard from './components/MenuItemCard';
 import Modal, { ConfirmModal } from '../../../components/Modal';
+import { InputField } from '../../../components/InputField';
 
 // Initial menu items (this would come from a database in a real app)
 const initialMenuItems = [
@@ -82,6 +83,23 @@ export default function MenuManager() {
         });
     }, [menuItems, searchTerm, selectedCategory]);
     
+    // Memoize category buttons
+    const categoryButtons = useMemo(() => {
+        return categories.map(category => (
+            <button
+                key={category}
+                onClick={() => setSelectedCategory(category)}
+                className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap ${
+                    selectedCategory === category
+                        ? 'bg-primaryColor text-white'
+                        : 'bg-white text-black border border-gray-300 hover:bg-gray-100'
+                }`}
+            >
+                {category}
+            </button>
+        ));
+    }, [categories, selectedCategory]);
+    
     const handleAddItem = useCallback(() => {
         setEditingItem(null);
         setShowForm(true);
@@ -133,46 +151,34 @@ export default function MenuManager() {
     }, []);
     
     return (
-        <div className="flex flex-col h-full md:h-[78vh] mt-5">
+        <div className="p-6 space-y-6 flex flex-col h-full md:h-[78vh]">
             {/* Header Section */}
-            <div className="mb-6">
-                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                    <h1 className="text-[24px] font-[500]">Menu Management</h1>
-                    <PrimaryButton onClick={handleAddItem} className="flex items-center gap-2">
-                        <FaPlus size={14} />
-                        Add New Item
-                    </PrimaryButton>
+            <div className="">
+                <div className="flex flex-row md:items-center md:justify-between gap-4">
+                    <h1 className="text-2xl font-bold text-gray-800">Menu Management</h1>
+                    <div className='w-1/2 flex justify-end'>
+                        <PrimaryButton onClick={handleAddItem} className="items-center gap-2">
+                            Add New Item
+                        </PrimaryButton>
+                    </div>
                 </div>
                 
                 {/* Search and Filter Section */}
                 <div className="flex flex-col md:flex-row gap-4 mt-4">
                     {/* Search Bar */}
                     <div className="relative flex-1">
-                        <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
-                        <input
-                            type="text"
-                            placeholder="Search menu items..."
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primaryColor focus:border-primaryColor"
-                        />
+                        <div className='w-full md:w-1/2'>
+                            <InputField 
+                                placeholder="Search menu items..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                            />
+                        </div>
                     </div>
                     
                     {/* Category Filter */}
-                    <div className="flex gap-2 overflow-x-auto">
-                        {categories.map(category => (
-                            <button
-                                key={category}
-                                onClick={() => setSelectedCategory(category)}
-                                className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap ${
-                                    selectedCategory === category
-                                        ? 'bg-primaryColor text-white'
-                                        : 'bg-white text-black border border-gray-300 hover:bg-gray-100'
-                                }`}
-                            >
-                                {category}
-                            </button>
-                        ))}
+                    <div className="w-full md:w-1/2 justify-center md:justify-end flex flex-wrap gap-2 overflow-x-auto">
+                        {categoryButtons}
                     </div>
                 </div>
             </div>
