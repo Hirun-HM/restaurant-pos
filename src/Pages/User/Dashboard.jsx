@@ -4,6 +4,7 @@ import Header from './components/Header';
 import TableCard from './components/TableCard';
 import TableManagement from './components/TableManagement';
 import StockManager from './components/StockManager';
+import LiquorManager from './components/LiquorManager';
 
 const tableList = [
     { id: 1, tableNumber: "01", status: "available", customerCount: 0, orderTime: null },
@@ -37,6 +38,11 @@ export default function UserDashboard() {
             {
                 active === 'Stocks' && (
                     <StockManager/>
+                )
+            }
+            {
+                active === 'Liquor' && (
+                    <LiquorManager/>
                 )
             }
         </div>

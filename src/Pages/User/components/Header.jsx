@@ -1,10 +1,12 @@
 import React from 'react'
 import { MdOutlineTableRestaurant } from "react-icons/md";
 import { MdInventory } from "react-icons/md";
+import { MdLocalBar } from "react-icons/md";
 
 const items = [
     { icon: MdOutlineTableRestaurant, title: 'Table'},
     { icon: MdInventory, title: 'Stocks'},
+    { icon: MdLocalBar, title: 'Liquor'},
 ]
 export default function Header({ active, setActive}) {    
 

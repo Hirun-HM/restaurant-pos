@@ -62,6 +62,9 @@ export default function StockManager() {
         return stockItems.filter(item => item.category === category);
     };
 
+    // Calculate total inventory value
+    const totalValue = stockItems.reduce((total, item) => total + (item.quantity * item.price), 0);
+
     const categories = [
         { key: 'ingredients', name: 'Ingredients', items: getItemsByCategory('ingredients') },
         { key: 'food', name: 'Food Items', items: getItemsByCategory('food') },
@@ -74,7 +77,8 @@ export default function StockManager() {
             <div className="flex justify-between items-center">
                 <h1 className="text-2xl font-bold text-gray-800">Stock Management</h1>
                 <div className="text-sm text-gray-600">
-                    Total Items: {stockItems.length}
+                    <div>Total Items: {stockItems.length}</div>
+                    <div>Total Value: LKR {totalValue.toFixed(2)}</div>
                 </div>
             </div>
 
