@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 
-const Select = ({ options, value, onChange, isDisabled }) => {
+const Select = ({ options = [], value, onChange, isDisabled }) => {
   // Memoize the options rendering
     const renderedOptions = useMemo(() => {
         return options.map((option) => (
@@ -19,7 +19,7 @@ const Select = ({ options, value, onChange, isDisabled }) => {
                 ${value ? 'border-primaryColor' : 'border-gray-300'}
                 ${isDisabled ? 'bg-gray-200 cursor-not-allowed border-gray-300' : 'bg-white'}`}
                 value={value}
-                onChange={onChange}
+                onChange={(e) => onChange(e.target.value)}
                 disabled={isDisabled} // Disables the select input when isDisabled is true
             >
                 {renderedOptions}
