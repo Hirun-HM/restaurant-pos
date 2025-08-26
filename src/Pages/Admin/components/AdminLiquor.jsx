@@ -328,7 +328,7 @@ export default function AdminLiquor() {
                                 <div className={`p-3 sm:p-4 ${status.bgColor}`}>
                                     <div className="flex items-center justify-between">
                                         <div className="flex items-center gap-2 min-w-0 flex-1">
-                                            <MdLocalBar className="h-5 w-5 sm:h-6 sm:w-6 text-purple-600 flex-shrink-0" />
+                                            <MdLocalBar className="h-5 w-5 sm:h-6 sm:w-6 text-primaryColor flex-shrink-0" />
                                             <div className="min-w-0 flex-1">
                                                 <h3 className="font-semibold text-gray-900 text-sm sm:text-base truncate">{liquor.name}</h3>
                                                 <p className="text-xs sm:text-sm text-gray-600 truncate">{liquor.category}</p>
@@ -368,7 +368,7 @@ export default function AdminLiquor() {
                                         </div>
                                         <div className="w-full bg-gray-200 rounded-full h-2">
                                             <div 
-                                                className="bg-purple-600 h-2 rounded-full transition-all duration-300"
+                                                className="bg-primaryColor h-2 rounded-full transition-all duration-300"
                                                 style={{ width: `${Math.min(stats.usagePercentage, 100)}%` }}
                                             ></div>
                                         </div>
