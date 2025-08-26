@@ -1,16 +1,48 @@
-import React from 'react';
-import { RiAdminFill } from 'react-icons/ri';
-import { FaSignOutAlt, FaTools } from 'react-icons/fa';
+import React, { useState, useCallback, memo } from 'react';
+import AdminHeader from './components/AdminHeader';
+import AdminOverview from './components/AdminOverview';
+import AdminStocks from './components/AdminStocks';
+import AdminLiquor from './components/AdminLiquor';
+import AdminAnalytics from './components/AdminAnalytics';
+
+const MemoizedAdminOverview = memo(AdminOverview);
+const MemoizedAdminStocks = memo(AdminStocks);
+const MemoizedAdminLiquor = memo(AdminLiquor);
+const MemoizedAdminAnalytics = memo(AdminAnalytics);
 
 export default function AdminDashboard() {
-    const handleLogout = () => {
-        // Add logout logic here
-        window.location.href = '/restaurant-pos/';
+    const [activeSection, setActiveSection] = useState('Overview');
+
+    const handleSectionChange = useCallback((section) => {
+        setActiveSection(section);
+    }, []);
+
+    const renderActiveSection = () => {
+        switch (activeSection) {
+            case 'Overview':
+                return <MemoizedAdminOverview />;
+            case 'Stocks':
+                return <MemoizedAdminStocks />;
+            case 'Liquor':
+                return <MemoizedAdminLiquor />;
+            case 'Analytics':
+                return <MemoizedAdminAnalytics />;
+            default:
+                return <MemoizedAdminOverview />;
+        }
     };
 
     return (
-        <div className="min-h-scree font-poppins">
-            
+        <div className="p-6 min-h-screen font-poppins">
+            <div className='w-full flex justify-center'>
+                <AdminHeader 
+                    activeSection={activeSection} 
+                    onSectionChange={handleSectionChange} 
+                />
+            </div>
+            <main className="container mx-auto">
+                {renderActiveSection()}
+            </main>
         </div>
     );
 }

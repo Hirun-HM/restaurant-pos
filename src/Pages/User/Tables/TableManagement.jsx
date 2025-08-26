@@ -1,8 +1,12 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import TableCard from './Components/TableCard';
 import OrderSummary from './Components/OrderSummary';
+import ConfirmationModal from '../../../components/ConfirmationModal';
 
 export default function TableManagement({tableList = []}) {
+    const navigate = useNavigate();
+    
     // Load menu items from localStorage (managed by MenuManager)
     const menuItems = useMemo(() => {
         const saved = localStorage.getItem('restaurant-menu-items');
@@ -64,6 +68,11 @@ export default function TableManagement({tableList = []}) {
     // Always start with no table selected (reset on page refresh)
     const [selectedTable, setSelectedTable] = useState(null);
     
+    // State for confirmation modal
+    const [showCloseModal, setShowCloseModal] = useState(false);
+    const [showClearAllModal, setShowClearAllModal] = useState(false);
+    const [billToClose, setBillToClose] = useState(null);
+    
     // Load bills from localStorage on component mount
     const [bills, setBills] = useState(() => {
         try {
@@ -93,7 +102,7 @@ export default function TableManagement({tableList = []}) {
             tableId: tableId,
             items: [],
             total: 0,
-            serviceCharge: true, // Default to include service charge
+            serviceCharge: false, // Default to not include service charge
             createdAt: new Date(),
             status: 'active'
         };
@@ -191,18 +200,47 @@ export default function TableManagement({tableList = []}) {
     }, []);
 
     const handleCloseBill = useCallback((tableId) => {
-        if (window.confirm('Are you sure you want to close this bill?')) {
+        setBillToClose(tableId);
+        setShowCloseModal(true);
+    }, []);
+
+    const confirmCloseBill = useCallback(() => {
+        if (billToClose) {
             setBills(prevBills => ({
                 ...prevBills,
-                [tableId]: {
-                    ...prevBills[tableId],
+                [billToClose]: {
+                    ...prevBills[billToClose],
                     status: 'closed',
                     closedAt: new Date()
                 }
             }));
             setSelectedTable(null);
+            setBillToClose(null);
         }
+    }, [billToClose]);
+
+    const cancelCloseBill = useCallback(() => {
+        setShowCloseModal(false);
+        setBillToClose(null);
     }, []);
+
+    // Navigation functions
+    const navigateToWelcome = useCallback(() => {
+        navigate('/');
+    }, [navigate]);
+
+    const navigateToUserDashboard = useCallback(() => {
+        navigate('/user/dashboard');
+    }, [navigate]);
+
+    const navigateToAdminDashboard = useCallback(() => {
+        navigate('/admin/dashboard');
+    }, [navigate]);
+
+    const handleLogout = useCallback(() => {
+        // Clear any user session data if needed
+        navigateToWelcome();
+    }, [navigateToWelcome]);
 
     // Function to clear old closed bills (optional - can be called to clean up storage)
     const clearOldBills = () => {
@@ -226,11 +264,18 @@ export default function TableManagement({tableList = []}) {
 
     // Memoize clear all bills function
     const clearAllBills = useCallback(() => {
-        if (window.confirm('Are you sure you want to clear all bills? This action cannot be undone.')) {
-            setBills({});
-            setSelectedTable(null);
-            localStorage.removeItem('restaurant-bills');
-        }
+        setShowClearAllModal(true);
+    }, []);
+
+    const confirmClearAllBills = useCallback(() => {
+        setBills({});
+        setSelectedTable(null);
+        localStorage.removeItem('restaurant-bills');
+        setShowClearAllModal(false);
+    }, []);
+
+    const cancelClearAllBills = useCallback(() => {
+        setShowClearAllModal(false);
     }, []);
 
     return (
@@ -277,6 +322,30 @@ export default function TableManagement({tableList = []}) {
                     onCloseBill={handleCloseBill}
                 />
             </div>
+
+            {/* Close Bill Confirmation Modal */}
+            <ConfirmationModal
+                isOpen={showCloseModal}
+                onClose={cancelCloseBill}
+                onConfirm={confirmCloseBill}
+                title="Close Bill"
+                message={`Are you sure you want to close the bill for Table ${selectedTable?.tableNumber}? This action cannot be undone and the table will be available for new orders.`}
+                confirmText="Close Bill"
+                cancelText="Cancel"
+                type="warning"
+            />
+
+            {/* Clear All Bills Confirmation Modal */}
+            <ConfirmationModal
+                isOpen={showClearAllModal}
+                onClose={cancelClearAllBills}
+                onConfirm={confirmClearAllBills}
+                title="Clear All Bills"
+                message="Are you sure you want to clear all bills? This action cannot be undone and will remove all active and closed bills from the system."
+                confirmText="Clear All"
+                cancelText="Cancel"
+                type="danger"
+            />
         </div>
     )
 }

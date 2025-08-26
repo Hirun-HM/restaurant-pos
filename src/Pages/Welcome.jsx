@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { RiAdminFill } from "react-icons/ri";
 import { FaUser } from "react-icons/fa";
 import PopupComponent from '../components/PopupComponent';
@@ -22,6 +23,7 @@ const userTypes = [
     ];
 
 export default function Welcome() {
+    const navigate = useNavigate();
     const [selectedCard, setSelectedCard] = useState(null);
     const [isPopupOpen, setIsPopupOpen] = useState(false);
     const [password, setPassword] = useState('');
@@ -68,10 +70,10 @@ export default function Welcome() {
                 // Redirect to appropriate dashboard based on user type
                 if (selectedCard.name === 'Admin') {
                     console.log('Redirecting to Admin dashboard...');
-                    window.location.href = '/restaurant-pos/admin/dashboard';
+                    navigate('/admin/dashboard');
                 } else if (selectedCard.name === 'Cashier') {
                     console.log('Redirecting to Cashier dashboard...');
-                    window.location.href = '/restaurant-pos/user/dashboard';
+                    navigate('/user/dashboard');
                 }
                 
             } else {

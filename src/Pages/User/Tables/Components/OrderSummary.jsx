@@ -2,6 +2,7 @@ import React, { useState, useCallback, useMemo, memo } from 'react';
 import { PrimaryButton, SecondaryButton } from '../../../../components/Button';
 import { FaPlus, FaMinus, FaTrash, FaReceipt } from 'react-icons/fa';
 import MenuItem from './MenuItem';
+import ConfirmationModal from '../../../../components/ConfirmationModal';
 
 const OrderSummary = memo(function OrderSummary({
     selectedTable,
@@ -15,6 +16,7 @@ const OrderSummary = memo(function OrderSummary({
     onCloseBill
 }) {
     const [selectedCategory, setSelectedCategory] = useState('All');
+    const [showPaymentModal, setShowPaymentModal] = useState(false);
 
     // Memoize categories to prevent recalculation on every render
     const categories = useMemo(() => {
@@ -182,17 +184,18 @@ const OrderSummary = memo(function OrderSummary({
 
     // Callback for payment completion
     const handlePaymentComplete = useCallback(() => {
-        if (!selectedTable || !bill) return;
-        
-        const confirmPayment = window.confirm(
-            `Complete payment for Table ${selectedTable.tableNumber}?\n\nTotal: LKR ${billCalculations.total.toFixed(2)}\n\nThis will close the bill and cannot be undone.`
-        );
-        
-        if (confirmPayment) {
-            // Call the onCloseBill function to close the bill
+        setShowPaymentModal(true);
+    }, []);
+
+    const confirmPayment = useCallback(() => {
+        if (selectedTable) {
             handleCloseBill();
         }
-    }, [selectedTable, bill, billCalculations, handleCloseBill]);
+    }, [selectedTable, handleCloseBill]);
+
+    const cancelPayment = useCallback(() => {
+        setShowPaymentModal(false);
+    }, []);
 
     // Memoize bill status checks
     const billStatus = useMemo(() => {
@@ -419,6 +422,21 @@ const OrderSummary = memo(function OrderSummary({
                     </div>
                 </div>
             )}
+
+            {/* Payment Confirmation Modal */}
+            <ConfirmationModal
+                isOpen={showPaymentModal}
+                onClose={cancelPayment}
+                onConfirm={confirmPayment}
+                title="Complete Payment"
+                message={selectedTable && billCalculations ? 
+                    `Complete payment for Table ${selectedTable.tableNumber}?\n\nTotal: LKR ${billCalculations.total.toFixed(2)}\n\nThis will close the bill and cannot be undone.` :
+                    'Complete this payment?'
+                }
+                confirmText="Complete Payment"
+                cancelText="Cancel"
+                type="info"
+            />
         </div>
     );
 });

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { FaUser, FaSignOutAlt, FaTools } from 'react-icons/fa';
 import Header from './components/Header';
 import TableCard from './Tables/Components/TableCard';
@@ -18,12 +19,13 @@ const tableList = [
 ];
 
 export default function UserDashboard() {
+    const navigate = useNavigate();
 
     const [active, setActive] = useState('Table');
 
     const handleLogout = () => {
         // Add logout logic here
-        window.location.href = '/restaurant-pos/';
+        navigate('/');
     };
 
     return (
