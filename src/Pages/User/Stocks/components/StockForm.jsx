@@ -126,7 +126,7 @@ export default function StockForm({
 
     return (
         <div className="bg-white rounded-lg p-6 border border-gray-200">
-            <h2 className="text-xl font-semibold text-gray-800 mb-4">
+            <h2 className="text-xl font-semibold text-other1 mb-4">
                 {editingItem ? 'Update Stock Item' : 'Stock Management'}
             </h2>
 
@@ -135,7 +135,7 @@ export default function StockForm({
                     {/* Mode Selection */}
                     {!editingItem && (
                         <div className="w-full">
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                            <label className="block text-sm font-medium text-other1 mb-2">
                                 Action <span className="text-red">*</span>
                             </label>
                             

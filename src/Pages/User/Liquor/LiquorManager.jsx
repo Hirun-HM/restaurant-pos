@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import LiquorForm from './components/LiquorForm';
 import LiquorItemCard from './components/LiquorItemCard';
 
@@ -14,7 +14,60 @@ export default function LiquorManager() {
 
     const [editingItem, setEditingItem] = useState(null);
 
-    const handleLiquorSubmit = (formData) => {
+    // Memoized function to get items by category
+    const getItemsByCategory = useCallback((category) => {
+        return liquorItems.filter(item => item.category === category);
+    }, [liquorItems]);
+
+    // Memoized function to get items by cigarette type
+    const getItemsByCigaretteType = useCallback((cigaretteType) => {
+        return liquorItems.filter(item => 
+            item.category === 'cigarette' && item.cigaretteType === cigaretteType
+        );
+    }, [liquorItems]);
+
+    // Memoized cigarette subcategories configuration
+    const cigaretteSubcategories = useMemo(() => [
+        { key: 'dunhill_blue', name: 'Dunhill Blue' },
+        { key: 'dunhill_tube', name: 'Dunhill Tube' },
+        { key: 'john_player_gold_leaf_20', name: 'John Player Gold Leaf (20\'s)' },
+        { key: 'john_player_gold_leaf_12', name: 'John Player Gold Leaf (12\'s)' },
+        { key: 'john_player_gold_pro', name: 'John Player Gold Pro' }
+    ], []);
+
+    // Memoized categories with dynamic data
+    const categories = useMemo(() => [
+        { 
+            key: 'beer', 
+            name: 'Beer', 
+            items: getItemsByCategory('beer'),
+            type: 'regular'
+        },
+        { 
+            key: 'hard_liquor', 
+            name: 'Hard Liquor', 
+            items: getItemsByCategory('hard_liquor'),
+            type: 'regular'
+        },
+        { 
+            key: 'cigarette', 
+            name: 'Cigarettes', 
+            items: getItemsByCategory('cigarette'),
+            type: 'cigarette',
+            subcategories: cigaretteSubcategories.map(sub => ({
+                ...sub,
+                items: getItemsByCigaretteType(sub.key)
+            }))
+        }
+    ], [getItemsByCategory, getItemsByCigaretteType, cigaretteSubcategories]);
+
+    // Memoized total value calculation
+    const totalValue = useMemo(() => {
+        return liquorItems.reduce((total, item) => total + (item.quantity * item.pricePerUnit), 0);
+    }, [liquorItems]);
+
+    // Memoized callback for form submission
+    const handleLiquorSubmit = useCallback((formData) => {
         if (formData.mode === 'new') {
             // Add new item
             const newItem = {
@@ -26,70 +79,107 @@ export default function LiquorManager() {
                 unit: formData.unit,
                 pricePerUnit: formData.pricePerUnit
             };
-            setLiquorItems([...liquorItems, newItem]);
+            setLiquorItems(prev => [...prev, newItem]);
         } else {
             // Update existing item
-            setLiquorItems(liquorItems.map(item => 
+            setLiquorItems(prev => prev.map(item => 
                 item.id === formData.id 
                     ? { ...item, quantity: item.quantity + formData.quantity, pricePerUnit: formData.pricePerUnit }
                     : item
             ));
         }
         setEditingItem(null);
-    };
+    }, [liquorItems]);
 
-    const handleEditItem = (item) => {
+    // Memoized callback for editing item
+    const handleEditItem = useCallback((item) => {
         setEditingItem(item);
         // Scroll to top of the page
         window.scrollTo({
             top: 0,
             behavior: 'smooth'
         });
-    };
+    }, []);
 
-    const handleDeleteItem = (itemId) => {
+    // Memoized callback for deleting item
+    const handleDeleteItem = useCallback((itemId) => {
         if (window.confirm('Are you sure you want to delete this item?')) {
-            setLiquorItems(liquorItems.filter(item => item.id !== itemId));
+            setLiquorItems(prev => prev.filter(item => item.id !== itemId));
         }
-    };
+    }, []);
 
-    const handleCancelEdit = () => {
+    // Memoized callback for canceling edit
+    const handleCancelEdit = useCallback(() => {
         setEditingItem(null);
-    };
+    }, []);
 
-    // Filter items by category for display
-    const getItemsByCategory = (category) => {
-        return liquorItems.filter(item => item.category === category);
-    };
+    // Memoized render function for item grid
+    const renderItemGrid = useCallback((items, gridKey) => (
+        <div key={gridKey} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {items.map(item => (
+                <LiquorItemCard
+                    key={item.id}
+                    item={item}
+                    onEdit={handleEditItem}
+                    onDelete={handleDeleteItem}
+                />
+            ))}
+        </div>
+    ), [handleEditItem, handleDeleteItem]);
 
-    const categories = [
-        { key: 'beer', name: 'Beer', items: getItemsByCategory('beer') },
-        { key: 'hard_liquor', name: 'Hard Liquor', items: getItemsByCategory('hard_liquor') },
-        { 
-            key: 'cigarette', 
-            name: 'Cigarettes', 
-            items: getItemsByCategory('cigarette'),
-            subcategories: [
-                { key: 'dunhill_blue', name: 'Dunhill Blue', items: getItemsByCategory('cigarette').filter(item => item.cigaretteType === 'dunhill_blue') },
-                { key: 'dunhill_tube', name: 'Dunhill Tube', items: getItemsByCategory('cigarette').filter(item => item.cigaretteType === 'dunhill_tube') },
-                { key: 'john_player_gold_leaf_20', name: 'John Player Gold Leaf (20\'s)', items: getItemsByCategory('cigarette').filter(item => item.cigaretteType === 'john_player_gold_leaf_20') },
-                { key: 'john_player_gold_leaf_12', name: 'John Player Gold Leaf (12\'s)', items: getItemsByCategory('cigarette').filter(item => item.cigaretteType === 'john_player_gold_leaf_12') },
-                { key: 'john_player_gold_pro', name: 'John Player Gold Pro', items: getItemsByCategory('cigarette').filter(item => item.cigaretteType === 'john_player_gold_pro') }
-            ]
-        }
-    ];
+    // Memoized render function for category section
+    const renderCategorySection = useCallback((category) => {
+        if (category.items.length === 0) return null;
 
-    // Calculate total inventory value
-    const totalValue = liquorItems.reduce((total, item) => total + (item.quantity * item.pricePerUnit), 0);
+        return (
+            <div key={category.key}>
+                <h2 className="text-lg font-semibold text-other1 mb-3">
+                    {category.name} ({category.items.length})
+                </h2>
+                {category.type === 'cigarette' ? (
+                    // Render cigarette subcategories
+                    category.subcategories.map(subcategory => (
+                        subcategory.items.length > 0 && (
+                            <div key={subcategory.key} className="ml-4 mb-4">
+                                <h3 className="text-md font-medium text-other1 mb-2">
+                                    {subcategory.name} ({subcategory.items.length})
+                                </h3>
+                                {renderItemGrid(subcategory.items, `${category.key}-${subcategory.key}`)}
+                            </div>
+                        )
+                    ))
+                ) : (
+                    // Render regular category items
+                    renderItemGrid(category.items, category.key)
+                )}
+            </div>
+        );
+    }, [renderItemGrid]);
+
+    // Memoized stats section
+    const statsSection = useMemo(() => (
+        <div className="text-sm text-gray-600">
+            <div>Total Items: {liquorItems.length}</div>
+            <div>Total Value: LKR {totalValue.toFixed(2)}</div>
+        </div>
+    ), [liquorItems.length, totalValue]);
+
+    // Memoized empty state
+    const emptyState = useMemo(() => (
+        <div className="text-center py-12">
+            <div className="text-gray-400 mb-4">
+                <div className="text-6xl">🍺</div>
+            </div>
+            <h3 className="text-lg font-semibold text-other1 mb-2">No Liquor Items</h3>
+            <p className="text-gray-500">Start by adding your first liquor item above.</p>
+        </div>
+    ), []);
 
     return (
         <div className="p-6 space-y-6">
             <div className="flex justify-between items-center">
-                <h1 className="text-2xl font-bold text-gray-800">Liquor Management</h1>
-                <div className="text-sm text-gray-600">
-                    <div>Total Items: {liquorItems.length}</div>
-                    <div>Total Value: LKR {totalValue.toFixed(2)}</div>
-                </div>
+                <h1 className="text-2xl font-bold text-other1">Liquor Management</h1>
+                {statsSection}
             </div>
 
             {/* Liquor Form */}
@@ -102,70 +192,11 @@ export default function LiquorManager() {
 
             {/* Liquor Items Display */}
             <div className="space-y-6">
-                {categories.map(category => {
-                    if (category.key === 'cigarette') {
-                        // Special handling for cigarettes with subcategories
-                        return (
-                            <div key={category.key}>
-                                <h2 className="text-lg font-semibold text-gray-800 mb-3">
-                                    {category.name} ({category.items.length})
-                                </h2>
-                                {category.subcategories.map(subcategory => (
-                                    subcategory.items.length > 0 && (
-                                        <div key={subcategory.key} className="ml-4 mb-4">
-                                            <h3 className="text-md font-medium text-gray-700 mb-2">
-                                                {subcategory.name} ({subcategory.items.length})
-                                            </h3>
-                                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                                {subcategory.items.map(item => (
-                                                    <LiquorItemCard
-                                                        key={item.id}
-                                                        item={item}
-                                                        onEdit={handleEditItem}
-                                                        onDelete={handleDeleteItem}
-                                                    />
-                                                ))}
-                                            </div>
-                                        </div>
-                                    )
-                                ))}
-                            </div>
-                        );
-                    } else {
-                        // Regular categories (beer, hard_liquor)
-                        return (
-                            category.items.length > 0 && (
-                                <div key={category.key}>
-                                    <h2 className="text-lg font-semibold text-gray-800 mb-3">
-                                        {category.name} ({category.items.length})
-                                    </h2>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                        {category.items.map(item => (
-                                            <LiquorItemCard
-                                                key={item.id}
-                                                item={item}
-                                                onEdit={handleEditItem}
-                                                onDelete={handleDeleteItem}
-                                            />
-                                        ))}
-                                    </div>
-                                </div>
-                            )
-                        );
-                    }
-                })}
+                {categories.map(renderCategorySection)}
             </div>
 
             {/* Empty State */}
-            {liquorItems.length === 0 && (
-                <div className="text-center py-12">
-                    <div className="text-gray-400 mb-4">
-                        <div className="text-6xl">🍺</div>
-                    </div>
-                    <h3 className="text-lg font-semibold text-gray-600 mb-2">No Liquor Items</h3>
-                    <p className="text-gray-500">Start by adding your first liquor item above.</p>
-                </div>
-            )}
+            {liquorItems.length === 0 && emptyState}
         </div>
     );
 }

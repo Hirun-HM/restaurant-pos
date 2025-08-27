@@ -75,8 +75,8 @@ export default function StockManager() {
     return (
         <div className="p-6 space-y-6">
             <div className="flex justify-between items-center">
-                <h1 className="text-2xl font-bold text-gray-800">Stock Management</h1>
-                <div className="text-sm text-gray-600">
+                <h1 className="text-2xl font-bold text-other1">Stock Management</h1>
+                <div className="text-sm text-text">
                     <div>Total Items: {stockItems.length}</div>
                     <div>Total Value: LKR {totalValue.toFixed(2)}</div>
                 </div>

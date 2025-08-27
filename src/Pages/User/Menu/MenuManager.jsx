@@ -219,7 +219,7 @@ export default memo(function MenuManager() {
             {/* Header Section */}
             <div className="">
                 <div className="flex flex-row md:items-center md:justify-between gap-4">
-                    <h1 className="text-2xl font-bold text-gray-800">Menu Management</h1>
+                    <h1 className="text-2xl font-bold text-other1">Menu Management</h1>
                     <div className='w-1/2 flex justify-end'>
                         <PrimaryButton onClick={handleAddItem} className="items-center gap-2">
                             Add New Item

@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { InputField } from '../../../../components/InputField';
 import Select from '../../../../components/Select';
 import { PrimaryButton, SecondaryButton } from '../../../../components/Button';
 import { validateLiquorForm } from '../../../../core/liquorValidation';
 
+// Memoized static configuration data
 const liquorCategories = [
     { value: 'beer', label: 'Beer' },
     { value: 'hard_liquor', label: 'Hard Liquor' },
@@ -45,61 +46,109 @@ export default function LiquorForm({
 
     const [errors, setErrors] = useState({});
 
-    const existingItemOptions = existingItems.map(item => ({
-        value: item.id?.toString() || '',
-        label: `${item.name || 'Unknown'} (${item.category || 'No category'})`
-    }));
+    // Memoized existing item options to prevent recalculation
+    const existingItemOptions = useMemo(() => 
+        existingItems.map(item => ({
+            value: item.id?.toString() || '',
+            label: `${item.name || 'Unknown'} (${item.category || 'No category'})`
+        })), [existingItems]
+    );
+
+    // Memoized select options configurations
+    const selectOptions = useMemo(() => ({
+        mode: [
+            { value: 'new', label: 'Add New Item' },
+            { value: 'update', label: 'Update Existing Item' }
+        ],
+        category: [
+            { value: '', label: 'Select category' },
+            ...liquorCategories
+        ],
+        cigaretteType: [
+            { value: '', label: 'Select cigarette type' },
+            ...cigaretteTypes
+        ],
+        unit: [
+            { value: '', label: 'Select unit' },
+            ...units
+        ],
+        existingItems: [
+            { value: '', label: 'Choose an existing item' },
+            ...existingItemOptions
+        ]
+    }), [existingItemOptions]);
+
+    // Memoized form reset data
+    const initialFormData = useMemo(() => ({
+        mode: 'new',
+        selectedItemId: '',
+        name: '',
+        category: '',
+        cigaretteType: '',
+        quantity: '',
+        unit: '',
+        pricePerUnit: ''
+    }), []);
+
+    // Memoized callback for form data updates
+    const updateFormData = useCallback((updates) => {
+        setFormData(prev => ({ ...prev, ...updates }));
+    }, []);
+
+    // Memoized callback for clearing errors
+    const clearErrors = useCallback(() => {
+        setErrors({});
+    }, []);
+
+
+    // Memoized callback for editing item setup
+    const setupEditingItem = useCallback((item) => {
+        setFormData({
+            mode: 'update',
+            selectedItemId: item.id?.toString() || '',
+            name: item.name || '',
+            category: item.category || '',
+            cigaretteType: item.cigaretteType || '',
+            quantity: '', // Always start with empty quantity for updates
+            unit: item.unit || '',
+            pricePerUnit: item.pricePerUnit ? item.pricePerUnit.toString() : ''
+        });
+        clearErrors();
+    }, [clearErrors]);
 
     useEffect(() => {
         if (editingItem) {
-            setFormData({
-                mode: 'update',
-                selectedItemId: editingItem.id?.toString() || '',
-                name: editingItem.name || '',
-                category: editingItem.category || '',
-                cigaretteType: editingItem.cigaretteType || '',
-                quantity: '', // Always start with empty quantity for updates
-                unit: editingItem.unit || '',
-                pricePerUnit: editingItem.pricePerUnit ? editingItem.pricePerUnit.toString() : ''
-            });
-            // Clear any existing errors when editing
-            setErrors({});
+            setupEditingItem(editingItem);
         }
-    }, [editingItem]);
+    }, [editingItem, setupEditingItem]);
 
-    const handleModeChange = (e) => {
+    // Memoized callback for mode change
+    const handleModeChange = useCallback((e) => {
         const mode = e.target.value;
         setFormData({
-            ...formData,
-            mode,
-            selectedItemId: '',
-            name: '',
-            category: '',
-            cigaretteType: '',
-            quantity: '',
-            unit: '',
-            pricePerUnit: ''
+            ...initialFormData,
+            mode
         });
-        setErrors({});
-    };
+        clearErrors();
+    }, [initialFormData, clearErrors]);
 
-    const handleCategoryChange = (e) => {
+    // Memoized callback for category change
+    const handleCategoryChange = useCallback((e) => {
         const category = e.target.value;
-        setFormData({
-            ...formData,
+        updateFormData({
             category,
             cigaretteType: category === 'cigarette' ? '' : '', // Reset cigarette type when category changes
             unit: category === 'cigarette' ? 'pack' : '' // Default unit for cigarettes
         });
-    };
+    }, [updateFormData]);
 
-    const handleExistingItemSelect = (e) => {
+    // Memoized callback for existing item selection
+    const handleExistingItemSelect = useCallback((e) => {
         const itemId = e.target.value;
         const selectedItem = existingItems.find(item => item.id.toString() === itemId);
         
         if (selectedItem) {
-            setFormData({
-                ...formData,
+            updateFormData({
                 selectedItemId: itemId,
                 name: selectedItem.name || '',
                 category: selectedItem.category || '',
@@ -109,9 +158,19 @@ export default function LiquorForm({
                 pricePerUnit: selectedItem.pricePerUnit ? selectedItem.pricePerUnit.toString() : ''
             });
         }
-    };
+    }, [existingItems, updateFormData]);
 
-    const handleSubmit = (e) => {
+    // Memoized form field handlers
+    const formHandlers = useMemo(() => ({
+        name: (e) => updateFormData({ name: e.target.value }),
+        cigaretteType: (e) => updateFormData({ cigaretteType: e.target.value }),
+        quantity: (e) => updateFormData({ quantity: e.target.value }),
+        unit: (e) => updateFormData({ unit: e.target.value }),
+        pricePerUnit: (e) => updateFormData({ pricePerUnit: e.target.value })
+    }), [updateFormData]);
+
+    // Memoized form submission handler
+    const handleSubmit = useCallback((e) => {
         e.preventDefault();
         
         const validated = validateLiquorForm(formData, setErrors);
@@ -131,24 +190,30 @@ export default function LiquorForm({
             onSubmit(submissionData);
             
             // Reset form
-            setFormData({
-                mode: 'new',
-                selectedItemId: '',
-                name: '',
-                category: '',
-                cigaretteType: '',
-                quantity: '',
-                unit: '',
-                pricePerUnit: ''
-            });
-            setErrors({});
+            setFormData(initialFormData);
+            clearErrors();
         }
-    };
+    }, [formData, onSubmit, initialFormData, clearErrors]);
+
+    // Memoized field disabled state
+    const isFieldDisabled = useMemo(() => {
+        return editingItem ? true : (formData.mode === 'update' && formData.selectedItemId);
+    }, [editingItem, formData.mode, formData.selectedItemId]);
+
+    // Memoized form title
+    const formTitle = useMemo(() => {
+        return editingItem ? 'Update Liquor Item' : 'Liquor Management';
+    }, [editingItem]);
+
+    // Memoized button text
+    const submitButtonText = useMemo(() => {
+        return formData.mode === 'new' ? 'Add Item' : 'Update Stock';
+    }, [formData.mode]);
 
     return (
         <div className="bg-white rounded-lg p-6 border border-gray-200">
-            <h2 className="text-xl font-semibold text-gray-800 mb-4">
-                {editingItem ? 'Update Liquor Item' : 'Liquor Management'}
+            <h2 className="text-xl font-semibold text-other1 mb-4">
+                {formTitle}
             </h2>
 
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -156,16 +221,13 @@ export default function LiquorForm({
                     {/* Mode Selection */}
                     {!editingItem && (
                         <div className="w-full">
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                            <label className="block text-sm font-medium text-other1 mb-2">
                                 Action <span className="text-red">*</span>
                             </label>
                             <Select
                                 value={formData.mode}
                                 onChange={handleModeChange}
-                                options={[
-                                    { value: 'new', label: 'Add New Item' },
-                                    { value: 'update', label: 'Update Existing Item' }
-                                ]}
+                                options={selectOptions.mode}
                             />
                         </div>
                     )}
@@ -173,16 +235,13 @@ export default function LiquorForm({
                     {/* Existing Item Selection */}
                     {formData.mode === 'update' && !editingItem && (
                         <div className="w-full">
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                            <label className="block text-sm font-medium text-other1 mb-2">
                                 Select Item to Update <span className="text-red">*</span>
                             </label>
                             <Select
                                 value={formData.selectedItemId}
                                 onChange={handleExistingItemSelect}
-                                options={[
-                                    { value: '', label: 'Choose an existing item' },
-                                    ...existingItemOptions
-                                ]}
+                                options={selectOptions.existingItems}
                             />
                             {errors.selectedItemId && <p className="mt-1 text-sm text-red">{errors.selectedItemId}</p>}
                         </div>
@@ -195,25 +254,22 @@ export default function LiquorForm({
                         label="Item Name"
                         type="text"
                         value={formData.name}
-                        onChange={(e) => setFormData({...formData, name: e.target.value})}
+                        onChange={formHandlers.name}
                         placeholder="Enter item name"
                         required
                         error={errors.name}
-                        disabled={editingItem ? true : (formData.mode === 'update' && formData.selectedItemId)}
+                        disabled={isFieldDisabled}
                     />
 
                     <div className="w-full">
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                        <label className="block text-sm font-medium text-other1 mb-2">
                             Category <span className="text-red">*</span>
                         </label>
                         <Select
                             value={formData.category}
                             onChange={handleCategoryChange}
-                            options={[
-                                { value: '', label: 'Select category' },
-                                ...liquorCategories
-                            ]}
-                            isDisabled={editingItem ? true : (formData.mode === 'update' && formData.selectedItemId)}
+                            options={selectOptions.category}
+                            isDisabled={isFieldDisabled}
                         />
                         {errors.category && <p className="mt-1 text-sm text-red">{errors.category}</p>}
                     </div>
@@ -222,17 +278,14 @@ export default function LiquorForm({
                 {/* Cigarette Type - Only show for cigarette category */}
                 {formData.category === 'cigarette' && (
                     <div className="w-full md:w-1/4">
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                        <label className="block text-sm font-medium text-other1 mb-2">
                             Cigarette Type <span className="text-red">*</span>
                         </label>
                         <Select
                             value={formData.cigaretteType}
-                            onChange={(e) => setFormData({...formData, cigaretteType: e.target.value})}
-                            options={[
-                                { value: '', label: 'Select cigarette type' },
-                                ...cigaretteTypes
-                            ]}
-                            isDisabled={editingItem ? true : (formData.mode === 'update' && formData.selectedItemId)}
+                            onChange={formHandlers.cigaretteType}
+                            options={selectOptions.cigaretteType}
+                            isDisabled={isFieldDisabled}
                         />
                         {errors.cigaretteType && <p className="mt-1 text-sm text-red">{errors.cigaretteType}</p>}
                     </div>
@@ -243,7 +296,7 @@ export default function LiquorForm({
                         label={formData.mode === 'update' ? 'Add Quantity' : 'Quantity'}
                         type="number"
                         value={formData.quantity}
-                        onChange={(e) => setFormData({...formData, quantity: e.target.value})}
+                        onChange={formHandlers.quantity}
                         placeholder="0"
                         min="1"
                         required
@@ -251,17 +304,14 @@ export default function LiquorForm({
                     />
 
                     <div className="w-full">
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                        <label className="block text-sm font-medium text-other1 mb-2">
                             Unit <span className="text-red">*</span>
                         </label>
                         <Select
                             value={formData.unit}
-                            onChange={(e) => setFormData({...formData, unit: e.target.value})}
-                            options={[
-                                { value: '', label: 'Select unit' },
-                                ...units
-                            ]}
-                            isDisabled={editingItem ? true : (formData.mode === 'update' && formData.selectedItemId)}
+                            onChange={formHandlers.unit}
+                            options={selectOptions.unit}
+                            isDisabled={isFieldDisabled}
                         />
                         {errors.unit && <p className="mt-1 text-sm text-red">{errors.unit}</p>}
                     </div>
@@ -270,7 +320,7 @@ export default function LiquorForm({
                         label="Price per Unit"
                         type="number"
                         value={formData.pricePerUnit}
-                        onChange={(e) => setFormData({...formData, pricePerUnit: e.target.value})}
+                        onChange={formHandlers.pricePerUnit}
                         placeholder="0.00"
                         min="0.01"
                         step="0.01"
@@ -282,7 +332,7 @@ export default function LiquorForm({
                 {/* Action Buttons */}
                 <div className="flex gap-3 pt-4">
                     <PrimaryButton type="submit">
-                        {formData.mode === 'new' ? 'Add Item' : 'Update Stock'}
+                        {submitButtonText}
                     </PrimaryButton>
                     {onCancel && (
                         <SecondaryButton type="button" onClick={onCancel}>

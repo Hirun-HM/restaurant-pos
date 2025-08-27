@@ -20,7 +20,7 @@ const MenuItemCard = memo(function MenuItemCard({ item, onEdit, onDelete }) {
             {/* Item Header */}
             <div className="flex justify-between items-start mb-3">
                 <div className="flex-1">
-                    <h3 className="font-semibold text-gray-800 text-lg mb-1">{item.name}</h3>
+                    <h3 className="font-semibold text-other1 text-lg mb-1">{item.name}</h3>
                     <span className={`inline-block px-2 py-1 rounded text-xs font-medium ${getCategoryColor(item.category)}`}>
                         {item.category}
                     </span>

@@ -6,7 +6,7 @@ export default function LiquorItemCard({ item, onEdit, onDelete }) {
         <div className="bg-white rounded-lg p-4 border border-gray-200">
             <div className="flex justify-between items-start mb-3">
                 <div className="flex-1">
-                    <h3 className="font-semibold text-lg">{item.name}</h3>
+                    <h3 className="font-semibold text-lg text-other1">{item.name}</h3>
                     <p className="text-sm text-text capitalize">{item.category.replace('_', ' ')}</p>
                     {item.cigaretteType && (
                         <p className="text-xs text-gray-500">{item.cigaretteType.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</p>
