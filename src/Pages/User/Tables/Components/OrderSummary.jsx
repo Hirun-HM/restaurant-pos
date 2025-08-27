@@ -87,6 +87,66 @@ const OrderSummary = memo(function OrderSummary({
         };
     }, [bill]);
 
+    // Memoize quantity control buttons configuration
+    const quantityControlButtons = useMemo(() => [
+        {
+            id: 'decrease',
+            icon: FaMinus,
+            onClick: (itemId, quantity) => handleUpdateQuantity(itemId, quantity - 1),
+            className: "p-1 text-red-500 hover:bg-red-50 rounded",
+            size: 10
+        },
+        {
+            id: 'increase',
+            icon: FaPlus,
+            onClick: (itemId, quantity) => handleUpdateQuantity(itemId, quantity + 1),
+            className: "p-1 text-green-500 hover:bg-green-50 rounded",
+            size: 10
+        },
+        {
+            id: 'delete',
+            icon: FaTrash,
+            onClick: (itemId) => handleRemoveItem(itemId),
+            className: "p-1 text-red-500 hover:bg-red-50 rounded ml-2",
+            size: 10
+        }
+    ], [handleUpdateQuantity, handleRemoveItem]);
+
+    // Memoized render function for quantity controls
+    const renderQuantityControls = useCallback((item) => {
+        return (
+            <div className="flex items-center gap-2">
+                {quantityControlButtons.map((button) => {
+                    const IconComponent = button.icon;
+                    
+                    if (button.id === 'decrease' || button.id === 'increase') {
+                        return (
+                            <button
+                                key={button.id}
+                                onClick={() => button.onClick(item.id, item.quantity)}
+                                className={button.className}
+                            >
+                                <IconComponent size={button.size} />
+                            </button>
+                        );
+                    } else if (button.id === 'delete') {
+                        return (
+                            <button
+                                key={button.id}
+                                onClick={() => button.onClick(item.id)}
+                                className={button.className}
+                            >
+                                <IconComponent size={button.size} />
+                            </button>
+                        );
+                    }
+                    return null;
+                })}
+                <span className="w-8 text-center text-sm font-medium text-other1">{item.quantity}</span>
+            </div>
+        );
+    }, [quantityControlButtons]);
+
     // Memoize date formatting function
     const formatBillDate = useCallback((date) => {
         return new Date(date).toLocaleString();
@@ -211,7 +271,7 @@ const OrderSummary = memo(function OrderSummary({
         <div className="h-full flex items-center justify-center">
             <div className="text-center">
                 <div className="text-6xl mb-4">🍽️</div>
-                <h2 className="text-xl font-semibold mb-2">Select a Table</h2>
+                <h2 className="text-xl font-semibold text-other1 mb-2">Select a Table</h2>
                 <p className="text-text">Click on a table to view or create orders</p>
             </div>
         </div>
@@ -222,7 +282,7 @@ const OrderSummary = memo(function OrderSummary({
         <div className="flex-1 flex items-center justify-center">
             <div className="flex flex-col items-center text-center">
                 <div className="text-6xl mb-4">📋</div>
-                <h2 className="text-xl font-semibold mb-4">No Active Bill</h2>
+                <h2 className="text-xl font-semibold text-other1 mb-4">No Active Bill</h2>
                 <p className="text-text mb-6">Create a new bill for Table {selectedTable?.tableNumber}</p>
                 <PrimaryButton onClick={handleCreateBill} className='flex items-center gap-1'>
                     <FaReceipt className="mr-2" />
@@ -249,7 +309,7 @@ const OrderSummary = memo(function OrderSummary({
     return (
         <div className="h-full flex flex-col">
             <div className="flex justify-between items-center mb-4">
-                <h1 className="text-[24px] font-[500]">
+                <h1 className="text-[24px] font-[500] text-other1">
                     Table {selectedTable.tableNumber} - Order Summary
                 </h1>
                 {billStatus.hasActiveBill && (
@@ -267,7 +327,7 @@ const OrderSummary = memo(function OrderSummary({
                 <div className="flex-1 flex flex-col md:flex-row gap-4 overflow-hidden">
                     {/* Menu Items Section */}
                     <div className="flex-1 flex flex-col">
-                        <h3 className="text-lg font-semibold mb-3">Menu Items</h3>
+                        <h3 className="text-lg font-semibold text-other1 mb-3">Menu Items</h3>
                         
                         {/* Category Filter */}
                         <div className="flex gap-2 mb-4 overflow-x-auto">
@@ -303,7 +363,7 @@ const OrderSummary = memo(function OrderSummary({
 
                     {/* Current Bill Section */}
                     <div className="w-full overflow-y-auto md:w-80 bg-white rounded-lg p-4 border border-gray-200 flex flex-col">
-                        <h3 className="text-lg font-semibold mb-3">Current Bill</h3>
+                        <h3 className="text-lg font-semibold text-other1 mb-3">Current Bill</h3>
                         
                         {!billStatus.hasItems ? (
                             emptyCartContent
@@ -314,32 +374,12 @@ const OrderSummary = memo(function OrderSummary({
                                     {bill.items.map(item => (
                                         <div key={item.id} className="flex justify-between items-center py-2 border-b border-gray-100">
                                             <div className="flex-1">
-                                                <h5 className="font-medium text-sm">{item.name}</h5>
+                                                <h5 className="font-medium text-other1 text-sm">{item.name}</h5>
                                                 <p className="text-xs text-gray-600">
                                                     LKR {item.price} each
                                                 </p>
                                             </div>
-                                            <div className="flex items-center gap-2">
-                                                <button
-                                                    onClick={() => handleUpdateQuantity(item.id, item.quantity - 1)}
-                                                    className="p-1 text-red-500 hover:bg-red-50 rounded"
-                                                >
-                                                    <FaMinus size={10} />
-                                                </button>
-                                                <span className="w-8 text-center text-sm font-medium">{item.quantity}</span>
-                                                <button
-                                                    onClick={() => handleUpdateQuantity(item.id, item.quantity + 1)}
-                                                    className="p-1 text-green-500 hover:bg-green-50 rounded"
-                                                >
-                                                    <FaPlus size={10} />
-                                                </button>
-                                                <button
-                                                    onClick={() => handleRemoveItem(item.id)}
-                                                    className="p-1 text-red-500 hover:bg-red-50 rounded ml-2"
-                                                >
-                                                    <FaTrash size={10} />
-                                                </button>
-                                            </div>
+                                            {renderQuantityControls(item)}
                                         </div>
                                     ))}
                                 </div>
@@ -348,7 +388,7 @@ const OrderSummary = memo(function OrderSummary({
                                 <div className="border-t border-gray-200 pt-4">
                                     <div className="flex justify-between items-center mb-2">
                                         <span className="text-sm text-gray-600">Subtotal:</span>
-                                        <span className="font-medium">LKR {billCalculations.subtotal.toFixed(2)}</span>
+                                        <span className="font-medium text-other1">LKR {billCalculations.subtotal.toFixed(2)}</span>
                                     </div>
                                     
                                     {/* Service Charge Toggle */}
@@ -376,7 +416,7 @@ const OrderSummary = memo(function OrderSummary({
                                                             checked:after:-translate-y-1/2"
                                                 />                                            
                                         </div>
-                                        <span className="font-medium">
+                                        <span className="font-medium text-other1">
                                             LKR {billCalculations.serviceCharge.toFixed(2)}
                                         </span>
                                     </div>

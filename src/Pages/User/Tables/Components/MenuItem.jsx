@@ -51,7 +51,7 @@ const MenuItem = memo(function MenuItem({item, onAddItem, selectedTable}) {
     return (
         <>
             <div key={item.id} className="bg-white p-4 rounded-lg border border-gray-200">
-                <h4 className="font-semibold text-gray-800">{item.name}</h4>
+                <h4 className="font-semibold text-other1">{item.name}</h4>
                 <p className="text-sm text-gray-600">{item.category}</p>
                 <div className="flex justify-between items-center mt-2">
                     <span className="font-medium text-gray-800">
@@ -73,7 +73,7 @@ const MenuItem = memo(function MenuItem({item, onAddItem, selectedTable}) {
                 <div className="fixed inset-0 bg-other1 bg-opacity-50 flex items-center justify-center z-50">
                     <div className="bg-white rounded-lg p-6 w-96 max-w-90vw">
                         <div className="flex justify-between items-center mb-4">
-                            <h3 className="text-lg font-semibold">Select Portion - {item.name}</h3>
+                            <h3 className="text-lg font-semibold text-other1">Select Portion - {item.name}</h3>
                             <button 
                                 onClick={closeModal}
                                 className="text-gray-500 hover:text-gray-700"
@@ -91,8 +91,8 @@ const MenuItem = memo(function MenuItem({item, onAddItem, selectedTable}) {
                                 >
                                     <div className="flex justify-between items-center">
                                         <div>
-                                            <span className="font-medium">{portion.name}</span>
-                                            <span className="text-sm text-gray-600 ml-2">({portion.ml}ml)</span>
+                                            <span className="font-medium text-other1">{portion.name}</span>
+                                            <span className="text-sm text-other1 ml-2">({portion.ml}ml)</span>
                                         </div>
                                         <span className="font-medium text-primaryColor">
                                             LKR {Math.round(item.price * portion.priceMultiplier)}

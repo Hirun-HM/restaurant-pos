@@ -283,7 +283,7 @@ export default function TableManagement({tableList = []}) {
             {/* for tables */}
             <div className='p-6 w-full md:w-1/3 overflow-y-auto bg-fourthColor rounded-[32px]'>
                 <div className="flex justify-between items-center mb-4">
-                    <h1 className='text-[24px] font-[500]'>Table List</h1>
+                    <h1 className='text-[24px] font-[500] text-other1'>Table List</h1>
                     {/* Development helper - remove in production */}
                     <button 
                         onClick={clearAllBills}

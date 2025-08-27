@@ -6,7 +6,7 @@ export default function StockItemCard({ item, onEdit, onDelete }) {
         <div className="bg-white rounded-lg p-4 border border-gray-200">
             <div className="flex justify-between items-start mb-3">
                 <div className="flex-1">
-                    <h3 className="font-semibold text-lg">{item.name}</h3>
+                    <h3 className="font-semibold text-other1 text-lg">{item.name}</h3>
                     <p className="text-sm text-text">{item.category}</p>
                 </div>
             </div>
@@ -14,11 +14,11 @@ export default function StockItemCard({ item, onEdit, onDelete }) {
             <div className="space-y-2 mb-4">
                 <div className="flex justify-between">
                     <span className="text-sm text-text">Quantity:</span>
-                    <span className="font-medium">{item.quantity} {item.unit}</span>
+                    <span className="font-medium text-other1">{item.quantity} {item.unit}</span>
                 </div>
                 <div className="flex justify-between">
                     <span className="text-sm text-text">Price:</span>
-                    <span className="font-medium">LKR {item.price}</span>
+                    <span className="font-medium text-other1">LKR {item.price}</span>
                 </div>
             </div>
 
