@@ -3,6 +3,7 @@ import { FaFilter, FaDownload } from 'react-icons/fa';
 import { MdInventory, MdWarning, MdCheckCircle } from 'react-icons/md';
 import { InputField } from '../../../components/InputField';
 import Select from '../../../components/Select';
+import AnimatedNumber from '../../../components/AnimatedNumber';
 
 const STOCK_CATEGORIES = ['Vegetables', 'Meat', 'Seafood', 'Dairy', 'Spices', 'Beverage', 'Other'];
 const STOCK_UNITS = ['kg', 'g', 'l', 'ml', 'pcs', 'boxes', 'cans', 'bottles'];
@@ -171,7 +172,8 @@ export default function AdminStocks() {
             value: stats.total,
             icon: MdInventory,
             iconColor: 'text-primaryColor',
-            valueColor: 'text-other1'
+            valueColor: 'text-other1',
+            isNumber: true
         },
         {
             id: 'lowStock',
@@ -179,15 +181,19 @@ export default function AdminStocks() {
             value: stats.lowStock,
             icon: MdWarning,
             iconColor: 'text-red',
-            valueColor: 'text-red'
+            valueColor: 'text-red',
+            isNumber: true
         },
         {
             id: 'totalValue',
             title: 'Total Value',
-            value: `LKR ${stats.totalValue.toFixed(2)}`,
+            value: stats.totalValue,
             icon: FaDownload,
             iconColor: 'text-green',
-            valueColor: 'text-green'
+            valueColor: 'text-green',
+            isNumber: true,
+            prefix: 'LKR ',
+            formatDecimals: true
         }
     ], [stats]);
 
@@ -215,7 +221,7 @@ export default function AdminStocks() {
         {
             id: 'item',
             render: (stock) => (
-                <div className="font-medium text-gray-900">{stock.name}</div>
+                <div className="font-medium text-other1">{stock.name}</div>
             )
         },
         {
@@ -230,7 +236,7 @@ export default function AdminStocks() {
             id: 'quantity',
             render: (stock) => (
                 <div>
-                    <div className="text-sm text-gray-900">
+                    <div className="text-sm text-other1">
                         {stock.currentQuantity} {stock.unit}
                     </div>
                     <div className="text-xs text-gray-500">
@@ -255,7 +261,7 @@ export default function AdminStocks() {
         {
             id: 'unitPrice',
             render: (stock) => (
-                <span className="text-sm text-gray-900">
+                <span className="text-sm text-other1">
                     LKR {stock.unitPrice.toFixed(2)}
                 </span>
             )
@@ -263,7 +269,7 @@ export default function AdminStocks() {
         {
             id: 'supplier',
             render: (stock) => (
-                <span className="text-sm text-gray-900">{stock.supplier}</span>
+                <span className="text-sm text-other1">{stock.supplier}</span>
             )
         }
     ], [getStockStatus]);
@@ -277,14 +283,26 @@ export default function AdminStocks() {
 
             {/* Fixed Stats Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-6 mb-4 sm:mb-6">
-                {statsCards.map((card) => {
+                {statsCards.map((card, index) => {
                     const IconComponent = card.icon;
                     return (
                         <div key={card.id} className="bg-white rounded-lg shadow-md p-3 sm:p-6 border border-border">
                             <div className="flex items-center justify-between">
                                 <div>
                                     <h3 className="text-xs sm:text-sm font-medium text-darkestGray uppercase">{card.title}</h3>
-                                    <p className={`text-lg sm:text-2xl font-bold mt-1 sm:mt-2 ${card.valueColor}`}>{card.value}</p>
+                                    <p className={`text-lg sm:text-2xl font-bold mt-1 sm:mt-2 ${card.valueColor}`}>
+                                        {card.isNumber ? (
+                                            <AnimatedNumber 
+                                                value={card.value}
+                                                duration={2000}
+                                                startDelay={index * 300}
+                                                prefix={card.prefix || ''}
+                                                formatValue={card.formatDecimals ? (val) => val.toFixed(2) : null}
+                                            />
+                                        ) : (
+                                            card.value
+                                        )}
+                                    </p>
                                 </div>
                                 <IconComponent className={`h-6 w-6 sm:h-8 sm:w-8 ${card.iconColor}`} />
                             </div>

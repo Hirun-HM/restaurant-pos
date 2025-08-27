@@ -32,10 +32,10 @@ export default function Header({ active, setActive}) {
                         key={i}
                         onClick={ () => handleActive(item.title)}
                         className='flex flex-col text-center cursor-pointer'>
-                        <div className={`h-16 w-16 flex items-center justify-center rounded-full ${active === item.title ? 'bg-primaryColor text-white': 'text-black border'}`}>
+                        <div className={`h-16 w-16 flex items-center justify-center rounded-full ${active === item.title ? 'bg-primaryColor text-white': 'text-other1 border'}`}>
                             <item.icon size={36}/>            
                         </div>
-                        <h1 className='text-[16px] mt-1 font-semibold'>{item.title}</h1>
+                        <h1 className='text-[16px] mt-1 font-semibold text-other1'>{item.title}</h1>
                     </div>
                 ))
             }

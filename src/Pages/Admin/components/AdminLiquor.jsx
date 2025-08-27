@@ -3,6 +3,7 @@ import { FaWineBottle } from 'react-icons/fa';
 import { MdLocalBar, MdWarning, MdCheckCircle, MdOutlineWaterDrop } from 'react-icons/md';
 import Select from '../../../components/Select';
 import { InputField } from '../../../components/InputField';
+import AnimatedNumber from '../../../components/AnimatedNumber';
 
 const LIQUOR_CATEGORIES = ['Whiskey', 'Vodka', 'Gin', 'Rum', 'Brandy', 'Wine', 'Beer', 'Other'];
 const BOTTLE_SIZES = ['750ml', '1000ml', '1750ml', '375ml', '200ml', '50ml'];
@@ -232,7 +233,8 @@ export default function AdminLiquor() {
             value: overallStats.totalItems,
             icon: MdLocalBar,
             iconColor: 'text-other1',
-            valueColor: 'text-other1'
+            valueColor: 'text-other1',
+            isNumber: true
         },
         {
             id: 'lowStock',
@@ -240,15 +242,19 @@ export default function AdminLiquor() {
             value: overallStats.lowStockItems,
             icon: MdWarning,
             iconColor: 'text-other2',
-            valueColor: 'text-other2'
+            valueColor: 'text-other2',
+            isNumber: true
         },
         {
             id: 'totalValue',
             title: 'Total Value',
-            value: `LKR ${overallStats.totalValue.toFixed(2)}`,
+            value: overallStats.totalValue,
             icon: FaWineBottle,
             iconColor: 'text-green',
-            valueColor: 'text-green'
+            valueColor: 'text-green',
+            isNumber: true,
+            prefix: 'LKR ',
+            formatDecimals: true
         },
         {
             id: 'totalPortions',
@@ -256,7 +262,8 @@ export default function AdminLiquor() {
             value: overallStats.totalPortions,
             icon: MdOutlineWaterDrop,
             iconColor: 'text-primaryColor',
-            valueColor: 'text-primaryColor'
+            valueColor: 'text-primaryColor',
+            isNumber: true
         }
     ], [overallStats]);
 
@@ -269,7 +276,7 @@ export default function AdminLiquor() {
 
             {/* Fixed Stats Cards */}
             <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-2 sm:gap-6 mb-4 sm:mb-6">
-                {statsCards.map((card) => {
+                {statsCards.map((card, index) => {
                     const IconComponent = card.icon;
                     return (
                         <div key={card.id} className="bg-white rounded-lg shadow-md p-2 sm:p-6 border border-border">
@@ -277,13 +284,22 @@ export default function AdminLiquor() {
                                 <div className="min-w-0 flex-1">
                                     <h3 className="text-xs sm:text-sm font-medium text-darkestGray uppercase truncate">{card.title}</h3>
                                     <p className={`text-sm sm:text-2xl font-bold mt-1 sm:mt-2 ${card.valueColor} truncate`}>
-                                        {typeof card.value === 'string' && card.value.includes('LKR') ? 
-                                            <span className="block sm:inline">
-                                                <span className="hidden sm:inline">{card.value}</span>
-                                                <span className="sm:hidden">{card.value.replace('LKR ', '₨')}</span>
-                                            </span>
-                                            : card.value
-                                        }
+                                        {card.isNumber ? (
+                                            <AnimatedNumber 
+                                                value={card.value}
+                                                duration={2000}
+                                                startDelay={index * 250}
+                                                prefix={card.prefix || ''}
+                                                formatValue={card.formatDecimals ? (val) => val.toFixed(2) : null}
+                                            />
+                                        ) : (
+                                            typeof card.value === 'string' && card.value.includes('LKR') ? 
+                                                <span className="block sm:inline">
+                                                    <span className="hidden sm:inline">{card.value}</span>
+                                                    <span className="sm:hidden">{card.value.replace('LKR ', '₨')}</span>
+                                                </span>
+                                                : card.value
+                                        )}
                                     </p>
                                 </div>
                                 <IconComponent className={`h-4 w-4 sm:h-8 sm:w-8 ${card.iconColor} flex-shrink-0 ml-1 sm:ml-0`} />
@@ -330,7 +346,7 @@ export default function AdminLiquor() {
                                         <div className="flex items-center gap-2 min-w-0 flex-1">
                                             <MdLocalBar className="h-5 w-5 sm:h-6 sm:w-6 text-primaryColor flex-shrink-0" />
                                             <div className="min-w-0 flex-1">
-                                                <h3 className="font-semibold text-gray-900 text-sm sm:text-base truncate">{liquor.name}</h3>
+                                                <h3 className="font-semibold text-other1 text-sm sm:text-base truncate">{liquor.name}</h3>
                                                 <p className="text-xs sm:text-sm text-gray-600 truncate">{liquor.category}</p>
                                             </div>
                                         </div>

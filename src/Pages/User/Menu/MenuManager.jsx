@@ -128,7 +128,7 @@ export default memo(function MenuManager() {
                 className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap ${
                     selectedCategory === category
                         ? 'bg-primaryColor text-white'
-                        : 'bg-white text-black border border-gray-300 hover:bg-gray-100'
+                        : 'bg-white text-other1 border border-gray-300 hover:bg-gray-100'
                 }`}
             >
                 {category}

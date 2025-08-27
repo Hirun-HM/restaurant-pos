@@ -1,6 +1,8 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { FaChartLine, FaChartBar, FaChartPie, FaCalendarAlt, FaDownload } from 'react-icons/fa';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { FaChartLine, FaChartBar, FaChartPie, FaCalendarAlt, FaDownload, FaShoppingCart } from 'react-icons/fa';
 import { MdTrendingUp, MdTrendingDown, MdMonetizationOn, MdRestaurant } from 'react-icons/md';
+import AnimatedNumber from '../../../components/AnimatedNumber';
+import Select from '../../../components/Select';
 
 export default function AdminAnalytics() {
     const [bills, setBills] = useState({});
@@ -25,126 +27,126 @@ export default function AdminAnalytics() {
     }, []);
 
     // Calculate analytics based on date range
-    useEffect(() => {
-        const calculateAnalytics = () => {
-            const now = new Date();
-            const closedBills = Object.values(bills).filter(bill => bill.status === 'closed');
-            
-            // Filter bills based on date range
-            let filteredBills = closedBills;
-            if (dateRange === 'today') {
-                const today = now.toDateString();
-                filteredBills = closedBills.filter(bill => 
-                    new Date(bill.closedAt || bill.createdAt).toDateString() === today
-                );
-            } else if (dateRange === 'week') {
-                const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-                filteredBills = closedBills.filter(bill => 
-                    new Date(bill.closedAt || bill.createdAt) >= weekAgo
-                );
-            } else if (dateRange === 'month') {
-                const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-                filteredBills = closedBills.filter(bill => 
-                    new Date(bill.closedAt || bill.createdAt) >= monthAgo
-                );
-            }
+    const calculateAnalytics = useCallback(() => {
+        const now = new Date();
+        const closedBills = Object.values(bills).filter(bill => bill.status === 'closed');
+        
+        // Filter bills based on date range
+        let filteredBills = closedBills;
+        if (dateRange === 'today') {
+            const today = now.toDateString();
+            filteredBills = closedBills.filter(bill => 
+                new Date(bill.closedAt || bill.createdAt).toDateString() === today
+            );
+        } else if (dateRange === 'week') {
+            const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+            filteredBills = closedBills.filter(bill => 
+                new Date(bill.closedAt || bill.createdAt) >= weekAgo
+            );
+        } else if (dateRange === 'month') {
+            const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+            filteredBills = closedBills.filter(bill => 
+                new Date(bill.closedAt || bill.createdAt) >= monthAgo
+            );
+        }
 
-            // Calculate revenue
-            const totalRevenue = filteredBills.reduce((sum, bill) => {
-                const serviceCharge = bill.serviceCharge ? bill.total * 0.1 : 0;
-                return sum + bill.total + serviceCharge;
-            }, 0);
+        // Calculate revenue
+        const totalRevenue = filteredBills.reduce((sum, bill) => {
+            const serviceCharge = bill.serviceCharge ? bill.total * 0.1 : 0;
+            return sum + bill.total + serviceCharge;
+        }, 0);
 
-            // Calculate average order value
-            const avgOrderValue = filteredBills.length > 0 ? totalRevenue / filteredBills.length : 0;
+        // Calculate average order value
+        const avgOrderValue = filteredBills.length > 0 ? totalRevenue / filteredBills.length : 0;
 
-            // Top selling items
-            const itemSales = {};
-            filteredBills.forEach(bill => {
-                bill.items.forEach(item => {
-                    const key = item.name;
-                    if (!itemSales[key]) {
-                        itemSales[key] = { name: item.name, quantity: 0, revenue: 0 };
-                    }
-                    itemSales[key].quantity += item.quantity;
-                    itemSales[key].revenue += item.price * item.quantity;
-                });
+        // Top selling items
+        const itemSales = {};
+        filteredBills.forEach(bill => {
+            bill.items.forEach(item => {
+                const key = item.name;
+                if (!itemSales[key]) {
+                    itemSales[key] = { name: item.name, quantity: 0, revenue: 0 };
+                }
+                itemSales[key].quantity += item.quantity;
+                itemSales[key].revenue += item.price * item.quantity;
             });
+        });
 
-            const topItems = Object.values(itemSales)
-                .sort((a, b) => b.quantity - a.quantity)
-                .slice(0, 5);
+        const topItems = Object.values(itemSales)
+            .sort((a, b) => b.quantity - a.quantity)
+            .slice(0, 5);
 
-            // Revenue by hour (for today)
-            const revenueByHour = Array.from({ length: 24 }, (_, hour) => {
-                const hourRevenue = filteredBills
-                    .filter(bill => {
-                        const billHour = new Date(bill.closedAt || bill.createdAt).getHours();
-                        return billHour === hour;
-                    })
+        // Revenue by hour (for today)
+        const revenueByHour = Array.from({ length: 24 }, (_, hour) => {
+            const hourRevenue = filteredBills
+                .filter(bill => {
+                    const billHour = new Date(bill.closedAt || bill.createdAt).getHours();
+                    return billHour === hour;
+                })
+                .reduce((sum, bill) => {
+                    const serviceCharge = bill.serviceCharge ? bill.total * 0.1 : 0;
+                    return sum + bill.total + serviceCharge;
+                }, 0);
+            
+            return { hour, revenue: hourRevenue };
+        });
+
+        // Revenue by day (for week/month)
+        const revenueByDay = [];
+        if (dateRange === 'week') {
+            for (let i = 6; i >= 0; i--) {
+                const date = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
+                const dayRevenue = filteredBills
+                    .filter(bill => 
+                        new Date(bill.closedAt || bill.createdAt).toDateString() === date.toDateString()
+                    )
                     .reduce((sum, bill) => {
                         const serviceCharge = bill.serviceCharge ? bill.total * 0.1 : 0;
                         return sum + bill.total + serviceCharge;
                     }, 0);
                 
-                return { hour, revenue: hourRevenue };
-            });
-
-            // Revenue by day (for week/month)
-            const revenueByDay = [];
-            if (dateRange === 'week') {
-                for (let i = 6; i >= 0; i--) {
-                    const date = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
-                    const dayRevenue = filteredBills
-                        .filter(bill => 
-                            new Date(bill.closedAt || bill.createdAt).toDateString() === date.toDateString()
-                        )
-                        .reduce((sum, bill) => {
-                            const serviceCharge = bill.serviceCharge ? bill.total * 0.1 : 0;
-                            return sum + bill.total + serviceCharge;
-                        }, 0);
-                    
-                    revenueByDay.push({
-                        date: date.toLocaleDateString('en-US', { weekday: 'short' }),
-                        revenue: dayRevenue
-                    });
-                }
-            }
-
-            // Category breakdown
-            const categoryRevenue = {};
-            filteredBills.forEach(bill => {
-                bill.items.forEach(item => {
-                    const menuItem = menuItems.find(mi => mi.name === item.name);
-                    const category = menuItem ? menuItem.category : 'Other';
-                    if (!categoryRevenue[category]) {
-                        categoryRevenue[category] = 0;
-                    }
-                    categoryRevenue[category] += item.price * item.quantity;
+                revenueByDay.push({
+                    date: date.toLocaleDateString('en-US', { weekday: 'short' }),
+                    revenue: dayRevenue
                 });
+            }
+        }
+
+        // Category breakdown
+        const categoryRevenue = {};
+        filteredBills.forEach(bill => {
+            bill.items.forEach(item => {
+                const menuItem = menuItems.find(mi => mi.name === item.name);
+                const category = menuItem ? menuItem.category : 'Other';
+                if (!categoryRevenue[category]) {
+                    categoryRevenue[category] = 0;
+                }
+                categoryRevenue[category] += item.price * item.quantity;
             });
+        });
 
-            const categoryBreakdown = Object.entries(categoryRevenue)
-                .map(([category, revenue]) => ({
-                    category,
-                    revenue,
-                    percentage: totalRevenue > 0 ? (revenue / totalRevenue) * 100 : 0
-                }))
-                .sort((a, b) => b.revenue - a.revenue);
+        const categoryBreakdown = Object.entries(categoryRevenue)
+            .map(([category, revenue]) => ({
+                category,
+                revenue,
+                percentage: totalRevenue > 0 ? (revenue / totalRevenue) * 100 : 0
+            }))
+            .sort((a, b) => b.revenue - a.revenue);
 
-            setAnalytics({
-                revenue: { total: totalRevenue, trend: 0 },
-                orders: { total: filteredBills.length, trend: 0 },
-                avgOrderValue: { value: avgOrderValue, trend: 0 },
-                topItems,
-                revenueByHour,
-                revenueByDay,
-                categoryBreakdown
-            });
-        };
-
-        calculateAnalytics();
+        setAnalytics({
+            revenue: { total: totalRevenue, trend: 0 },
+            orders: { total: filteredBills.length, trend: 0 },
+            avgOrderValue: { value: avgOrderValue, trend: 0 },
+            topItems,
+            revenueByHour,
+            revenueByDay,
+            categoryBreakdown
+        });
     }, [bills, menuItems, dateRange]);
+
+    useEffect(() => {
+        calculateAnalytics();
+    }, [calculateAnalytics]);
 
     // Chart components
     const BarChart = ({ data, title, xKey, yKey, color = 'bg-blue-500' }) => {
@@ -286,7 +288,7 @@ export default function AdminAnalytics() {
                                     style={{ backgroundColor: colors[index % colors.length] }}
                                 ></div>
                                 <span className="text-sm text-gray-700">{item.category}</span>
-                                <span className="text-sm font-medium text-gray-900">
+                                <span className="text-sm font-medium text-other1">
                                     {item.percentage.toFixed(1)}%
                                 </span>
                             </div>
@@ -297,22 +299,100 @@ export default function AdminAnalytics() {
         );
     };
 
+    // Memoized key metrics configuration
+    const keyMetrics = useMemo(() => [
+        {
+            id: 'revenue',
+            title: 'Total Revenue',
+            value: analytics.revenue.total,
+            isNumber: true,
+            prefix: 'LKR ',
+            icon: <MdMonetizationOn className="h-8 w-8 text-green-600" />,
+            className: 'bg-white rounded-lg shadow-md p-6 border border-gray-200',
+            delay: 0
+        },
+        {
+            id: 'orders',
+            title: 'Total Orders',
+            value: analytics.orders.total,
+            isNumber: true,
+            icon: <FaShoppingCart className="h-8 w-8 text-blue-600" />,
+            className: 'bg-white rounded-lg shadow-md p-6 border border-gray-200',
+            delay: 100
+        },
+        {
+            id: 'avgOrder',
+            title: 'Avg Order Value',
+            value: analytics.avgOrderValue.value,
+            isNumber: true,
+            prefix: 'LKR ',
+            icon: <MdTrendingUp className="h-8 w-8 text-purple-600" />,
+            className: 'bg-white rounded-lg shadow-md p-6 border border-gray-200',
+            delay: 200
+        }
+    ], [analytics]);
+
+    // Memoized date range options
+    const dateRangeOptions = useMemo(() => [
+        { value: 'today', label: 'Today' },
+        { value: 'week', label: 'This Week' },
+        { value: 'month', label: 'This Month' },
+        { value: 'all', label: 'All Time' }
+    ], []);
+
+    // Handle date range change
+    const handleDateRangeChange = useCallback((value) => {
+        setDateRange(value);
+    }, []);
+
+    // Render key metric card
+    const renderMetricCard = useCallback(({ title, value, isNumber, prefix, icon, className, delay }) => (
+        <div className={className}>
+            <div className="flex items-center justify-between">
+                <div>
+                    <h3 className="text-sm font-medium text-gray-500 uppercase">{title}</h3>
+                    <p className="text-2xl font-bold text-other1 mt-2">
+                        {isNumber ? (
+                            <AnimatedNumber 
+                                value={value} 
+                                prefix={prefix}
+                                formatDecimals={title.includes('Avg') ? 2 : 0}
+                                delay={delay}
+                            />
+                        ) : value}
+                    </p>
+                    <div className="flex items-center mt-2 text-green-600">
+                        <MdTrendingUp className="h-4 w-4" />
+                        <span className="text-sm ml-1">+0%</span>
+                    </div>
+                </div>
+                {icon}
+            </div>
+        </div>
+    ), []);
+
+    // Memoized table columns configuration
+    const tableColumns = useMemo(() => [
+        { key: 'category', label: 'Category' },
+        { key: 'revenue', label: 'Revenue' },
+        { key: 'percentage', label: 'Percentage' }
+    ], []);
+
+    if (!analytics) {
+        return <div className="p-6 text-center">Loading analytics...</div>;
+    }
+
     return (
         <div className="p-6 space-y-6">
             {/* Header */}
             <div className="flex items-center justify-between">
-                <h1 className="text-3xl font-bold text-gray-800">Analytics & Reports</h1>
+                <h1 className="text-3xl font-bold text-other1">Analytics & Reports</h1>
                 <div className="flex items-center gap-4">
-                    <select
+                    <Select
+                        options={dateRangeOptions}
                         value={dateRange}
-                        onChange={(e) => setDateRange(e.target.value)}
-                        className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
-                    >
-                        <option value="today">Today</option>
-                        <option value="week">This Week</option>
-                        <option value="month">This Month</option>
-                        <option value="all">All Time</option>
-                    </select>
+                        onChange={handleDateRangeChange}
+                    />
                     <button className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2">
                         <FaDownload className="h-4 w-4" />
                         Export Report
@@ -322,109 +402,35 @@ export default function AdminAnalytics() {
 
             {/* Key Metrics */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="bg-white rounded-lg shadow-md p-6 border border-gray-200">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <h3 className="text-sm font-medium text-gray-500 uppercase">Total Revenue</h3>
-                            <p className="text-2xl font-bold text-gray-900 mt-2">
-                                LKR {analytics.revenue.total.toFixed(2)}
-                            </p>
-                            <div className="flex items-center mt-2 text-green-600">
-                                <MdTrendingUp className="h-4 w-4" />
-                                <span className="text-sm ml-1">+{analytics.revenue.trend}%</span>
-                            </div>
-                        </div>
-                        <MdMonetizationOn className="h-8 w-8 text-green-600" />
+                {keyMetrics.map(metric => (
+                    <div key={metric.id}>
+                        {renderMetricCard(metric)}
                     </div>
-                </div>
-
-                <div className="bg-white rounded-lg shadow-md p-6 border border-gray-200">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <h3 className="text-sm font-medium text-gray-500 uppercase">Total Orders</h3>
-                            <p className="text-2xl font-bold text-gray-900 mt-2">{analytics.orders.total}</p>
-                            <div className="flex items-center mt-2 text-blue-600">
-                                <MdTrendingUp className="h-4 w-4" />
-                                <span className="text-sm ml-1">+{analytics.orders.trend}%</span>
-                            </div>
-                        </div>
-                        <MdRestaurant className="h-8 w-8 text-blue-600" />
-                    </div>
-                </div>
-
-                <div className="bg-white rounded-lg shadow-md p-6 border border-gray-200">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <h3 className="text-sm font-medium text-gray-500 uppercase">Avg Order Value</h3>
-                            <p className="text-2xl font-bold text-gray-900 mt-2">
-                                LKR {analytics.avgOrderValue.value.toFixed(2)}
-                            </p>
-                            <div className="flex items-center mt-2 text-purple-600">
-                                <MdTrendingUp className="h-4 w-4" />
-                                <span className="text-sm ml-1">+{analytics.avgOrderValue.trend}%</span>
-                            </div>
-                        </div>
-                        <FaChartLine className="h-8 w-8 text-purple-600" />
-                    </div>
-                </div>
+                ))}
             </div>
 
-            {/* Charts Row 1 */}
+            {/* Analytics Content */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {dateRange === 'today' && analytics.revenueByHour.length > 0 && (
-                    <LineChart
-                        data={analytics.revenueByHour.filter(item => item.revenue > 0)}
-                        title="Revenue by Hour"
-                        xKey="hour"
-                        yKey="revenue"
-                    />
-                )}
+                {/* Simple chart placeholders for now */}
+                <div className="bg-white p-6 rounded-lg shadow-md border border-gray-200">
+                    <h3 className="text-lg font-semibold text-gray-800 mb-4">Revenue Trends</h3>
+                    <p className="text-gray-600">Chart coming soon...</p>
+                </div>
                 
-                {dateRange === 'week' && analytics.revenueByDay.length > 0 && (
-                    <BarChart
-                        data={analytics.revenueByDay}
-                        title="Revenue by Day"
-                        xKey="date"
-                        yKey="revenue"
-                        color="bg-green-500"
-                    />
-                )}
-
-                {analytics.categoryBreakdown.length > 0 && (
-                    <PieChart
-                        data={analytics.categoryBreakdown}
-                        title="Revenue by Category"
-                    />
-                )}
+                <div className="bg-white p-6 rounded-lg shadow-md border border-gray-200">
+                    <h3 className="text-lg font-semibold text-gray-800 mb-4">Top Items</h3>
+                    <div className="space-y-2">
+                        {analytics.topItems.slice(0, 5).map((item, index) => (
+                            <div key={index} className="flex justify-between items-center">
+                                <span className="text-sm text-gray-700">{item.name}</span>
+                                <span className="text-sm font-medium">{item.quantity} sold</span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
             </div>
 
-            {/* Charts Row 2 */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {analytics.topItems.length > 0 && (
-                    <BarChart
-                        data={analytics.topItems}
-                        title="Top Selling Items"
-                        xKey="name"
-                        yKey="quantity"
-                        color="bg-orange-500"
-                    />
-                )}
-
-                {analytics.topItems.length > 0 && (
-                    <BarChart
-                        data={analytics.topItems.map(item => ({
-                            ...item,
-                            revenueFormatted: item.revenue
-                        }))}
-                        title="Top Revenue Items"
-                        xKey="name"
-                        yKey="revenue"
-                        color="bg-purple-500"
-                    />
-                )}
-            </div>
-
-            {/* Summary Table */}
+            {/* Performance Summary Table */}
             <div className="bg-white rounded-lg shadow-md border border-gray-200 overflow-hidden">
                 <div className="px-6 py-4 border-b border-gray-200">
                     <h3 className="text-lg font-semibold text-gray-800">Performance Summary</h3>
@@ -433,43 +439,30 @@ export default function AdminAnalytics() {
                     <table className="w-full">
                         <thead className="bg-gray-50">
                             <tr>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Metric</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Value</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Trend</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                                {tableColumns.map(column => (
+                                    <th 
+                                        key={column.key}
+                                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                                    >
+                                        {column.label}
+                                    </th>
+                                ))}
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-gray-200">
-                            <tr>
-                                <td className="px-6 py-4 text-sm font-medium text-gray-900">Total Revenue</td>
-                                <td className="px-6 py-4 text-sm text-gray-900">LKR {analytics.revenue.total.toFixed(2)}</td>
-                                <td className="px-6 py-4 text-sm text-green-600">+{analytics.revenue.trend}%</td>
-                                <td className="px-6 py-4">
-                                    <span className="px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full">
-                                        Good
-                                    </span>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td className="px-6 py-4 text-sm font-medium text-gray-900">Total Orders</td>
-                                <td className="px-6 py-4 text-sm text-gray-900">{analytics.orders.total}</td>
-                                <td className="px-6 py-4 text-sm text-blue-600">+{analytics.orders.trend}%</td>
-                                <td className="px-6 py-4">
-                                    <span className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full">
-                                        Active
-                                    </span>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td className="px-6 py-4 text-sm font-medium text-gray-900">Average Order Value</td>
-                                <td className="px-6 py-4 text-sm text-gray-900">LKR {analytics.avgOrderValue.value.toFixed(2)}</td>
-                                <td className="px-6 py-4 text-sm text-purple-600">+{analytics.avgOrderValue.trend}%</td>
-                                <td className="px-6 py-4">
-                                    <span className="px-2 py-1 text-xs font-medium bg-purple-100 text-purple-800 rounded-full">
-                                        Stable
-                                    </span>
-                                </td>
-                            </tr>
+                        <tbody className="bg-white divide-y divide-gray-200">
+                            {analytics.categoryBreakdown.map((category, index) => (
+                                <tr key={index} className="hover:bg-gray-50 transition-colors">
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-other1">
+                                        {category.category}
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                        LKR {category.revenue.toFixed(2)}
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                        {category.percentage.toFixed(1)}%
+                                    </td>
+                                </tr>
+                            ))}
                         </tbody>
                     </table>
                 </div>

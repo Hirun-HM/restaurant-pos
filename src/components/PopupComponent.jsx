@@ -27,7 +27,7 @@ export default function PopupComponent({ isOpen, onClose, title, children }) {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             {/* Backdrop with blur effect */}
             <div 
-                className="absolute inset-0 bg-black bg-opacity-50 backdrop-blur-sm transition-opacity duration-300"
+                className="absolute inset-0 bg-other1 bg-opacity-50 backdrop-blur-sm transition-opacity duration-300"
                 onClick={onClose}
             />
             

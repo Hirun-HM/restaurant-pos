@@ -70,7 +70,7 @@ const MenuItem = memo(function MenuItem({item, onAddItem, selectedTable}) {
 
             {/* Liquor Portion Selection Modal */}
             {showPortionModal && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                <div className="fixed inset-0 bg-other1 bg-opacity-50 flex items-center justify-center z-50">
                     <div className="bg-white rounded-lg p-6 w-96 max-w-90vw">
                         <div className="flex justify-between items-center mb-4">
                             <h3 className="text-lg font-semibold">Select Portion - {item.name}</h3>

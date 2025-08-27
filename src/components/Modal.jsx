@@ -41,7 +41,7 @@ export default function Modal({ isOpen, onClose, title, children, size = 'md' })
         <div className="fixed inset-0 z-50 overflow-y-auto">
             {/* Backdrop */}
             <div 
-                className="fixed inset-0 bg-black bg-opacity-50 transition-opacity"
+                className="fixed inset-0 bg-other1 bg-opacity-50 transition-opacity"
                 onClick={onClose}
             />
             
@@ -54,7 +54,7 @@ export default function Modal({ isOpen, onClose, title, children, size = 'md' })
                 >
                     {/* Header */}
                     <div className="flex items-center justify-between p-6 border-b border-gray-200">
-                        <h2 className="text-xl font-semibold text-gray-900">
+                        <h2 className="text-xl font-semibold text-other1">
                             {title}
                         </h2>
                         <button

@@ -105,10 +105,10 @@ const OrderSummary = memo(function OrderSummary({
                     <p style="margin: 5px 0; font-size: 12px;">${formatBillDate(bill.createdAt)}</p>
                 </div>
                 
-                <div style="border-top: 2px solid #000; padding-top: 10px;">
+                <div style="border-top: 2px solid #003151; padding-top: 10px;">
                     <table style="width: 100%; border-collapse: collapse;">
                         <thead>
-                            <tr style="border-bottom: 1px solid #000;">
+                            <tr style="border-bottom: 1px solid #003151;">
                                 <th style="text-align: left; padding: 5px 0;">Item</th>
                                 <th style="text-align: center; padding: 5px 0;">Qty</th>
                                 <th style="text-align: right; padding: 5px 0;">Price</th>
@@ -130,7 +130,7 @@ const OrderSummary = memo(function OrderSummary({
                     </table>
                 </div>
                 
-                <div style="border-top: 2px solid #000; padding-top: 10px; margin-top: 15px;">
+                <div style="border-top: 2px solid #003151; padding-top: 10px; margin-top: 15px;">
                     <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
                         <span>Subtotal:</span>
                         <span>LKR ${billCalculations.subtotal.toFixed(2)}</span>
@@ -141,7 +141,7 @@ const OrderSummary = memo(function OrderSummary({
                             <span>LKR ${billCalculations.serviceCharge.toFixed(2)}</span>
                         </div>
                     ` : ''}
-                    <div style="display: flex; justify-content: space-between; font-weight: bold; font-size: 18px; border-top: 1px solid #000; padding-top: 5px;">
+                    <div style="display: flex; justify-content: space-between; font-weight: bold; font-size: 18px; border-top: 1px solid #003151; padding-top: 5px;">
                         <span>Total:</span>
                         <span>LKR ${billCalculations.total.toFixed(2)}</span>
                     </div>
@@ -278,7 +278,7 @@ const OrderSummary = memo(function OrderSummary({
                                     className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap ${
                                         selectedCategory === category
                                             ? 'bg-primaryColor text-white'
-                                            : 'bg-white text-black hover:bg-gray-100'
+                                            : 'bg-white text-other1 hover:bg-gray-100'
                                     }`}
                                 >
                                     {category}
