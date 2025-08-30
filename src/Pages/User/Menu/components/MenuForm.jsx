@@ -9,7 +9,6 @@ const categories = [
     { value: 'Liquor', label: 'Liquor' },
     { value: 'Cigarettes', label: 'Cigarettes' },
     { value: 'Bites', label: 'Bites' },
-    { value: 'Beverage', label: 'Beverage' },
     { value: 'Others', label: 'Others' }
 ];
 
@@ -18,7 +17,11 @@ export default memo(function MenuForm({ item, onSubmit, onCancel }) {
         name: item?.name || '',
         price: item?.price || '',
         category: item?.category || 'Foods',
-        description: item?.description || ''
+        description: item?.description || '',
+        volume: item?.volume || 750,
+        unitsPerPack: item?.unitsPerPack || 20,
+        portionTracking: item?.portionTracking || false,
+        stockId: item?.stockId || ''
     });
     
     const [errors, setErrors] = useState({});
@@ -40,13 +43,12 @@ export default memo(function MenuForm({ item, onSubmit, onCancel }) {
     
     const validateForm = useCallback(() => {
         const newErrors = {};
-        
+
+        // Validate required fields
         if (!formData.name.trim()) {
-            newErrors.name = 'Item name is required';
-        } else if (formData.name.trim().length < 2) {
-            newErrors.name = 'Item name must be at least 2 characters';
+            newErrors.name = 'Name is required';
         }
-        
+
         if (!formData.price) {
             newErrors.price = 'Price is required';
         } else if (isNaN(formData.price) || Number(formData.price) <= 0) {
@@ -56,13 +58,26 @@ export default memo(function MenuForm({ item, onSubmit, onCancel }) {
         if (!formData.category) {
             newErrors.category = 'Category is required';
         }
-        
+
         if (!formData.description.trim()) {
             newErrors.description = 'Description is required';
         } else if (formData.description.trim().length < 5) {
             newErrors.description = 'Description must be at least 5 characters';
         }
-        
+
+        // Category-specific validation
+        if (formData.category === 'Liquor') {
+            if (!formData.volume || formData.volume <= 0) {
+                newErrors.volume = 'Valid volume in milliliters is required';
+            }
+        }
+
+        if (formData.category === 'Cigarettes') {
+            if (!formData.unitsPerPack || formData.unitsPerPack <= 0) {
+                newErrors.unitsPerPack = 'Valid number of units per pack is required';
+            }
+        }
+
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
     }, [formData]);
@@ -152,6 +167,42 @@ export default memo(function MenuForm({ item, onSubmit, onCancel }) {
                         required
                     />
                 </div>
+
+                {/* Liquor-specific fields */}
+                {formData.category === 'Liquor' && (
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Volume (ml) <span className="text-red-500">*</span>
+                        </label>
+                        <InputField
+                            type="number"
+                            name="volume"
+                            value={formData.volume}
+                            onChange={(e) => handleInputChange('volume', e.target.value)}
+                            placeholder="Enter volume in ml"
+                            error={errors.volume}
+                            required
+                        />
+                    </div>
+                )}
+
+                {/* Cigarette-specific fields */}
+                {formData.category === 'Cigarettes' && (
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Units Per Pack <span className="text-red-500">*</span>
+                        </label>
+                        <InputField
+                            type="number"
+                            name="unitsPerPack"
+                            value={formData.unitsPerPack}
+                            onChange={(e) => handleInputChange('unitsPerPack', e.target.value)}
+                            placeholder="Enter units per pack"
+                            error={errors.unitsPerPack}
+                            required
+                        />
+                    </div>
+                )}
                 
                 {/* Description */}
                 <div>

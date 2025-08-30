@@ -36,9 +36,21 @@ const MenuItemCard = memo(function MenuItemCard({ item, onEdit, onDelete }) {
             <div className="flex justify-between items-start mb-3">
                 <div className="flex-1">
                     <h3 className="font-semibold text-other1 text-lg mb-1">{item.name}</h3>
-                    <span className={`inline-block px-2 py-1 rounded text-xs font-medium ${getCategoryColor(item.category)}`}>
-                        {item.category}
-                    </span>
+                    <div className="flex gap-2 flex-wrap">
+                        <span className={`inline-block px-2 py-1 rounded text-xs font-medium ${getCategoryColor(item.category)}`}>
+                            {item.category}
+                        </span>
+                        {item.category === 'Liquor' && (
+                            <span className="inline-block px-2 py-1 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                                {item.volume}ml
+                            </span>
+                        )}
+                        {item.category === 'Cigarettes' && (
+                            <span className="inline-block px-2 py-1 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                                {item.unitsPerPack} per pack
+                            </span>
+                        )}
+                    </div>
                 </div>
                 <div className="text-right">
                     <div className="text-lg font-bold text-primaryColor">
@@ -58,9 +70,9 @@ const MenuItemCard = memo(function MenuItemCard({ item, onEdit, onDelete }) {
                     <span>Item ID:</span>
                     <span>#{item.id}</span>
                 </div>
-                {item.category === 'Liquor' && !item.name.toLowerCase().includes('beer') && (
+                {(item.category === 'Liquor' || item.category === 'Cigarettes') && (
                     <div className="text-xs text-blue-600">
-                        ✨ Portion tracking available
+                        ✨ {item.category === 'Liquor' ? 'Portion' : 'Pack'} tracking enabled
                     </div>
                 )}
             </div>

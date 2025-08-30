@@ -1,10 +1,11 @@
-import React, { useState, useCallback, useMemo, memo } from 'react';
-import { PrimaryButton, SecondaryButton } from '../../../components/Button';
+import React, { useState, useCallback, useMemo, memo, useEffect } from 'react';
+import { PrimaryButton } from '../../../components/Button';
 import { FaPlus, FaEdit, FaTrash, FaSearch } from 'react-icons/fa';
-import MenuForm from './components/MenuForm';
-import MenuItemCard from './components/MenuItemCard';
+import MenuForm from './Components/MenuForm';
+import MenuItemCard from './Components/MenuItemCard';
 import Modal from '../../../components/Modal';
 import { InputField } from '../../../components/InputField';
+import { convertToStandardUnit } from '../../../const/const';
 
 // Initial menu items (this would come from a database in a real app)
 const initialMenuItems = [
@@ -18,10 +19,82 @@ const initialMenuItems = [
     { id: 10, name: 'Noodles', price: 420, category: 'Foods', description: 'Stir-fried noodles with vegetables' },
     
     // Liquor
-    { id: 11, name: 'Beer', price: 350, category: 'Liquor', description: 'Chilled beer bottle', portionTracking: true },
-    { id: 12, name: 'Whiskey', price: 1200, category: 'Liquor', description: 'Premium whiskey bottle', portionTracking: true },
-    { id: 13, name: 'Vodka', price: 1000, category: 'Liquor', description: 'Premium vodka bottle', portionTracking: true },
-    { id: 14, name: 'Arrack', price: 800, category: 'Liquor', description: 'Local arrack bottle', portionTracking: true },
+    { 
+        id: 11, 
+        name: 'Beer', 
+        price: 350, 
+        category: 'Liquor', 
+        description: 'Chilled beer bottle', 
+        portionTracking: true,
+        volume: 330,
+        volumeUnit: 'ml',
+        stockId: 'beer_stock'
+    },
+    { 
+        id: 12, 
+        name: 'Whiskey', 
+        price: 1200, 
+        category: 'Liquor', 
+        description: 'Premium whiskey bottle', 
+        portionTracking: true,
+        volume: 750,
+        volumeUnit: 'ml',
+        stockId: 'whiskey_stock'
+    },
+    { 
+        id: 13, 
+        name: 'Vodka', 
+        price: 1000, 
+        category: 'Liquor', 
+        description: 'Premium vodka bottle', 
+        portionTracking: true,
+        volume: 750,
+        volumeUnit: 'ml',
+        stockId: 'vodka_stock'
+    },
+    { 
+        id: 14, 
+        name: 'Arrack', 
+        price: 800, 
+        category: 'Liquor', 
+        description: 'Local arrack bottle', 
+        portionTracking: true,
+        volume: 750,
+        volumeUnit: 'ml',
+        stockId: 'arrack_stock'
+    },
+
+    // Cigarettes
+    {
+        id: 15,
+        name: 'Dunhill Blue',
+        price: 850,
+        category: 'Cigarettes',
+        description: 'Dunhill Blue cigarettes',
+        portionTracking: true,
+        unitsPerPack: 20,
+        stockId: 'dunhill_blue_stock'
+    },
+    {
+        id: 16,
+        name: 'Marlboro Red',
+        price: 950,
+        category: 'Cigarettes',
+        description: 'Marlboro Red cigarettes',
+        portionTracking: true,
+        unitsPerPack: 20,
+        stockId: 'marlboro_red_stock'
+    },
+    {
+        id: 17,
+        name: 'Gold Leaf',
+        price: 750,
+        category: 'Cigarettes',
+        description: 'Gold Leaf cigarettes',
+        portionTracking: true,
+        unitsPerPack: 20,
+        stockId: 'gold_leaf_stock'
+    },
     
     // Bites
     { id: 18, name: 'Chicken Wings', price: 280, category: 'Bites', description: 'Crispy chicken wings' },
@@ -42,22 +115,27 @@ const initialMenuItems = [
 ];
 
 // Allowed categories for Menu Manager
-const ALLOWED_CATEGORIES = ['Foods', 'Liquor', 'Bites', 'Others'];
+const ALLOWED_CATEGORIES = ['Foods', 'Liquor', 'Cigarettes', 'Bites', 'Others'];
 
 export default memo(function MenuManager() {
     // Memoize initial menu items to prevent recreation
     const initialMenuData = useMemo(() => {
         const saved = localStorage.getItem('restaurant-menu-items');
         if (saved) {
-            const parsedData = JSON.parse(saved);
-            // Filter only allowed categories and migrate old categories
-            const filteredData = parsedData
-                .map(item => ({
-                    ...item,
-                    category: item.category === 'Sandy' ? 'Beverage' : item.category
-                }))
-                .filter(item => ALLOWED_CATEGORIES.includes(item.category));
-            return filteredData;
+            try {
+                const parsedData = JSON.parse(saved);
+                // Filter only allowed categories and migrate old categories
+                const filteredData = parsedData
+                    .map(item => ({
+                        ...item,
+                        category: item.category === 'Sandy' ? 'Beverage' : item.category
+                    }))
+                    .filter(item => ALLOWED_CATEGORIES.includes(item.category));
+                return filteredData;
+            } catch (error) {
+                console.error('Error parsing menu items:', error);
+                return initialMenuItems.filter(item => ALLOWED_CATEGORIES.includes(item.category));
+            }
         }
         return initialMenuItems.filter(item => ALLOWED_CATEGORIES.includes(item.category));
     }, []);
@@ -70,20 +148,16 @@ export default memo(function MenuManager() {
     
     // One-time migration effect to update localStorage with filtered data
     React.useEffect(() => {
-        const saved = localStorage.getItem('restaurant-menu-items');
-        if (saved) {
-            const parsedData = JSON.parse(saved);
-            // Filter and migrate data to only include allowed categories
-            const filteredData = parsedData
-                .map(item => ({
-                    ...item,
-                    category: item.category === 'Sandy' ? 'Beverage' : item.category
-                }))
-                .filter(item => ALLOWED_CATEGORIES.includes(item.category));
-            
-            // Update localStorage with filtered data and set state
-            localStorage.setItem('restaurant-menu-items', JSON.stringify(filteredData));
-            setMenuItems(filteredData);
+        try {
+            // Clear all menu-related data and initialize with default items
+            localStorage.clear();
+            localStorage.setItem('restaurant-menu-items', JSON.stringify(initialMenuItems));
+            setMenuItems(initialMenuItems);
+
+        } catch (error) {
+            console.error('Error initializing menu data:', error);
+            // Fallback to default items if localStorage fails
+            setMenuItems(initialMenuItems);
         }
     }, []); // Run only once on mount
     
@@ -92,14 +166,10 @@ export default memo(function MenuManager() {
         localStorage.setItem('restaurant-menu-items', JSON.stringify(menuItems));
     }, [menuItems]);
     
-    // Memoize categories (only show allowed categories)
+    // Memoize categories (show all allowed categories)
     const categories = useMemo(() => {
-        const itemCategories = menuItems.map(item => item.category);
-        const availableCategories = ALLOWED_CATEGORIES.filter(category => 
-            itemCategories.includes(category)
-        );
-        return ['All', ...availableCategories];
-    }, [menuItems]);
+        return ['All', ...ALLOWED_CATEGORIES];
+    }, []);
     
     // Memoize filtered items
     const filteredItems = useMemo(() => {
@@ -183,16 +253,98 @@ export default memo(function MenuManager() {
             return;
         }
 
+        // Process form data based on category
+        let processedData = { ...formData };
+
+        // Get stock items once for both Liquor and Cigarettes
+        const stockKey = localStorage.getItem('restaurant-stock-items');
+        const stockItems = stockKey ? JSON.parse(stockKey) : [];
+
+        // Handle Liquor items
+        if (formData.category === 'Liquor') {
+            processedData = {
+                ...processedData,
+                portionTracking: true,
+                volume: formData.volume || 750, // Default to 750ml if not specified
+                volumeUnit: 'ml',
+                stockId: formData.name.toLowerCase().replace(/\s+/g, '_') + '_stock'
+            };
+
+            // Create or update corresponding stock item if it doesn't exist
+            const stockExists = stockItems.some(item => item.id === processedData.stockId);
+            
+            if (!stockExists) {
+                // Add new stock item for liquor
+                const newStockItem = {
+                    id: processedData.stockId,
+                    name: formData.name,
+                    category: formData.category,
+                    quantity: 0, // Initial stock
+                    unit: 'ml',
+                    price: formData.price,
+                    volume: processedData.volume
+                };
+                localStorage.setItem('restaurant-stock-items', 
+                    JSON.stringify([...stockItems, newStockItem]));
+            }
+        } 
+        // Handle Cigarette items
+        else if (formData.category === 'Cigarettes') {
+            processedData = {
+                ...processedData,
+                portionTracking: true,
+                unitsPerPack: formData.unitsPerPack || 20, // Default to 20 cigarettes per pack
+                stockId: formData.name.toLowerCase().replace(/\s+/g, '_') + '_stock'
+            };
+
+            // Create or update corresponding stock item if it doesn't exist
+            const stockExists = stockItems.some(item => item.id === processedData.stockId);
+
+            if (!stockExists) {
+                // Add new stock item based on category
+                const newStockItem = {
+                    id: processedData.stockId,
+                    name: formData.name,
+                    category: formData.category,
+                    quantity: 0, // Initial stock
+                    unit: formData.category === 'Liquor' ? 'ml' : 'packs',
+                    price: formData.price,
+                    ...(formData.category === 'Cigarettes' && {
+                        unitsPerPack: processedData.unitsPerPack
+                    })
+                };
+                localStorage.setItem('restaurant-stock-items', 
+                    JSON.stringify([...stockItems, newStockItem]));
+            }
+        }
+
         if (editingItem) {
             // Update existing item
             setMenuItems(prev => prev.map(item => 
-                item.id === editingItem.id ? { ...formData, id: editingItem.id } : item
+                item.id === editingItem.id 
+                    ? { ...processedData, id: editingItem.id } 
+                    : item
             ));
+
+            // If this is a liquor item, update the stock item name if it changed
+            if (processedData.category === 'Liquor' && editingItem.name !== processedData.name) {
+                const stockKey = localStorage.getItem('restaurant-stock-items');
+                if (stockKey) {
+                    const stockItems = JSON.parse(stockKey);
+                    const updatedStockItems = stockItems.map(item => 
+                        item.id === editingItem.stockId 
+                            ? { ...item, name: processedData.name }
+                            : item
+                    );
+                    localStorage.setItem('restaurant-stock-items', JSON.stringify(updatedStockItems));
+                }
+            }
         } else {
             // Add new item
-            const newId = Math.max(...menuItems.map(item => item.id)) + 1;
-            setMenuItems(prev => [...prev, { ...formData, id: newId }]);
+            const newId = Math.max(...menuItems.map(item => item.id), 0) + 1;
+            setMenuItems(prev => [...prev, { ...processedData, id: newId }]);
         }
+
         setShowForm(false);
         setEditingItem(null);
     }, [editingItem, menuItems]);
