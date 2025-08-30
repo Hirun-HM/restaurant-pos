@@ -3,10 +3,11 @@ import { PrimaryButton, SecondaryButton } from '../../../components/Button';
 import { FaPlus, FaEdit, FaTrash, FaSearch } from 'react-icons/fa';
 import MenuForm from './components/MenuForm';
 import MenuItemCard from './components/MenuItemCard';
-import Modal, { ConfirmModal } from '../../../components/Modal';
+import Modal from '../../../components/Modal';
 import { InputField } from '../../../components/InputField';
 
 // Initial menu items (this would come from a database in a real app)
+// Only Foods, Bites, and Others categories are allowed in Menu Manager
 const initialMenuItems = [
     // Foods
     { id: 1, name: 'Chicken Rice', price: 450, category: 'Foods', description: 'Delicious chicken rice with spices' },
@@ -17,17 +18,6 @@ const initialMenuItems = [
     { id: 9, name: 'Chicken Curry', price: 550, category: 'Foods', description: 'Spicy chicken curry with rice' },
     { id: 10, name: 'Noodles', price: 420, category: 'Foods', description: 'Stir-fried noodles with vegetables' },
     
-    // Liquor
-    { id: 11, name: 'Beer', price: 350, category: 'Liquor', description: 'Chilled beer bottle' },
-    { id: 12, name: 'Whiskey', price: 1200, category: 'Liquor', description: 'Premium whiskey bottle' },
-    { id: 13, name: 'Vodka', price: 1000, category: 'Liquor', description: 'Premium vodka bottle' },
-    { id: 14, name: 'Arrack', price: 800, category: 'Liquor', description: 'Local arrack bottle' },
-    
-    // Cigarettes
-    { id: 15, name: 'Dunhill Blue', price: 850, category: 'Cigarettes', description: 'Dunhill Blue cigarettes pack' },
-    { id: 16, name: 'John Player Gold Leaf', price: 920, category: 'Cigarettes', description: 'John Player Gold Leaf pack' },
-    { id: 17, name: 'Marlboro', price: 950, category: 'Cigarettes', description: 'Marlboro cigarettes pack' },
-    
     // Bites
     { id: 18, name: 'Chicken Wings', price: 280, category: 'Bites', description: 'Crispy chicken wings' },
     { id: 19, name: 'Fish Cutlets', price: 150, category: 'Bites', description: 'Fried fish cutlets' },
@@ -35,20 +25,19 @@ const initialMenuItems = [
     { id: 21, name: 'Prawn Crackers', price: 180, category: 'Bites', description: 'Crispy prawn crackers' },
     { id: 22, name: 'Vadai', price: 120, category: 'Bites', description: 'Traditional vadai snack' },
     
-    // Beverage
-    { id: 23, name: 'Chicken Sandwich', price: 250, category: 'Beverage', description: 'Grilled chicken sandwich' },
-    { id: 24, name: 'Club Sandwich', price: 350, category: 'Beverage', description: 'Multi-layer club sandwich' },
-    { id: 25, name: 'Fish Sandwich', price: 280, category: 'Beverage', description: 'Fresh fish sandwich' },
-    { id: 26, name: 'Egg Sandwich', price: 180, category: 'Beverage', description: 'Boiled egg sandwich' },
-    
-    // Others
+    // Others (beverages, desserts, and refreshments only)
     { id: 4, name: 'Coca Cola', price: 120, category: 'Others', description: 'Chilled Coca Cola' },
     { id: 5, name: 'Orange Juice', price: 150, category: 'Others', description: 'Fresh orange juice' },
     { id: 8, name: 'Ice Cream', price: 200, category: 'Others', description: 'Vanilla ice cream' },
     { id: 27, name: 'Coffee', price: 100, category: 'Others', description: 'Hot coffee' },
     { id: 28, name: 'Tea', price: 80, category: 'Others', description: 'Ceylon tea' },
-    { id: 29, name: 'Fresh Lime', price: 120, category: 'Others', description: 'Fresh lime juice' }
+    { id: 29, name: 'Fresh Lime', price: 120, category: 'Others', description: 'Fresh lime juice' },
+    { id: 30, name: 'Ice Cubes', price: 50, category: 'Others', description: 'Fresh ice cubes' },
+    { id: 31, name: 'Water Bottle', price: 80, category: 'Others', description: 'Pure drinking water' }
 ];
+
+// Allowed categories for Menu Manager
+const ALLOWED_CATEGORIES = ['Foods', 'Bites', 'Others'];
 
 export default memo(function MenuManager() {
     // Memoize initial menu items to prevent recreation
@@ -56,14 +45,16 @@ export default memo(function MenuManager() {
         const saved = localStorage.getItem('restaurant-menu-items');
         if (saved) {
             const parsedData = JSON.parse(saved);
-            // Migrate old "Sandy" categories to "Beverage"
-            const migratedData = parsedData.map(item => ({
-                ...item,
-                category: item.category === 'Sandy' ? 'Beverage' : item.category
-            }));
-            return migratedData;
+            // Filter only allowed categories and migrate old categories
+            const filteredData = parsedData
+                .map(item => ({
+                    ...item,
+                    category: item.category === 'Sandy' ? 'Beverage' : item.category
+                }))
+                .filter(item => ALLOWED_CATEGORIES.includes(item.category));
+            return filteredData;
         }
-        return initialMenuItems;
+        return initialMenuItems.filter(item => ALLOWED_CATEGORIES.includes(item.category));
     }, []);
 
     const [menuItems, setMenuItems] = useState(initialMenuData);
@@ -71,22 +62,23 @@ export default memo(function MenuManager() {
     const [editingItem, setEditingItem] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedCategory, setSelectedCategory] = useState('All');
-    const [deleteConfirm, setDeleteConfirm] = useState({ show: false, itemId: null, itemName: '' });
     
-    // One-time migration effect to update localStorage with migrated data
+    // One-time migration effect to update localStorage with filtered data
     React.useEffect(() => {
         const saved = localStorage.getItem('restaurant-menu-items');
         if (saved) {
             const parsedData = JSON.parse(saved);
-            const hasOldSandyCategory = parsedData.some(item => item.category === 'Sandy');
-            if (hasOldSandyCategory) {
-                const migratedData = parsedData.map(item => ({
+            // Filter and migrate data to only include allowed categories
+            const filteredData = parsedData
+                .map(item => ({
                     ...item,
                     category: item.category === 'Sandy' ? 'Beverage' : item.category
-                }));
-                localStorage.setItem('restaurant-menu-items', JSON.stringify(migratedData));
-                setMenuItems(migratedData);
-            }
+                }))
+                .filter(item => ALLOWED_CATEGORIES.includes(item.category));
+            
+            // Update localStorage with filtered data and set state
+            localStorage.setItem('restaurant-menu-items', JSON.stringify(filteredData));
+            setMenuItems(filteredData);
         }
     }, []); // Run only once on mount
     
@@ -95,9 +87,13 @@ export default memo(function MenuManager() {
         localStorage.setItem('restaurant-menu-items', JSON.stringify(menuItems));
     }, [menuItems]);
     
-    // Memoize categories
+    // Memoize categories (only show allowed categories)
     const categories = useMemo(() => {
-        return ['All', ...new Set(menuItems.map(item => item.category))];
+        const itemCategories = menuItems.map(item => item.category);
+        const availableCategories = ALLOWED_CATEGORIES.filter(category => 
+            itemCategories.includes(category)
+        );
+        return ['All', ...availableCategories];
     }, [menuItems]);
     
     // Memoize filtered items
@@ -147,27 +143,8 @@ export default memo(function MenuManager() {
     }, []);
     
     const handleDeleteItem = useCallback((itemId) => {
-        const item = menuItems.find(item => item.id === itemId);
-        setDeleteConfirm({ 
-            show: true, 
-            itemId: itemId, 
-            itemName: item?.name || 'this item' 
-        });
-    }, [menuItems]);
-    
-    const confirmDelete = useCallback(() => {
-        if (deleteConfirm.itemId) {
-            setMenuItems(prev => prev.filter(item => item.id !== deleteConfirm.itemId));
-        }
-        setDeleteConfirm({ show: false, itemId: null, itemName: '' });
-    }, [deleteConfirm.itemId]);
-    
-    const cancelDelete = useCallback(() => {
-        setDeleteConfirm({ show: false, itemId: null, itemName: '' });
+        setMenuItems(prev => prev.filter(item => item.id !== itemId));
     }, []);
-
-    // Memoize delete confirmation state to prevent object recreation
-    const deleteConfirmState = useMemo(() => deleteConfirm, [deleteConfirm]);
 
     // Memoize empty state component
     const emptyState = useMemo(() => (
@@ -195,6 +172,12 @@ export default memo(function MenuManager() {
     ), [filteredItems, handleEditItem, handleDeleteItem]);
     
     const handleFormSubmit = useCallback((formData) => {
+        // Ensure only allowed categories can be added
+        if (!ALLOWED_CATEGORIES.includes(formData.category)) {
+            console.warn(`Category "${formData.category}" is not allowed in Menu Manager`);
+            return;
+        }
+
         if (editingItem) {
             // Update existing item
             setMenuItems(prev => prev.map(item => 
@@ -269,18 +252,6 @@ export default memo(function MenuManager() {
                     onCancel={handleFormCancel}
                 />
             </Modal>
-            
-            {/* Delete Confirmation Modal */}
-            <ConfirmModal
-                isOpen={deleteConfirmState.show}
-                onClose={cancelDelete}
-                onConfirm={confirmDelete}
-                title="Delete Menu Item"
-                message={`Are you sure you want to delete "${deleteConfirmState.itemName}"? This action cannot be undone.`}
-                confirmText="Delete"
-                cancelText="Cancel"
-                confirmButtonClass="bg-red-500 hover:bg-red-600"
-            />
         </div>
     );
 });

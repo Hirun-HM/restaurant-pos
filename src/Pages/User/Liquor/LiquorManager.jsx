@@ -103,9 +103,7 @@ export default function LiquorManager() {
 
     // Memoized callback for deleting item
     const handleDeleteItem = useCallback((itemId) => {
-        if (window.confirm('Are you sure you want to delete this item?')) {
-            setLiquorItems(prev => prev.filter(item => item.id !== itemId));
-        }
+        setLiquorItems(prev => prev.filter(item => item.id !== itemId));
     }, []);
 
     // Memoized callback for canceling edit

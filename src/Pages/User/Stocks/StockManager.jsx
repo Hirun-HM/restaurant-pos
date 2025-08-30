@@ -48,9 +48,7 @@ export default function StockManager() {
     };
 
     const handleDeleteItem = (itemId) => {
-        if (window.confirm('Are you sure you want to delete this item?')) {
-            setStockItems(stockItems.filter(item => item.id !== itemId));
-        }
+        setStockItems(stockItems.filter(item => item.id !== itemId));
     };
 
     const handleCancelEdit = () => {

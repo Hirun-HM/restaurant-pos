@@ -8,9 +8,9 @@ import { FaSignOutAlt } from "react-icons/fa";
 
 const items = [
     { icon: MdOutlineTableRestaurant, title: 'Table'},
-    { icon: MdInventory, title: 'Stocks'},
-    { icon: MdLocalBar, title: 'Liquor'},
     { icon: MdRestaurantMenu, title: 'Menu'},
+    { icon: MdLocalBar, title: 'Liquor'},
+    { icon: MdInventory, title: 'Stocks'},
 ]
 export default function Header({ active, setActive}) {    
     const navigate = useNavigate();

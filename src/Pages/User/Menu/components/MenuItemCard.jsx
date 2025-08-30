@@ -1,8 +1,23 @@
-import React, { memo } from 'react';
+import React, { memo, useState } from 'react';
 import { PrimaryButton, SecondaryButton } from '../../../../components/Button';
 import { FaEdit, FaTrash } from 'react-icons/fa';
 
 const MenuItemCard = memo(function MenuItemCard({ item, onEdit, onDelete }) {
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+
+    const handleDeleteClick = () => {
+        setShowDeleteModal(true);
+    };
+
+    const handleConfirmDelete = () => {
+        onDelete(item.id);
+        setShowDeleteModal(false);
+    };
+
+    const handleCancelDelete = () => {
+        setShowDeleteModal(false);
+    };
+
     const getCategoryColor = (category) => {
         const colors = {
             'Foods': 'bg-green-100 text-green-800',
@@ -60,13 +75,41 @@ const MenuItemCard = memo(function MenuItemCard({ item, onEdit, onDelete }) {
                     Edit
                 </PrimaryButton>
                 <SecondaryButton
-                    onClick={() => onDelete(item.id)}
+                    onClick={handleDeleteClick}
                     className="flex-1 flex items-center justify-center gap-2 text-sm py-2 bg-red-50 text-red-600 border-red-200 hover:bg-red-100"
                 >
                     <FaTrash size={12} />
                     Delete
                 </SecondaryButton>
             </div>
+
+            {/* Delete Confirmation Modal */}
+            {showDeleteModal && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                    <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4 shadow-xl">
+                        <div className="mb-4">
+                            <h3 className="text-lg font-semibold text-other1 mb-2">Confirm Delete</h3>
+                            <p className="text-text">
+                                Are you sure you want to delete <strong>{item.name}</strong>? 
+                                This action cannot be undone.
+                            </p>
+                        </div>
+                        
+                        <div className="flex gap-3 justify-end">
+                            <SecondaryButton type="button" onClick={handleCancelDelete}>
+                                Cancel
+                            </SecondaryButton>
+                            <PrimaryButton 
+                                type="button" 
+                                onClick={handleConfirmDelete}
+                                className="bg-red-600 hover:bg-red-700 text-white"
+                            >
+                                Delete
+                            </PrimaryButton>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 });
