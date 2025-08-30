@@ -4,10 +4,10 @@ import LiquorItemCard from './components/LiquorItemCard';
 
 export default function LiquorManager() {
     const [liquorItems, setLiquorItems] = useState([
-        { id: 1, name: 'Budweiser', category: 'beer', quantity: 48, unit: 'bottle', pricePerUnit: 3.50 },
-        { id: 2, name: 'Corona Extra', category: 'beer', quantity: 24, unit: 'bottle', pricePerUnit: 4.25 },
-        { id: 3, name: 'Jack Daniels', category: 'hard_liquor', quantity: 6, unit: 'bottle', pricePerUnit: 45.99 },
-        { id: 4, name: 'Johnnie Walker Black', category: 'hard_liquor', quantity: 3, unit: 'bottle', pricePerUnit: 65.00 },
+        { id: 1, name: 'Budweiser', category: 'beer', quantity: 48, unit: 'bottle', pricePerUnit: 3.50, volume: 330, volumeUnit: 'ml' },
+        { id: 2, name: 'Corona Extra', category: 'beer', quantity: 24, unit: 'bottle', pricePerUnit: 4.25, volume: 355, volumeUnit: 'ml' },
+        { id: 3, name: 'Jack Daniels', category: 'hard_liquor', quantity: 6, unit: 'bottle', pricePerUnit: 45.99, volume: 750, volumeUnit: 'ml' },
+        { id: 4, name: 'Johnnie Walker Black', category: 'hard_liquor', quantity: 3, unit: 'bottle', pricePerUnit: 65.00, volume: 750, volumeUnit: 'ml' },
         { id: 6, name: 'John Player Gold Leaf (12)', category: 'cigarette', cigaretteType: 'john_player_gold_leaf_12', quantity: 15, unit: 'pack', pricePerUnit: 920.00 },
         { id: 7, name: 'John Player Gold Leaf (20)', category: 'cigarette', cigaretteType: 'john_player_gold_leaf_20', quantity: 0, unit: 'pack', pricePerUnit: 900.00 }
     ]);
@@ -77,14 +77,28 @@ export default function LiquorManager() {
                 cigaretteType: formData.cigaretteType,
                 quantity: formData.quantity,
                 unit: formData.unit,
-                pricePerUnit: formData.pricePerUnit
+                pricePerUnit: formData.pricePerUnit,
+                // Add volume info for liquor items only
+                ...(formData.category !== 'cigarette' && {
+                    volume: formData.volume || 0,
+                    volumeUnit: formData.volumeUnit || 'ml'
+                })
             };
             setLiquorItems(prev => [...prev, newItem]);
         } else {
             // Update existing item
             setLiquorItems(prev => prev.map(item => 
                 item.id === formData.id 
-                    ? { ...item, quantity: item.quantity + formData.quantity, pricePerUnit: formData.pricePerUnit }
+                    ? { 
+                        ...item, 
+                        quantity: item.quantity + formData.quantity, 
+                        pricePerUnit: formData.pricePerUnit,
+                        // Update volume if it's a liquor item
+                        ...(item.category !== 'cigarette' && {
+                            volume: formData.volume || item.volume,
+                            volumeUnit: formData.volumeUnit || item.volumeUnit
+                        })
+                    }
                     : item
             ));
         }

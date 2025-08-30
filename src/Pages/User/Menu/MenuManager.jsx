@@ -7,7 +7,6 @@ import Modal from '../../../components/Modal';
 import { InputField } from '../../../components/InputField';
 
 // Initial menu items (this would come from a database in a real app)
-// Only Foods, Bites, and Others categories are allowed in Menu Manager
 const initialMenuItems = [
     // Foods
     { id: 1, name: 'Chicken Rice', price: 450, category: 'Foods', description: 'Delicious chicken rice with spices' },
@@ -17,6 +16,12 @@ const initialMenuItems = [
     { id: 7, name: 'Vegetable Curry', price: 350, category: 'Foods', description: 'Mixed vegetable curry' },
     { id: 9, name: 'Chicken Curry', price: 550, category: 'Foods', description: 'Spicy chicken curry with rice' },
     { id: 10, name: 'Noodles', price: 420, category: 'Foods', description: 'Stir-fried noodles with vegetables' },
+    
+    // Liquor
+    { id: 11, name: 'Beer', price: 350, category: 'Liquor', description: 'Chilled beer bottle', portionTracking: true },
+    { id: 12, name: 'Whiskey', price: 1200, category: 'Liquor', description: 'Premium whiskey bottle', portionTracking: true },
+    { id: 13, name: 'Vodka', price: 1000, category: 'Liquor', description: 'Premium vodka bottle', portionTracking: true },
+    { id: 14, name: 'Arrack', price: 800, category: 'Liquor', description: 'Local arrack bottle', portionTracking: true },
     
     // Bites
     { id: 18, name: 'Chicken Wings', price: 280, category: 'Bites', description: 'Crispy chicken wings' },
@@ -37,7 +42,7 @@ const initialMenuItems = [
 ];
 
 // Allowed categories for Menu Manager
-const ALLOWED_CATEGORIES = ['Foods', 'Bites', 'Others'];
+const ALLOWED_CATEGORIES = ['Foods', 'Liquor', 'Bites', 'Others'];
 
 export default memo(function MenuManager() {
     // Memoize initial menu items to prevent recreation

@@ -27,6 +27,8 @@ const units = [
     { value: 'case', label: 'Cases' }
 ];
 
+
+
 export default function LiquorForm({ 
     existingItems = [], 
     editingItem = null, 
@@ -41,7 +43,8 @@ export default function LiquorForm({
         cigaretteType: '', // for cigarettes only
         quantity: '',
         unit: '',
-        pricePerUnit: ''
+        pricePerUnit: '',
+        volume: '' // for liquor items (always in ml)
     });
 
     const [errors, setErrors] = useState({});
@@ -72,6 +75,7 @@ export default function LiquorForm({
             { value: '', label: 'Select unit' },
             ...units
         ],
+
         existingItems: [
             { value: '', label: 'Choose an existing item' },
             ...existingItemOptions
@@ -111,7 +115,9 @@ export default function LiquorForm({
             cigaretteType: item.cigaretteType || '',
             quantity: '', // Always start with empty quantity for updates
             unit: item.unit || '',
-            pricePerUnit: item.pricePerUnit ? item.pricePerUnit.toString() : ''
+            pricePerUnit: item.pricePerUnit ? item.pricePerUnit.toString() : '',
+            volume: item.volume ? item.volume.toString() : '',
+            volumeUnit: item.volumeUnit || 'ml'
         });
         clearErrors();
     }, [clearErrors]);
@@ -166,7 +172,8 @@ export default function LiquorForm({
         cigaretteType: (e) => updateFormData({ cigaretteType: e.target.value }),
         quantity: (e) => updateFormData({ quantity: e.target.value }),
         unit: (e) => updateFormData({ unit: e.target.value }),
-        pricePerUnit: (e) => updateFormData({ pricePerUnit: e.target.value })
+        pricePerUnit: (e) => updateFormData({ pricePerUnit: e.target.value }),
+        volume: (e) => updateFormData({ volume: e.target.value })
     }), [updateFormData]);
 
     // Memoized form submission handler
@@ -184,7 +191,10 @@ export default function LiquorForm({
                 cigaretteType: formData.category === 'cigarette' ? formData.cigaretteType : '',
                 quantity: parseInt(formData.quantity) || 0,
                 unit: formData.unit,
-                pricePerUnit: parseFloat(formData.pricePerUnit) || 0
+                pricePerUnit: parseFloat(formData.pricePerUnit) || 0,
+                ...(formData.category === 'liquor' && {
+                    volume: parseInt(formData.volume) || 0
+                })
             };
 
             onSubmit(submissionData);
@@ -328,6 +338,22 @@ export default function LiquorForm({
                         error={errors.pricePerUnit}
                     />
                 </div>
+
+                {/* Volume Field - Only show for liquor items */}
+                {formData.category !== 'cigarette' && (
+                    <div className="w-full md:w-1/3 mt-4">
+                        <InputField
+                            label="Bottle Volume (ml)"
+                            type="number"
+                            value={formData.volume}
+                            onChange={formHandlers.volume}
+                            placeholder="Enter volume in milliliters"
+                            min="1"
+                            required
+                            error={errors.volume}
+                        />
+                    </div>
+                )}
 
                 {/* Action Buttons */}
                 <div className="flex gap-3 pt-4">

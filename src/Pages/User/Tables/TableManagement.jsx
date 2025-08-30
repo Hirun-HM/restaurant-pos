@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import TableCard from './Components/TableCard';
 import OrderSummary from './Components/OrderSummary';
 import ConfirmationModal from '../../../components/ConfirmationModal';
+import { sriLankanDishes } from '../../../const/const';
 
 export default function TableManagement({tableList = []}) {
     const navigate = useNavigate();

@@ -34,6 +34,12 @@ export default function LiquorItemCard({ item, onEdit, onDelete }) {
                     <span className="text-sm text-text">Quantity:</span>
                     <span className="font-medium">{item.quantity} {item.unit}</span>
                 </div>
+                {item.category !== 'cigarette' && (
+                    <div className="flex justify-between">
+                        <span className="text-sm text-text">Volume:</span>
+                        <span className="font-medium">{item.volume} {item.volumeUnit}</span>
+                    </div>
+                )}
                 <div className="flex justify-between">
                     <span className="text-sm text-text">Price per Unit:</span>
                     <span className="font-medium">LKR {item.pricePerUnit}</span>
