@@ -19,8 +19,10 @@ export const validateStockItem = [
         .trim()
         .notEmpty()
         .withMessage('Stock item name is required')
-        .isLength({ min: 1, max: 100 })
-        .withMessage('Name must be between 1 and 100 characters'),
+        .isLength({ min: 2, max: 50 })
+        .withMessage('Name must be between 2 and 50 characters')
+        .matches(/^[a-zA-Z0-9\s\-&]+$/)
+        .withMessage('Name can only contain letters, numbers, spaces, hyphens, and ampersands'),
     
     body('category')
         .isIn(['ingredients', 'food', 'drinks', 'supplies'])
