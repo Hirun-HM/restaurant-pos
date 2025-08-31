@@ -151,7 +151,7 @@ export default function LiquorPortionManager({
                       <div className="flex-1">
                         <div className="font-medium text-gray-900">{portion.name}</div>
                         <div className="text-sm text-gray-600">
-                          {portion.volume}ml - ${portion.price?.toFixed(2)}
+                          {portion.volume}ml - LKR {portion.price?.toFixed(2)}
                         </div>
                       </div>
                       <div className="flex gap-2">

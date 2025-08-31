@@ -258,7 +258,7 @@ export default function LiquorForm({ item, onSubmit, onCancel }) {
           </SelectField>
 
           <InputField
-            label="Price per Bottle (Rs.)"
+            label="Price per Bottle (LKR)"
             id="pricePerBottle"
             type="number"
             step="0.01"
@@ -352,7 +352,7 @@ export default function LiquorForm({ item, onSubmit, onCancel }) {
                   </div>
                   <div className="flex-1">
                     <InputField
-                      label={index === 0 ? "Price (Rs.)" : ""}
+                      label={index === 0 ? "Price (LKR)" : ""}
                       type="number"
                       step="0.01"
                       min="0"

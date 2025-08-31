@@ -333,7 +333,7 @@ export default function LiquorForm({ item, onSubmit, onCancel }) {
                     </div>
                     <div className="flex-1">
                       <InputField
-                        label={index === 0 ? "Price (Rs.)" : ""}
+                        label={index === 0 ? "Price (LKR)" : ""}
                         type="number"
                         step="0.01"
                         min="0"

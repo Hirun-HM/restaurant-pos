@@ -354,7 +354,7 @@ export default function LiquorManagerWithAPI() {
                     <div key={index} className="bg-gray-50 p-3 rounded border text-sm">
                       <div className="flex justify-between items-center">
                         <span className="font-medium">{sale.liquorName} - {sale.portionName}</span>
-                        <span className="text-green-600">Rs. {sale.totalPrice.toFixed(2)}</span>
+                        <span className="text-green-600">LKR {sale.totalPrice.toFixed(2)}</span>
                       </div>
                       <div className="text-gray-600 text-xs mt-1">
                         Qty: {sale.quantity} | Consumed: {sale.totalConsumed}ml

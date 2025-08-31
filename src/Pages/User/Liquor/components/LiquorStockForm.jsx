@@ -298,7 +298,7 @@ export default function LiquorStockForm({ item, onSubmit, onCancel }) {
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <InputField
-                label={`Price per ${isCigarettes() ? 'Pack' : 'Bottle'} (Rs.)`}
+                label={`Price per ${isCigarettes() ? 'Pack' : 'Bottle'} (LKR)`}
                 id="pricePerBottle"
                 type="number"
                 step="0.01"

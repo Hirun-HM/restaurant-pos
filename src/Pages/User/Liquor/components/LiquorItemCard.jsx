@@ -121,7 +121,7 @@ export default function LiquorItemCard({
               {item.portions.slice(0, 3).map((portion, index) => (
                 <div key={portion._id || index} className="flex justify-between text-xs">
                   <span className="text-gray-600">{portion.name} ({portion.volume}ml)</span>
-                  <span className="font-medium text-gray-900">${portion.price?.toFixed(2)}</span>
+                  <span className="font-medium text-gray-900">LKR {portion.price?.toFixed(2)}</span>
                 </div>
               ))}
               {item.portions.length > 3 && (

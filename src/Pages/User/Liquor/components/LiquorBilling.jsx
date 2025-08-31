@@ -149,7 +149,7 @@ const LiquorBilling = ({ isOpen, onClose, onSaleComplete }) => {
 
     return liquorData.portions.map(portion => ({
       value: portion._id,
-      label: `${portion.name} (${portion.volume}ml) - Rs. ${portion.price.toFixed(2)}`
+      label: `${portion.name} (${portion.volume}ml) - LKR ${portion.price.toFixed(2)}`
     }));
   };
 
@@ -211,7 +211,7 @@ const LiquorBilling = ({ isOpen, onClose, onSaleComplete }) => {
           >
             {liquorItems.map(item => (
               <option key={item._id} value={item._id}>
-                {item.name} - {item.brand} ({item.bottlesInStock} bottles) - Rs. {item.pricePerBottle.toFixed(2)}
+                {item.name} - {item.brand} ({item.bottlesInStock} bottles) - LKR {item.pricePerBottle.toFixed(2)}
                 {item.bottlesInStock <= item.minimumBottles && ' ⚠️ Low Stock'}
               </option>
             ))}
@@ -279,7 +279,7 @@ const LiquorBilling = ({ isOpen, onClose, onSaleComplete }) => {
               <h3 className="font-medium text-blue-800">Sale Summary</h3>
             </div>
             <div className="text-sm text-blue-700">
-              <p><strong>Total: Rs. {calculateTotal().toFixed(2)}</strong></p>
+              <p><strong>Total: LKR {calculateTotal().toFixed(2)}</strong></p>
             </div>
           </div>
         )}
