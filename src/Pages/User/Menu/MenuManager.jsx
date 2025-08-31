@@ -447,7 +447,7 @@ export default memo(function MenuManager() {
                         </div>
                         
                         {/* Items Grid */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 pb-6">
+                        <div className="grid grid-cols-1 md:grid-cols-3  gap-6 pb-6">
                             {filteredItems.map(item => {
                                 // Use different components based on item type
                                 if (item.isFromAPI && item.category === 'Liquor') {

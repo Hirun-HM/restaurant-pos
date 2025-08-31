@@ -7,8 +7,10 @@ import LiquorService from '../../../../services/liquorService';
 
 export default function LiquorMenuCard({ liquorItem, onUpdatePortions, onEdit, onDelete }) {
   const [editingPortions, setEditingPortions] = useState(false);
+  const [editingBeerPrice, setEditingBeerPrice] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState('');
+  const [beerPrice, setBeerPrice] = useState(liquorItem.pricePerBottle || 0);
 
   // Memoize initial portion prices
   const initialPortionPrices = useMemo(() => {
@@ -92,6 +94,25 @@ export default function LiquorMenuCard({ liquorItem, onUpdatePortions, onEdit, o
     }
   }, [liquorItem._id, liquorItem.portions, portionPrices, onUpdatePortions]);
 
+  const handleSaveBeerPrice = useCallback(async () => {
+    setSaving(true);
+    setSaveMessage('');
+    
+    try {
+      await LiquorService.updateLiquorPrice(liquorItem._id, { pricePerBottle: beerPrice });
+      setSaveMessage('Price saved successfully!');
+      setEditingBeerPrice(false);
+      onUpdatePortions?.(liquorItem._id);
+      setTimeout(() => setSaveMessage(''), 3000);
+    } catch (error) {
+      console.error('Error saving beer price:', error);
+      setSaveMessage('Error saving price. Please try again.');
+      setTimeout(() => setSaveMessage(''), 5000);
+    } finally {
+      setSaving(false);
+    }
+  }, [liquorItem._id, beerPrice, onUpdatePortions]);
+
   const handleCancelEdit = useCallback(() => {
     setPortionPrices(initialPortionPrices);
     setEditingPortions(false);
@@ -99,7 +120,7 @@ export default function LiquorMenuCard({ liquorItem, onUpdatePortions, onEdit, o
   }, [initialPortionPrices]);
 
   return (
-    <div className="bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-shadow min-h-[24rem] flex flex-col">
+    <div className="w-full bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-shadow min-h-[24rem] flex flex-col">
       {/* Header */}
       <div className="p-4 border-b border-gray-100">
         <div className="flex items-start justify-between">
@@ -244,11 +265,80 @@ export default function LiquorMenuCard({ liquorItem, onUpdatePortions, onEdit, o
               </div>
             ))}
           </div>
+        ) : liquorItem.type === 'beer' ? (
+          <div className="bg-gray-50 rounded-lg p-4">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <span className="text-sm font-medium text-gray-700">Beer Price</span>
+                <p className="text-sm text-gray-600">Price per bottle</p>
+              </div>
+              {!editingBeerPrice && (
+                <PrimaryButton
+                  onClick={() => setEditingBeerPrice(true)}
+                  className="text-sm px-3 py-1 flex items-center"
+                >
+                  <FaEdit className="mr-1" />
+                  Edit Price
+                </PrimaryButton>
+              )}
+            </div>
+
+            {editingBeerPrice ? (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between bg-white rounded-lg p-3 border">
+                  <span className="text-sm font-medium text-gray-700">Bottle Price</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-gray-600">LKR</span>
+                    <InputField
+                      type="number"
+                      value={beerPrice}
+                      onChange={(e) => setBeerPrice(parseFloat(e.target.value) || 0)}
+                      className="w-24 text-right"
+                      placeholder="0.00"
+                      min="0"
+                      step="0.01"
+                    />
+                  </div>
+                </div>
+                
+                <div className="flex items-center justify-end gap-2 mt-4">
+                  <SecondaryButton
+                    onClick={() => {
+                      setBeerPrice(liquorItem.pricePerBottle || 0);
+                      setEditingBeerPrice(false);
+                    }}
+                    disabled={saving}
+                    className="px-4 py-2 flex items-center"
+                  >
+                    <FaTimes className="mr-1" />
+                    Cancel
+                  </SecondaryButton>
+                  <PrimaryButton
+                    onClick={handleSaveBeerPrice}
+                    disabled={saving}
+                    className="px-4 py-2 flex items-center"
+                  >
+                    <FaSave className="mr-1" />
+                    {saving ? 'Saving...' : 'Save Price'}
+                  </PrimaryButton>
+                </div>
+              </div>
+            ) : (
+              <div className="bg-white rounded-lg p-3 border">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-700">Bottle Price</span>
+                  <span className="text-sm font-semibold text-green-600">
+                    LKR {beerPrice.toFixed(2)}
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
         ) : (
           <div className="mt-auto">
             <div className="bg-gray-50 rounded-lg p-4 text-center">
               <span className="text-sm text-gray-600">
-                {liquorItem.type === 'beer' || liquorItem.type === 'wine' ? (
+                {liquorItem.type === 'wine' ? (
                   'Sold as whole bottles only'
                 ) : liquorItem.type === 'cigarettes' ? (
                   'Sold as whole packs only'
@@ -262,7 +352,7 @@ export default function LiquorMenuCard({ liquorItem, onUpdatePortions, onEdit, o
       </div>
 
       {/* Footer */}
-      <div className="p-4 border-t border-gray-100 mt-auto bg-gray-50">
+      {/* <div className="p-4 border-t border-gray-100 mt-auto bg-gray-50">
         <div className="flex justify-between items-center">
           <span className="text-sm text-gray-600">
             Last updated: {new Date(liquorItem.updatedAt).toLocaleDateString()}
@@ -270,13 +360,13 @@ export default function LiquorMenuCard({ liquorItem, onUpdatePortions, onEdit, o
           <div className="flex items-center gap-2">
             <SecondaryButton
               onClick={() => onEdit?.(liquorItem)}
-              className="px-3 py-1"
+              className="px-3 py-1 text-primaryColor hover:text-white"
             >
-              <FaEdit className="text-blue-600" />
+              <FaEdit className="" />
             </SecondaryButton>
           </div>
         </div>
-      </div>
+      </div> */}
     </div>
   );
 }
