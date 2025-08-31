@@ -5,13 +5,15 @@ const stockSchema = new mongoose.Schema({
         type: String,
         required: [true, 'Stock item name is required'],
         trim: true,
-        maxlength: [100, 'Name cannot exceed 100 characters']
+        maxlength: [100, 'Name cannot exceed 100 characters'],
+        unique: true
     },
     category: {
         type: String,
         required: [true, 'Category is required'],
         enum: ['ingredients', 'food', 'drinks', 'supplies'],
-        lowercase: true
+        lowercase: true,
+        index: true
     },
     quantity: {
         type: Number,
