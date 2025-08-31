@@ -5,7 +5,7 @@ import Header from './components/Header';
 import TableCard from './Tables/Components/TableCard';
 import TableManagement from './Tables/TableManagement';
 import StockManager from './Stocks/StockManager';
-import LiquorManager from './Liquor/LiquorManager';
+import LiquorManagerWithAPI from './Liquor/LiquorManagerWithAPI';
 import MenuManager from './Menu/MenuManager';
 
 const tableList = [
@@ -45,7 +45,7 @@ export default function UserDashboard() {
             }
             {
                 active === 'Liquor' && (
-                    <LiquorManager/>
+                    <LiquorManagerWithAPI/>
                 )
             }
             {

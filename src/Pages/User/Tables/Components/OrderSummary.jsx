@@ -1,8 +1,11 @@
-import React, { useState, useCallback, useMemo, memo } from 'react';
+import React, { useState, useCallback, useMemo, memo, useEffect } from 'react';
+import PropTypes from 'prop-types';
 import { PrimaryButton, SecondaryButton } from '../../../../components/Button';
 import { FaPlus, FaMinus, FaTrash, FaReceipt } from 'react-icons/fa';
 import MenuItem from './MenuItem';
 import ConfirmationModal from '../../../../components/ConfirmationModal';
+import { useLiquor } from '../../../../hooks/useLiquor';
+import { stockConsumptionService } from '../../../../services/stockConsumptionService';
 
 const OrderSummary = memo(function OrderSummary({
     selectedTable,
@@ -17,18 +20,105 @@ const OrderSummary = memo(function OrderSummary({
 }) {
     const [selectedCategory, setSelectedCategory] = useState('All');
     const [showPaymentModal, setShowPaymentModal] = useState(false);
+    const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+    const [paymentResult, setPaymentResult] = useState(null);
+    
+    // Use the custom liquor hook
+    const { 
+        liquorItems, 
+        loading: isLoadingLiquor, 
+        error: liquorError, 
+        fetchLiquorItems 
+    } = useLiquor();
+
+    // Fetch liquor items from database
+    useEffect(() => {
+        fetchLiquorItems();
+    }, [fetchLiquorItems]);
+
+    // Debug logging
+    useEffect(() => {
+        console.log('OrderSummary - Liquor data:', {
+            liquorItems: liquorItems.length,
+            loading: isLoadingLiquor,
+            error: liquorError
+        });
+    }, [liquorItems, isLoadingLiquor, liquorError]);
+
+    // Transform liquor items to match our menu item format
+    const transformedLiquorItems = useMemo(() => {
+        return liquorItems.map(item => {
+            let category;
+            switch (item.type) {
+                case 'hard_liquor':
+                    category = 'Hard Liquor';
+                    break;
+                case 'beer':
+                    category = 'Beer';
+                    break;
+                case 'wine':
+                    category = 'Wine';
+                    break;
+                case 'cigarettes':
+                    category = 'Cigarettes';
+                    break;
+                default:
+                    category = 'Other';
+            }
+
+            return {
+                id: item._id,
+                name: item.name,
+                brand: item.brand,
+                price: item.pricePerBottle || 0,
+                category: category,
+                type: item.type,
+                bottleVolume: item.bottleVolume,
+                portions: item.portions || [],
+                alcoholPercentage: item.alcoholPercentage,
+                stock: {
+                    bottlesInStock: item.bottlesInStock || 0,
+                    millilitersRemaining: item.totalVolumeRemaining || item.currentBottleVolume || 0
+                }
+            };
+        });
+    }, [liquorItems]);
+
+    // Combine menu items (food, etc.) with liquor items from database
+    const allMenuItems = useMemo(() => {
+        // Filter out old liquor items from localStorage to avoid duplicates
+        const nonLiquorMenuItems = menuItems.filter(item => 
+            item.category !== 'Liquor' && item.category !== 'Cigarettes'
+        );
+        return [...nonLiquorMenuItems, ...transformedLiquorItems];
+    }, [menuItems, transformedLiquorItems]);
 
     // Memoize categories to prevent recalculation on every render
     const categories = useMemo(() => {
-        return ['All', ...new Set(menuItems.map(item => item.category))];
-    }, [menuItems]);
+        const allCategories = ['All', ...new Set(allMenuItems.map(item => item.category))];
+        // Ensure liquor categories are in a specific order
+        const orderedCategories = ['All'];
+        const liquorCategories = ['Hard Liquor', 'Beer', 'Wine', 'Cigarettes'];
+        const otherCategories = allCategories.filter(cat => 
+            cat !== 'All' && !liquorCategories.includes(cat)
+        );
+        
+        liquorCategories.forEach(cat => {
+            if (allCategories.includes(cat)) {
+                orderedCategories.push(cat);
+            }
+        });
+        
+        orderedCategories.push(...otherCategories);
+        return orderedCategories;
+    }, [allMenuItems]);
 
     // Memoize filtered menu items
     const filteredMenuItems = useMemo(() => {
         return selectedCategory === 'All' 
-            ? menuItems 
-            : menuItems.filter(item => item.category === selectedCategory);
-    }, [selectedCategory, menuItems]);
+            ? allMenuItems 
+            : allMenuItems.filter(item => item.category === selectedCategory);
+    }, [selectedCategory, allMenuItems]);
 
     // Callback for category selection
     const handleCategorySelect = useCallback((category) => {
@@ -247,11 +337,39 @@ const OrderSummary = memo(function OrderSummary({
         setShowPaymentModal(true);
     }, []);
 
-    const confirmPayment = useCallback(() => {
-        if (selectedTable) {
-            handleCloseBill();
+    // Callback for payment completion
+    const confirmPayment = useCallback(async () => {
+        if (selectedTable && bill) {
+            setIsProcessingPayment(true);
+            try {
+                // Process stock consumption for liquor items
+                const billData = {
+                    billId: bill.id,
+                    tableNumber: selectedTable.tableNumber,
+                    items: bill.items,
+                    total: billCalculations.total,
+                    serviceCharge: bill.serviceCharge
+                };
+                
+                const result = await stockConsumptionService.processBillPayment(billData);
+                setPaymentResult(result);
+                
+                // Show success message and close bill
+                console.log('Stock consumption processed:', result);
+                handleCloseBill();
+                
+                // Refresh liquor items to show updated stock
+                fetchLiquorItems();
+                
+            } catch (error) {
+                console.error('Error processing payment:', error);
+                alert('Error processing payment and updating stock. Please try again.');
+            } finally {
+                setIsProcessingPayment(false);
+            }
         }
-    }, [selectedTable, handleCloseBill]);
+        setShowPaymentModal(false);
+    }, [selectedTable, bill, billCalculations, handleCloseBill, fetchLiquorItems]);
 
     const cancelPayment = useCallback(() => {
         setShowPaymentModal(false);
@@ -348,16 +466,43 @@ const OrderSummary = memo(function OrderSummary({
 
                         {/* Menu Items Grid */}
                         <div className="flex-1 overflow-y-auto">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                {filteredMenuItems.map(item => (
-                                    <MenuItem 
-                                        key={item.id}
-                                        item={item} 
-                                        onAddItem={onAddItem} 
-                                        selectedTable={selectedTable}
-                                    />
-                                ))}
-                            </div>
+                            {isLoadingLiquor ? (
+                                <div className="flex items-center justify-center h-32">
+                                    <div className="text-center">
+                                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primaryColor mx-auto"></div>
+                                        <p className="text-sm text-gray-600 mt-2">Loading liquor items...</p>
+                                    </div>
+                                </div>
+                            ) : liquorError ? (
+                                <div className="flex items-center justify-center h-32">
+                                    <div className="text-center">
+                                        <p className="text-sm text-red-600">{liquorError}</p>
+                                        <button 
+                                            onClick={() => window.location.reload()}
+                                            className="text-xs text-blue-600 hover:underline mt-1"
+                                        >
+                                            Try Again
+                                        </button>
+                                    </div>
+                                </div>
+                            ) : filteredMenuItems.length === 0 ? (
+                                <div className="flex items-center justify-center h-32">
+                                    <div className="text-center">
+                                        <p className="text-sm text-gray-600">No items found in this category</p>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                    {filteredMenuItems.map(item => (
+                                        <MenuItem 
+                                            key={item.id}
+                                            item={item} 
+                                            onAddItem={onAddItem} 
+                                            selectedTable={selectedTable}
+                                        />
+                                    ))}
+                                </div>
+                            )}
                         </div>
                     </div>
 
@@ -480,5 +625,18 @@ const OrderSummary = memo(function OrderSummary({
         </div>
     );
 });
+
+// PropTypes validation
+OrderSummary.propTypes = {
+    selectedTable: PropTypes.object,
+    bill: PropTypes.object,
+    menuItems: PropTypes.array.isRequired,
+    onCreateBill: PropTypes.func.isRequired,
+    onAddItem: PropTypes.func.isRequired,
+    onRemoveItem: PropTypes.func.isRequired,
+    onUpdateQuantity: PropTypes.func.isRequired,
+    onToggleServiceCharge: PropTypes.func.isRequired,
+    onCloseBill: PropTypes.func.isRequired
+};
 
 export default OrderSummary;

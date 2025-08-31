@@ -32,16 +32,7 @@ export default function TableManagement({tableList = []}) {
             { id: 9, name: 'Chicken Curry', price: 550, category: 'Foods' },
             { id: 10, name: 'Noodles', price: 420, category: 'Foods' },
             
-            // Liquor
-            { id: 11, name: 'Beer', price: 350, category: 'Liquor' },
-            { id: 12, name: 'Whiskey', price: 1200, category: 'Liquor' },
-            { id: 13, name: 'Vodka', price: 1000, category: 'Liquor' },
-            { id: 14, name: 'Arrack', price: 800, category: 'Liquor' },
-            
-            // Cigarettes
-            { id: 15, name: 'Dunhill Blue', price: 850, category: 'Cigarettes' },
-            { id: 16, name: 'John Player Gold Leaf', price: 920, category: 'Cigarettes' },
-            { id: 17, name: 'Marlboro', price: 950, category: 'Cigarettes' },
+
             
             // Bites
             { id: 18, name: 'Chicken Wings', price: 280, category: 'Bites' },

@@ -72,7 +72,7 @@ export default function LiquorForm({ item, onSubmit, onCancel }) {
         portions: item.portions || []
       });
     } else {
-      const initialPortions = generateStandardPortions(750);
+      const initialPortions = generateStandardPortions(750); // Default to 750ml
       setFormData({
         mode: 'new',
         name: '',
@@ -130,40 +130,35 @@ export default function LiquorForm({ item, onSubmit, onCancel }) {
       newErrors.alcoholPercentage = 'Alcohol percentage must be between 0 and 100';
     }
 
-    // For non-beer items, validate portion prices
-    if (formData.type !== 'beer') {
-      const invalidPortions = formData.portions.filter(portion => 
-        !portion.price || parseFloat(portion.price) <= 0
-      );
-      if (invalidPortions.length > 0) {
-        newErrors.portions = 'All portion prices must be greater than 0';
-      }
+    // For non-beer items, portions are required
+    if (formData.type !== 'beer' && (!formData.portions || formData.portions.length === 0)) {
+      newErrors.portions = 'At least one portion is required for liquor items (except beer)';
     }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleInputChange = (field, value) => {
+  const handleInputChange = (name, value) => {
     setFormData(prev => ({
       ...prev,
-      [field]: value
+      [name]: value
     }));
-    
-    // Clear error when user starts typing
-    if (errors[field]) {
+
+    // Clear error for this field
+    if (errors[name]) {
       setErrors(prev => ({
         ...prev,
-        [field]: ''
+        [name]: ''
       }));
     }
   };
 
-  const handlePortionPriceChange = (index, price) => {
+  const handlePortionChange = (index, field, value) => {
     const newPortions = [...formData.portions];
     newPortions[index] = {
       ...newPortions[index],
-      price: parseFloat(price) || 0
+      [field]: value
     };
     setFormData(prev => ({
       ...prev,
@@ -186,152 +181,136 @@ export default function LiquorForm({ item, onSubmit, onCancel }) {
         bottlesInStock: parseInt(formData.bottlesInStock),
         minimumBottles: parseInt(formData.minimumBottles),
         alcoholPercentage: formData.alcoholPercentage ? parseFloat(formData.alcoholPercentage) : undefined,
-        portions: formData.type === 'beer' ? [] : formData.portions.map(portion => ({
+        portions: formData.portions.map(portion => ({
           ...portion,
+          volume: parseFloat(portion.volume),
           price: parseFloat(portion.price)
         }))
       };
 
-      // Remove empty optional fields
-      if (!submitData.supplier) delete submitData.supplier;
-      if (!submitData.description) delete submitData.description;
-      if (!submitData.alcoholPercentage) delete submitData.alcoholPercentage;
-
       await onSubmit(submitData);
     } catch (error) {
-      console.error('Error submitting form:', error);
-      setErrors({ submit: 'Failed to save liquor item. Please try again.' });
+      console.error('Form submission error:', error);
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <Modal isOpen={true} onClose={onCancel} title={item ? "Edit Liquor Item" : "Add New Liquor Item"}>
+    <Modal
+      isOpen={true}
+      onClose={onCancel}
+      title={item ? 'Edit Liquor Item' : 'Add New Liquor Item'}
+      size="large"
+    >
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Basic Information */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <InputField
-            label="Liquor Name"
-            id="name"
+            label="Name *"
+            name="name"
             value={formData.name}
             onChange={(e) => handleInputChange('name', e.target.value)}
-            placeholder="e.g., Jack Daniels"
             error={errors.name}
-            required
+            placeholder="Enter liquor name"
           />
 
           <InputField
-            label="Brand"
-            id="brand"
+            label="Brand *"
+            name="brand"
             value={formData.brand}
             onChange={(e) => handleInputChange('brand', e.target.value)}
-            placeholder="e.g., Jack Daniels"
             error={errors.brand}
-            required
+            placeholder="Enter brand name"
           />
 
           <SelectField
-            label="Liquor Type"
-            id="type"
+            label="Type *"
+            name="type"
             value={formData.type}
-            onChange={(value) => handleInputChange('type', value)}
+            onChange={(e) => handleInputChange('type', e.target.value)}
+            options={LIQUOR_TYPES}
             error={errors.type}
-            required
-          >
-            {LIQUOR_TYPES.map(type => (
-              <option key={type.value} value={type.value}>{type.label}</option>
-            ))}
-          </SelectField>
+          />
 
           <SelectField
-            label="Bottle Volume"
-            id="bottleVolume"
+            label="Bottle Volume *"
+            name="bottleVolume"
             value={formData.bottleVolume}
-            onChange={(value) => handleInputChange('bottleVolume', parseInt(value))}
+            onChange={(e) => handleInputChange('bottleVolume', parseInt(e.target.value))}
+            options={BOTTLE_VOLUMES}
             error={errors.bottleVolume}
-            required
-          >
-            {BOTTLE_VOLUMES.map(vol => (
-              <option key={vol.value} value={vol.value}>{vol.label}</option>
-            ))}
-          </SelectField>
+          />
 
           <InputField
-            label="Price per Bottle (Rs.)"
-            id="pricePerBottle"
+            label="Price per Bottle *"
+            name="pricePerBottle"
             type="number"
             step="0.01"
             min="0"
             value={formData.pricePerBottle}
             onChange={(e) => handleInputChange('pricePerBottle', e.target.value)}
-            placeholder="45.99"
             error={errors.pricePerBottle}
-            required
+            placeholder="0.00"
           />
 
           <InputField
             label="Bottles in Stock"
-            id="bottlesInStock"
+            name="bottlesInStock"
             type="number"
             min="0"
             value={formData.bottlesInStock}
             onChange={(e) => handleInputChange('bottlesInStock', parseInt(e.target.value) || 0)}
             error={errors.bottlesInStock}
-            required
+            placeholder="0"
           />
 
           <InputField
-            label="Minimum Bottles"
-            id="minimumBottles"
+            label="Minimum Stock Level"
+            name="minimumBottles"
             type="number"
             min="0"
             value={formData.minimumBottles}
             onChange={(e) => handleInputChange('minimumBottles', parseInt(e.target.value) || 0)}
             error={errors.minimumBottles}
-            required
+            placeholder="2"
           />
 
           <InputField
             label="Alcohol Percentage"
-            id="alcoholPercentage"
+            name="alcoholPercentage"
             type="number"
             step="0.1"
             min="0"
             max="100"
             value={formData.alcoholPercentage}
             onChange={(e) => handleInputChange('alcoholPercentage', e.target.value)}
-            placeholder="40"
             error={errors.alcoholPercentage}
+            placeholder="40.0"
           />
-        </div>
 
-        {/* Optional Fields */}
-        <div className="space-y-4">
           <InputField
-            label="Supplier (Optional)"
-            id="supplier"
+            label="Supplier"
+            name="supplier"
             value={formData.supplier}
             onChange={(e) => handleInputChange('supplier', e.target.value)}
-            placeholder="Supplier name"
+            error={errors.supplier}
+            placeholder="Enter supplier name"
           />
-
-          <div>
-            <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
-              Description (Optional)
-            </label>
-            <textarea
-              id="description"
-              rows={3}
-              value={formData.description}
-              onChange={(e) => handleInputChange('description', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              placeholder="Additional details about this liquor..."
-            />
-          </div>
         </div>
 
-        {/* Standard Portions Section */}
+        <InputField
+          label="Description"
+          name="description"
+          type="textarea"
+          value={formData.description}
+          onChange={(e) => handleInputChange('description', e.target.value)}
+          error={errors.description}
+          placeholder="Enter description (optional)"
+          rows={3}
+        />
+
+        {/* Portions Section */}
         {formData.type !== 'beer' && (
           <div className="border-t pt-6">
             <div className="mb-4">
@@ -344,34 +323,39 @@ export default function LiquorForm({ item, onSubmit, onCancel }) {
             )}
 
             <div className="space-y-3">
-              {formData.portions.map((portion, index) => (
-                <div key={index} className="flex gap-3 items-center bg-gray-50 p-3 rounded-lg">
-                  <div className="flex-1">
-                    <div className="font-medium text-gray-700">{portion.name}</div>
-                    <div className="text-sm text-gray-500">{portion.volume}ml</div>
+              {formData.portions.map((portion, index) => {
+                const portionKey = portion._id || `portion-${index}`;
+                return (
+                  <div key={portionKey} className="flex gap-3 items-center bg-gray-50 p-3 rounded-lg">
+                    <div className="flex-1">
+                      <div className="font-medium text-gray-700">{portion.name}</div>
+                      <div className="text-sm text-gray-500">{portion.volume}ml</div>
+                    </div>
+                    <div className="flex-1">
+                      <InputField
+                        label={index === 0 ? "Price (Rs.)" : ""}
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        placeholder="0.00"
+                        value={portion.price || ''}
+                        onChange={(e) => handlePortionChange(index, 'price', parseFloat(e.target.value) || 0)}
+                        className="mb-0"
+                        required
+                      />
+                    </div>
                   </div>
-                  <div className="flex-1">
-                    <InputField
-                      label={index === 0 ? "Price (Rs.)" : ""}
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      placeholder="0.00"
-                      value={portion.price || ''}
-                      onChange={(e) => handlePortionPriceChange(index, e.target.value)}
-                      className="mb-0"
-                      required
-                    />
-                  </div>
+                );
+              })}
+            </div>
+
+            {formData.portions.length === 0 && (
+                <div className="text-center py-6 border-2 border-dashed border-gray-300 rounded-lg">
+                  <p className="text-gray-500">No portions added yet. Click "Add Portion" to get started.</p>
                 </div>
-              ))}
+              )}
             </div>
           </div>
-        )}
-
-        {/* Submit Error */}
-        {errors.submit && (
-          <div className="text-red-600 text-sm">{errors.submit}</div>
         )}
 
         {/* Form Actions */}
@@ -399,5 +383,5 @@ export default function LiquorForm({ item, onSubmit, onCancel }) {
 LiquorForm.propTypes = {
   item: PropTypes.object,
   onSubmit: PropTypes.func.isRequired,
-  onCancel: PropTypes.func.isRequired,
+  onCancel: PropTypes.func.isRequired
 };

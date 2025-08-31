@@ -49,3 +49,6 @@ export const SecondaryButton = ({
         </button>
     );
 };
+
+// Default export as PrimaryButton for backward compatibility
+export default PrimaryButton;

@@ -25,13 +25,13 @@ const MenuItemCard = memo(function MenuItemCard({ item, onEdit, onDelete }) {
             'Cigarettes': 'bg-gray-100 text-gray-800',
             'Bites': 'bg-orange-100 text-orange-800',
             'Beverage': 'bg-yellow-100 text-yellow-800',
-            'Others': 'bg-blue-100 text-blue-800'
+            'Others': 'bg-yellow-100 text-yellow-800'
         };
         return colors[category] || 'bg-gray-100 text-gray-800';
     };
 
     return (
-        <div className="bg-white rounded-lg border border-gray-200 p-4 hover:shadow-md transition-shadow">
+        <div className="bg-white rounded-lg border border-gray-200 p-4 hover:shadow-md transition-shadow h-fit">
             {/* Item Header */}
             <div className="flex justify-between items-start mb-3">
                 <div className="flex-1">
@@ -41,12 +41,12 @@ const MenuItemCard = memo(function MenuItemCard({ item, onEdit, onDelete }) {
                             {item.category}
                         </span>
                         {item.category === 'Liquor' && (
-                            <span className="inline-block px-2 py-1 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                            <span className="inline-block px-2 py-1 rounded text-xs font-medium bg-yellow-100 text-yellow-800">
                                 {item.volume}ml
                             </span>
                         )}
                         {item.category === 'Cigarettes' && (
-                            <span className="inline-block px-2 py-1 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                            <span className="inline-block px-2 py-1 rounded text-xs font-medium bg-yellow-100 text-yellow-800">
                                 {item.unitsPerPack} per pack
                             </span>
                         )}
@@ -66,34 +66,41 @@ const MenuItemCard = memo(function MenuItemCard({ item, onEdit, onDelete }) {
             
             {/* Item Details */}
             <div className="mb-4 space-y-1">
-                <div className="flex justify-between text-xs text-gray-500">
-                    <span>Item ID:</span>
-                    <span>#{item.id}</span>
-                </div>
                 {(item.category === 'Liquor' || item.category === 'Cigarettes') && (
-                    <div className="text-xs text-blue-600">
+                    <div className="text-xs text-yellow-600 bg-yellow-50 rounded px-2 py-1 inline-flex items-center gap-1">
                         ✨ {item.category === 'Liquor' ? 'Portion' : 'Pack'} tracking enabled
                     </div>
                 )}
             </div>
             
-            {/* Action Buttons */}
-            <div className="flex gap-2">
-                <PrimaryButton
-                    onClick={() => onEdit(item)}
-                    className="flex-1 flex items-center justify-center gap-2 text-sm py-2"
-                >
-                    <FaEdit size={12} />
-                    Edit
-                </PrimaryButton>
-                <SecondaryButton
-                    onClick={handleDeleteClick}
-                    className="flex-1 flex items-center justify-center gap-2 text-sm py-2 bg-red-50 text-red-600 border-red-200 hover:bg-red-100"
-                >
-                    <FaTrash size={12} />
-                    Delete
-                </SecondaryButton>
-            </div>
+            {/* Action Buttons - Hide for Cigarettes */}
+            {item.category !== 'Cigarettes' && (
+                <div className="flex gap-2">
+                    <PrimaryButton
+                        onClick={() => onEdit(item)}
+                        className="flex-1 flex items-center justify-center gap-2 text-sm py-2"
+                    >
+                        <FaEdit size={12} />
+                        Edit
+                    </PrimaryButton>
+                    <SecondaryButton
+                        onClick={handleDeleteClick}
+                        className="flex-1 flex items-center justify-center gap-2 text-sm py-2 bg-red-50 text-red-600 border-red-200 hover:bg-red-100"
+                    >
+                        <FaTrash size={12} />
+                        Delete
+                    </SecondaryButton>
+                </div>
+            )}
+            
+            {/* Info message for Cigarettes */}
+            {item.category === 'Cigarettes' && (
+                <div className="text-center py-2">
+                    <p className="text-xs text-gray-500">
+                        Cigarette items are managed through Stock Management
+                    </p>
+                </div>
+            )}
 
             {/* Delete Confirmation Modal */}
             {showDeleteModal && (
