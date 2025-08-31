@@ -159,7 +159,7 @@ export default function LiquorMenuCard({ liquorItem, onUpdatePortions, onEdit, o
           <div>
             <span className="text-sm font-medium text-gray-700">Price per {liquorItem.type === 'cigarettes' ? 'Pack' : 'Bottle'}:</span>
             <p className="text-lg font-semibold text-green-600">
-              Rs. {liquorItem.pricePerBottle ? liquorItem.pricePerBottle.toFixed(2) : '0.00'}
+              LKR {liquorItem.pricePerBottle ? liquorItem.pricePerBottle.toFixed(2) : '0.00'}
             </p>
           </div>
           {/* Only show alcohol percentage for hard liquor */}
@@ -217,7 +217,7 @@ export default function LiquorMenuCard({ liquorItem, onUpdatePortions, onEdit, o
                       </span>
                     </div>
                     <div className="flex items-center space-x-2">
-                      <span className="text-sm text-gray-600">Rs.</span>
+                      <span className="text-sm text-gray-600">LKR</span>
                       <InputField
                         type="number"
                         value={portionPrices[portion._id] || ''}
@@ -262,7 +262,7 @@ export default function LiquorMenuCard({ liquorItem, onUpdatePortions, onEdit, o
                       {portion.name} ({formatVolume(portion.volume)})
                     </span>
                     <span className="text-sm font-semibold text-green-600">
-                      Rs. {(portion.price || 0).toFixed(2)}
+                      LKR {(portion.price || 0).toFixed(2)}
                     </span>
                   </div>
                 ))}

@@ -86,7 +86,7 @@ export default function LiquorMenuCard({ liquorItem, onManagePortions }) {
             <span className="text-sm font-medium text-gray-700">
               {liquorItem.type === 'cigarettes' ? 'Price per Pack:' : 'Price per Bottle:'}
             </span>
-            <p className="text-lg font-semibold text-green-600">Rs. {liquorItem.pricePerBottle?.toFixed(2) || '0.00'}</p>
+            <p className="text-lg font-semibold text-green-600">LKR {liquorItem.pricePerBottle?.toFixed(2) || '0.00'}</p>
           </div>
           {/* Only show alcohol percentage for hard liquor */}
           {liquorItem.type === 'hard_liquor' && (
@@ -121,7 +121,7 @@ export default function LiquorMenuCard({ liquorItem, onManagePortions }) {
                   key={portion._id}
                   className="px-2 py-1 text-xs bg-white text-gray-600 rounded border"
                 >
-                  {formatVolume(portion.volume)} - Rs. {portion.price?.toFixed(2) || '0.00'}
+                  {formatVolume(portion.volume)} - LKR {portion.price?.toFixed(2) || '0.00'}
                 </span>
               ))}
               {portionCount > 3 && (

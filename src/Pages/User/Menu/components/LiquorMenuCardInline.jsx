@@ -117,7 +117,7 @@ export default function LiquorMenuCard({ liquorItem, onUpdatePortions }) {
         <div className="grid grid-cols-2 gap-4 mb-4">
           <div>
             <span className="text-sm font-medium text-gray-700">Price per Bottle:</span>
-            <p className="text-lg font-semibold text-green-600">Rs. {liquorItem.pricePerBottle?.toFixed(2)}</p>
+            <p className="text-lg font-semibold text-green-600">LKR {liquorItem.pricePerBottle?.toFixed(2)}</p>
           </div>
           <div>
             <span className="text-sm font-medium text-gray-700">Alcohol %:</span>
@@ -189,7 +189,7 @@ export default function LiquorMenuCard({ liquorItem, onUpdatePortions }) {
                       ) : (
                         <>
                           <span className="font-bold text-green-600 text-base w-20 text-right">
-                            Rs. {portion.price?.toFixed(2) || '0.00'}
+                            LKR {portion.price?.toFixed(2) || '0.00'}
                           </span>
                           <Button
                             onClick={() => toggleEditPortion(portion._id)}

@@ -129,7 +129,7 @@ export default function LiquorPortionEditor({ liquorItem, onUpdatePortions, onCl
                       {editingPortions[portion._id] ? (
                         <div className="flex items-center space-x-2">
                           <InputField
-                            label="Price (Rs.)"
+                            label="Price (LKR)"
                             type="number"
                             step="0.01"
                             min="0"
@@ -149,7 +149,7 @@ export default function LiquorPortionEditor({ liquorItem, onUpdatePortions, onCl
                       ) : (
                         <div className="flex items-center space-x-2">
                           <span className="text-lg font-semibold text-green-600">
-                            Rs. {portion.price?.toFixed(2) || '0.00'}
+                            LKR {portion.price?.toFixed(2) || '0.00'}
                           </span>
                           <Button
                             onClick={() => toggleEditPortion(portion._id)}
