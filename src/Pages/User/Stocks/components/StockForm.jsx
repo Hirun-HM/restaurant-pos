@@ -60,11 +60,10 @@ export default function StockForm({
         }
     }, [editingItem]);
 
-    const handleModeChange = (e) => {
-        const mode = e.target.value;
+    const handleModeChange = (value) => {
         setFormData({
             ...formData,
-            mode,
+            mode: value,
             selectedItemId: '',
             name: '',
             category: '',
@@ -75,8 +74,7 @@ export default function StockForm({
         setErrors({});
     };
 
-    const handleExistingItemSelect = (e) => {
-        const itemId = e.target.value;
+    const handleExistingItemSelect = (itemId) => {
         const selectedItem = existingItems.find(item => item.id.toString() === itemId);
         
         if (selectedItem) {
@@ -189,7 +187,7 @@ export default function StockForm({
                         </label>
                         <Select
                             value={formData.category}
-                            onChange={(e) => setFormData({...formData, category: e.target.value})}
+                            onChange={(value) => setFormData({...formData, category: value})}
                             options={[
                                 { value: '', label: 'Select category' },
                                 ...categories
@@ -218,7 +216,7 @@ export default function StockForm({
                         </label>
                         <Select
                             value={formData.unit}
-                            onChange={(e) => setFormData({...formData, unit: e.target.value})}
+                            onChange={(value) => setFormData({...formData, unit: value})}
                             options={[
                                 { value: '', label: 'Select unit' },
                                 ...units
