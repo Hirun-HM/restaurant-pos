@@ -1,14 +1,14 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { FaFilter, FaDownload } from 'react-icons/fa';
+import { FaDownload } from 'react-icons/fa';
 import { MdInventory, MdWarning, MdCheckCircle } from 'react-icons/md';
 import { InputField } from '../../../components/InputField';
 import Select from '../../../components/Select';
 import AnimatedNumber from '../../../components/AnimatedNumber';
+import LoadingSpinner from '../../../components/LoadingSpinner';
+import AdminService from '../../../services/adminService';
 
 const STOCK_CATEGORIES = ['Vegetables', 'Meat', 'Seafood', 'Dairy', 'Spices', 'Beverage', 'Other'];
-const STOCK_UNITS = ['kg', 'g', 'l', 'ml', 'pcs', 'boxes', 'cans', 'bottles'];
 
-// Generate dummy stock data
 const generateDummyStocks = () => {
     return [
         {
@@ -120,22 +120,37 @@ const generateDummyStocks = () => {
 
 export default function AdminStocks() {
     const [stocks, setStocks] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedCategory, setSelectedCategory] = useState('All');
 
-    // Load stocks from localStorage
+    // Load stocks from API
     useEffect(() => {
-        const savedStocks = JSON.parse(localStorage.getItem('restaurant-stocks') || '[]');
-        // If no saved stocks, use dummy data
-        const stocksData = savedStocks.length > 0 ? savedStocks : generateDummyStocks();
-        setStocks(stocksData);
+        const fetchStocks = async () => {
+            try {
+                setLoading(true);
+                setError(null);
+                const stockData = await AdminService.getStockData();
+                setStocks(stockData || []);
+            } catch (error) {
+                console.error('Error fetching stocks:', error);
+                setError('Failed to load stock data');
+                // Fallback to dummy data on error
+                setStocks(generateDummyStocks());
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchStocks();
     }, []);
 
     // Filter stocks based on search and category
     const filteredStocks = useMemo(() => {
         return stocks.filter(stock => {
             const matchesSearch = stock.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                stock.supplier.toLowerCase().includes(searchTerm.toLowerCase());
+                (stock.supplier || '').toLowerCase().includes(searchTerm.toLowerCase());
             const matchesCategory = selectedCategory === 'All' || stock.category === selectedCategory;
             return matchesSearch && matchesCategory;
         });
@@ -143,9 +158,13 @@ export default function AdminStocks() {
 
     // Get stock status
     const getStockStatus = useCallback((stock) => {
-        if (stock.currentQuantity <= stock.minQuantity) {
+        const currentQty = stock.quantity || stock.currentQuantity || 0;
+        const minQty = stock.minimumQuantity || stock.minQuantity || 0;
+        const maxQty = stock.maximumQuantity || stock.maxQuantity || currentQty * 2;
+        
+        if (currentQty <= minQty) {
             return { status: 'low', color: 'text-red-600', icon: MdWarning };
-        } else if (stock.currentQuantity >= stock.maxQuantity) {
+        } else if (currentQty >= maxQty) {
             return { status: 'high', color: 'text-orange-600', icon: MdWarning };
         } else {
             return { status: 'normal', color: 'text-green-600', icon: MdCheckCircle };
@@ -154,8 +173,14 @@ export default function AdminStocks() {
 
     // Stats
     const stats = useMemo(() => {
-        const lowStockCount = stocks.filter(stock => stock.currentQuantity <= stock.minQuantity).length;
-        const totalValue = stocks.reduce((sum, stock) => sum + (stock.currentQuantity * stock.unitPrice), 0);
+        const lowStockCount = stocks.filter(stock => 
+            (stock.quantity || stock.currentQuantity) <= (stock.minimumQuantity || stock.minQuantity)
+        ).length;
+        const totalValue = stocks.reduce((sum, stock) => {
+            const quantity = stock.quantity || stock.currentQuantity || 0;
+            const price = stock.price || stock.sellingPrice || stock.unitPrice || 0;
+            return sum + (quantity * price);
+        }, 0);
         
         return {
             total: stocks.length,
@@ -234,16 +259,22 @@ export default function AdminStocks() {
         },
         {
             id: 'quantity',
-            render: (stock) => (
-                <div>
-                    <div className="text-sm text-other1">
-                        {stock.currentQuantity} {stock.unit}
+            render: (stock) => {
+                const currentQty = stock.quantity || stock.currentQuantity || 0;
+                const minQty = stock.minimumQuantity || stock.minQuantity || 0;
+                const maxQty = stock.maximumQuantity || stock.maxQuantity || currentQty * 2;
+                
+                return (
+                    <div>
+                        <div className="text-sm text-other1">
+                            {currentQty} {stock.unit}
+                        </div>
+                        <div className="text-xs text-gray-500">
+                            Min: {minQty} | Max: {maxQty}
+                        </div>
                     </div>
-                    <div className="text-xs text-gray-500">
-                        Min: {stock.minQuantity} | Max: {stock.maxQuantity}
-                    </div>
-                </div>
-            )
+                );
+            }
         },
         {
             id: 'status',
@@ -260,19 +291,44 @@ export default function AdminStocks() {
         },
         {
             id: 'unitPrice',
-            render: (stock) => (
-                <span className="text-sm text-other1">
-                    LKR {stock.unitPrice.toFixed(2)}
-                </span>
-            )
+            render: (stock) => {
+                const price = stock.price || stock.sellingPrice || stock.unitPrice || 0;
+                return (
+                    <span className="text-sm text-other1">
+                        LKR {price.toFixed(2)}
+                    </span>
+                );
+            }
         },
         {
             id: 'supplier',
             render: (stock) => (
-                <span className="text-sm text-other1">{stock.supplier}</span>
+                <span className="text-sm text-other1">{stock.supplier || 'N/A'}</span>
             )
         }
     ], [getStockStatus]);
+
+    // Show loading spinner
+    if (loading) {
+        return (
+            <div className="h-screen flex items-center justify-center">
+                <LoadingSpinner />
+            </div>
+        );
+    }
+
+    // Show error state
+    if (error && stocks.length === 0) {
+        return (
+            <div className="h-screen flex items-center justify-center">
+                <div className="text-center">
+                    <MdWarning className="h-12 w-12 text-red-500 mx-auto mb-4" />
+                    <h2 className="text-xl font-semibold text-gray-900 mb-2">Error Loading Stock Data</h2>
+                    <p className="text-gray-600">{error}</p>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="h-screen flex flex-col p-3 sm:p-6">

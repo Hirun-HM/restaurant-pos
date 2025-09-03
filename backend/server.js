@@ -51,6 +51,8 @@ const connectDB = async () => {
 // Import routes
 import stockRoutes from './routes/stockRoutes.js';
 import liquorRoutes from './routes/liquorRoutes.js';
+import foodItemRoutes from './routes/foodItemRoutes.js';
+import orderRoutes from './routes/orderRoutes.js';
 
 // Connect to database
 connectDB();
@@ -77,6 +79,8 @@ app.get('/api/health', (req, res) => {
 // API Routes
 app.use('/api/stock', stockRoutes);
 app.use('/api/liquor', liquorRoutes);
+app.use('/api/food-items', foodItemRoutes);
+app.use('/api/orders', orderRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {

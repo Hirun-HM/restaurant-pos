@@ -4,7 +4,7 @@ import { FaUser, FaSignOutAlt, FaTools } from 'react-icons/fa';
 import Header from './components/Header';
 import TableCard from './Tables/Components/TableCard';
 import TableManagement from './Tables/TableManagement';
-import StockManager from './Stocks/StockManager';
+import StockManagerWithAPI from './Stocks/StockManagerWithAPI';
 import LiquorManagerWithAPI from './Liquor/LiquorManagerWithAPI';
 import MenuManager from './Menu/MenuManager';
 
@@ -40,7 +40,7 @@ export default function UserDashboard() {
             }
             {
                 active === 'Stocks' && (
-                    <StockManager/>
+                    <StockManagerWithAPI/>
                 )
             }
             {

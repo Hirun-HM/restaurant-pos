@@ -1,89 +1,40 @@
-import React, { useState, useCallback, useMemo, memo } from 'react';
+import React, { useState, useCallback, useMemo, memo, useEffect } from 'react';
 import { PrimaryButton, SecondaryButton } from '../../../components/Button';
 import { FaSync } from 'react-icons/fa';
-import MenuForm from './Components/MenuForm';
-import MenuItemCard from './Components/MenuItemCard';
+import FoodItemMenuCard from './components/FoodItemMenuCard';
 import LiquorMenuCard from './components/LiquorMenuCardEnhanced';
 import LiquorService from '../../../services/liquorService';
-import Modal from '../../../components/Modal';
+import { useFoodItems } from '../../../hooks/useFoodItems';
 import { InputField } from '../../../components/InputField';
 
-// Initial menu items (this would come from a database in a real app)
-const initialMenuItems = [
-    // Foods
-    { id: 1, name: 'Chicken Rice', price: 450, category: 'Foods', description: 'Delicious chicken rice with spices' },
-    { id: 2, name: 'Fried Rice', price: 380, category: 'Foods', description: 'Traditional fried rice with vegetables' },
-    { id: 3, name: 'Kottu', price: 500, category: 'Foods', description: 'Sri Lankan kottu roti with chicken' },
-    { id: 6, name: 'Fish Curry', price: 650, category: 'Foods', description: 'Fresh fish curry with rice' },
-    { id: 7, name: 'Vegetable Curry', price: 350, category: 'Foods', description: 'Mixed vegetable curry' },
-    { id: 9, name: 'Chicken Curry', price: 550, category: 'Foods', description: 'Spicy chicken curry with rice' },
-    { id: 10, name: 'Noodles', price: 420, category: 'Foods', description: 'Stir-fried noodles with vegetables' },
-    
-    // Bites
-    { id: 18, name: 'Chicken Wings', price: 280, category: 'Bites', description: 'Crispy chicken wings' },
-    { id: 19, name: 'Fish Cutlets', price: 150, category: 'Bites', description: 'Fried fish cutlets' },
-    { id: 20, name: 'Deviled Chicken', price: 320, category: 'Bites', description: 'Spicy deviled chicken pieces' },
-    { id: 21, name: 'Prawn Crackers', price: 180, category: 'Bites', description: 'Crispy prawn crackers' },
-    { id: 22, name: 'Vadai', price: 120, category: 'Bites', description: 'Traditional vadai snack' },
-    
-    // Others (beverages, desserts, and refreshments only)
-    { id: 4, name: 'Coca Cola', price: 120, category: 'Others', description: 'Chilled Coca Cola' },
-    { id: 5, name: 'Orange Juice', price: 150, category: 'Others', description: 'Fresh orange juice' },
-    { id: 8, name: 'Ice Cream', price: 200, category: 'Others', description: 'Vanilla ice cream' },
-    { id: 27, name: 'Coffee', price: 100, category: 'Others', description: 'Hot coffee' },
-    { id: 28, name: 'Tea', price: 80, category: 'Others', description: 'Ceylon tea' },
-    { id: 29, name: 'Fresh Lime', price: 120, category: 'Others', description: 'Fresh lime juice' },
-    { id: 30, name: 'Ice Cubes', price: 50, category: 'Others', description: 'Fresh ice cubes' },
-    { id: 31, name: 'Water Bottle', price: 80, category: 'Others', description: 'Pure drinking water' }
-];
-
-// Allowed categories for Menu Manager
+// Allowed categories for Menu Manager (now only API-based items)
 const ALLOWED_CATEGORIES = ['Foods', 'Liquor', 'Cigarettes', 'Bites', 'Others'];
 
-export default memo(function MenuManager() {
-    // Memoize initial menu items to prevent recreation
-    const initialMenuData = useMemo(() => {
-        const saved = localStorage.getItem('restaurant-menu-items');
-        if (saved) {
-            try {
-                const parsedData = JSON.parse(saved);
-                // Filter only allowed categories and migrate old categories
-                const filteredData = parsedData
-                    .map(item => ({
-                        ...item,
-                        category: item.category === 'Sandy' ? 'Beverage' : item.category
-                    }))
-                    .filter(item => ALLOWED_CATEGORIES.includes(item.category));
-                return filteredData;
-            } catch (error) {
-                console.error('Error parsing menu items:', error);
-                return initialMenuItems.filter(item => ALLOWED_CATEGORIES.includes(item.category));
-            }
-        }
-        return initialMenuItems.filter(item => ALLOWED_CATEGORIES.includes(item.category));
-    }, []);
+// Map food item categories to menu categories
+const FOOD_CATEGORY_MAPPING = {
+    'Rice Dishes': 'Foods',
+    'Noodles': 'Foods', 
+    'Main Course': 'Foods',
+    'Appetizers': 'Bites',
+    'Desserts': 'Others',
+    'Beverages': 'Others',
+    'Others': 'Others'
+};
 
-    const [menuItems, setMenuItems] = useState(initialMenuData);
+export default memo(function MenuManager() {
+    // Add food items hook
+    const { foodItems, loading: foodItemsLoading, fetchFoodItems } = useFoodItems();
+
     const [liquorItems, setLiquorItems] = useState([]);
-    const [showForm, setShowForm] = useState(false);
-    const [editingItem, setEditingItem] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedCategory, setSelectedCategory] = useState('All');
     
-    // One-time migration effect to update localStorage with filtered data
-    React.useEffect(() => {
-        try {
-            // Clear all menu-related data and initialize with default items
-            localStorage.clear();
-            localStorage.setItem('restaurant-menu-items', JSON.stringify(initialMenuItems));
-            setMenuItems(initialMenuItems);
-
-        } catch (error) {
-            console.error('Error initializing menu data:', error);
-            // Fallback to default items if localStorage fails
-            setMenuItems(initialMenuItems);
-        }
-    }, []); // Run only once on mount
+    // Load food items when component mounts
+    useEffect(() => {
+        fetchFoodItems().catch(error => {
+            console.error('Error fetching food items:', error);
+        });
+    }, [fetchFoodItems]);
 
     // Fetch liquor items from API
     React.useEffect(() => {
@@ -99,19 +50,43 @@ export default memo(function MenuManager() {
             setLiquorItems([]);
         }
     };
-    
-    // Save to localStorage whenever menu items change
-    React.useEffect(() => {
-        localStorage.setItem('restaurant-menu-items', JSON.stringify(menuItems));
-    }, [menuItems]);
+
+    // Refresh all data from APIs
+    const refreshAllData = async () => {
+        try {
+            await Promise.all([
+                fetchLiquorItems(),
+                fetchFoodItems()
+            ]);
+            console.log('All menu data refreshed successfully');
+        } catch (error) {
+            console.error('Error refreshing menu data:', error);
+        }
+    };
     
     // Memoize categories (show all allowed categories)
     const categories = useMemo(() => {
         return ['All', ...ALLOWED_CATEGORIES];
     }, []);
     
-    // Memoize filtered items (combine menu items and liquor items)
+    // Memoize filtered items (combine food items and liquor items only - no static items)
     const filteredItems = useMemo(() => {
+        // Convert food items to menu format
+        const foodMenuItems = foodItems.map(item => ({
+            id: `food_${item._id}`,
+            name: item.name,
+            category: FOOD_CATEGORY_MAPPING[item.category] || 'Foods',
+            description: item.description,
+            price: item.sellingPrice,
+            basePrice: item.basePrice,
+            ingredients: item.ingredients || [],
+            nutritionalInfo: item.nutritionalInfo,
+            allergens: item.allergens,
+            isFromFoodAPI: true,
+            _id: item._id,
+            type: 'food_item'
+        }));
+
         // Convert liquor items to menu format
         const liquorMenuItems = liquorItems.map(item => {
             // Map item types to appropriate categories
@@ -149,8 +124,8 @@ export default memo(function MenuManager() {
             };
         });
 
-        // Combine regular menu items with liquor items
-        const allItems = [...menuItems, ...liquorMenuItems];
+        // Combine only API-based items (food items and liquor items)
+        const allItems = [...foodMenuItems, ...liquorMenuItems];
 
         return allItems.filter(item => {
             const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -159,7 +134,7 @@ export default memo(function MenuManager() {
             const matchesCategory = selectedCategory === 'All' || item.category === selectedCategory;
             return matchesSearch && matchesCategory;
         });
-    }, [menuItems, liquorItems, searchTerm, selectedCategory]);
+    }, [foodItems, liquorItems, searchTerm, selectedCategory]);
     
     // Memoized handlers to prevent unnecessary re-renders
     const handleSearchChange = useCallback((e) => {
@@ -204,140 +179,6 @@ export default memo(function MenuManager() {
         ));
     }, [categories, selectedCategory, handleCategoryChange]);
     
-    const handleAddItem = useCallback(() => {
-        setEditingItem(null);
-        setShowForm(true);
-    }, []);
-    
-    const handleEditItem = useCallback((item) => {
-        if (item.isFromAPI) {
-            // For API items (liquor), show different handling
-            alert('Liquor items can be edited in Stock Management');
-        } else {
-            setEditingItem(item);
-            setShowForm(true);
-        }
-    }, []);
-    
-    const handleDeleteItem = useCallback((item) => {
-        if (typeof item === 'object' && item.isFromAPI) {
-            // For API items (liquor), show different handling  
-            alert('Liquor items can be deleted from Stock Management');
-        } else {
-            // Handle both old (itemId) and new (item object) formats
-            const idToDelete = typeof item === 'object' ? item.id : item;
-            setMenuItems(prev => prev.filter(menuItem => menuItem.id !== idToDelete));
-        }
-    }, []);
-    
-    const handleFormSubmit = useCallback((formData) => {
-        // Ensure only allowed categories can be added
-        if (!ALLOWED_CATEGORIES.includes(formData.category)) {
-            console.warn(`Category "${formData.category}" is not allowed in Menu Manager`);
-            return;
-        }
-
-        // Process form data based on category
-        let processedData = { ...formData };
-
-        // Get stock items once for both Liquor and Cigarettes
-        const stockKey = localStorage.getItem('restaurant-stock-items');
-        const stockItems = stockKey ? JSON.parse(stockKey) : [];
-
-        // Handle Liquor items
-        if (formData.category === 'Liquor') {
-            processedData = {
-                ...processedData,
-                portionTracking: true,
-                volume: formData.volume || 750, // Default to 750ml if not specified
-                volumeUnit: 'ml',
-                stockId: formData.name.toLowerCase().replace(/\s+/g, '_') + '_stock'
-            };
-
-            // Create or update corresponding stock item if it doesn't exist
-            const stockExists = stockItems.some(item => item.id === processedData.stockId);
-            
-            if (!stockExists) {
-                // Add new stock item for liquor
-                const newStockItem = {
-                    id: processedData.stockId,
-                    name: formData.name,
-                    category: formData.category,
-                    quantity: 0, // Initial stock
-                    unit: 'ml',
-                    price: formData.price,
-                    volume: processedData.volume
-                };
-                localStorage.setItem('restaurant-stock-items', 
-                    JSON.stringify([...stockItems, newStockItem]));
-            }
-        } 
-        // Handle Cigarette items
-        else if (formData.category === 'Cigarettes') {
-            processedData = {
-                ...processedData,
-                portionTracking: true,
-                unitsPerPack: formData.unitsPerPack || 20, // Default to 20 cigarettes per pack
-                stockId: formData.name.toLowerCase().replace(/\s+/g, '_') + '_stock'
-            };
-
-            // Create or update corresponding stock item if it doesn't exist
-            const stockExists = stockItems.some(item => item.id === processedData.stockId);
-
-            if (!stockExists) {
-                // Add new stock item based on category
-                const newStockItem = {
-                    id: processedData.stockId,
-                    name: formData.name,
-                    category: formData.category,
-                    quantity: 0, // Initial stock
-                    unit: formData.category === 'Liquor' ? 'ml' : 'packs',
-                    price: formData.price,
-                    ...(formData.category === 'Cigarettes' && {
-                        unitsPerPack: processedData.unitsPerPack
-                    })
-                };
-                localStorage.setItem('restaurant-stock-items', 
-                    JSON.stringify([...stockItems, newStockItem]));
-            }
-        }
-
-        if (editingItem) {
-            // Update existing item
-            setMenuItems(prev => prev.map(item => 
-                item.id === editingItem.id 
-                    ? { ...processedData, id: editingItem.id } 
-                    : item
-            ));
-
-            // If this is a liquor item, update the stock item name if it changed
-            if (processedData.category === 'Liquor' && editingItem.name !== processedData.name) {
-                const stockKey = localStorage.getItem('restaurant-stock-items');
-                if (stockKey) {
-                    const stockItems = JSON.parse(stockKey);
-                    const updatedStockItems = stockItems.map(item => 
-                        item.id === editingItem.stockId 
-                            ? { ...item, name: processedData.name }
-                            : item
-                    );
-                    localStorage.setItem('restaurant-stock-items', JSON.stringify(updatedStockItems));
-                }
-            }
-        } else {
-            // Add new item
-            const newId = Math.max(...menuItems.map(item => item.id), 0) + 1;
-            setMenuItems(prev => [...prev, { ...processedData, id: newId }]);
-        }
-
-        setShowForm(false);
-        setEditingItem(null);
-    }, [editingItem, menuItems]);
-    
-    const handleFormCancel = useCallback(() => {
-        setShowForm(false);
-        setEditingItem(null);
-    }, []);
-    
     return (
         <div className="p-8 min-h-screen bg-gray-50">
             {/* Enhanced Header Section */}
@@ -346,28 +187,20 @@ export default memo(function MenuManager() {
                 <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6 mb-8">
                     <div className="space-y-2">
                         <h1 className="text-3xl font-bold text-other1">Menu Management</h1>
-                        <p className="text-gray-600">Manage your restaurant's menu items and categories</p>
+                        <p className="text-gray-600">View your restaurant's menu items from Food Items and Liquor Stock</p>
                     </div>
                     
                     {/* Action Buttons */}
                     <div className="flex gap-3">
                         <SecondaryButton 
-                            onClick={fetchLiquorItems}
+                            onClick={refreshAllData}
                             className="flex items-center gap-2 px-6 py-3"
-                            title="Refresh liquor data"
+                            title="Refresh all menu data from APIs"
+                            disabled={foodItemsLoading}
                         >
-                            <FaSync className="w-4 h-4" />
-                            Refresh
+                            <FaSync className={`w-4 h-4 ${foodItemsLoading ? 'animate-spin' : ''}`} />
+                            {foodItemsLoading ? 'Refreshing...' : 'Refresh All'}
                         </SecondaryButton>
-                        <PrimaryButton 
-                            onClick={handleAddItem} 
-                            className="flex items-center gap-2 px-6 py-3"
-                        >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                            </svg>
-                            Add New Item
-                        </PrimaryButton>
                     </div>
                 </div>
 
@@ -376,7 +209,7 @@ export default memo(function MenuManager() {
                     {/* Search Bar */}
                     <div className="flex flex-col md:flex-row gap-6 items-end">
                         <div className="flex-1 space-y-2">
-                            <label className="block text-sm font-medium text-gray-700">
+                            <label htmlFor="menu-search" className="block text-sm font-medium text-gray-700">
                                 Search Menu Items
                             </label>
                             <div className="relative">
@@ -386,6 +219,7 @@ export default memo(function MenuManager() {
                                     </svg>
                                 </div>
                                 <InputField 
+                                    id="menu-search"
                                     placeholder="Search by name, description, or brand..."
                                     value={searchTerm}
                                     onChange={handleSearchChange}
@@ -401,14 +235,14 @@ export default memo(function MenuManager() {
                     </div>
                     
                     {/* Category Filter */}
-                    <div className="space-y-3">
-                        <label className="block text-sm font-medium text-gray-700">
+                    <fieldset className="space-y-3">
+                        <legend className="block text-sm font-medium text-gray-700">
                             Filter by Category
-                        </label>
+                        </legend>
                         <div className="flex flex-wrap gap-3">
                             {categoryButtons}
                         </div>
-                    </div>
+                    </fieldset>
                 </div>
             </div>
             
@@ -456,39 +290,25 @@ export default memo(function MenuManager() {
                                             key={item.id}
                                             liquorItem={item}
                                             onUpdatePortions={handleUpdateLiquorPortions}
-                                            onEdit={() => handleEditItem(item)}
-                                            onDelete={() => handleDeleteItem(item)}
+                                            // Remove edit/delete from menu view - these should be done in stock management
                                         />
                                     );
-                                } else {
+                                } else if (item.isFromFoodAPI && item.type === 'food_item') {
                                     return (
-                                        <MenuItemCard
+                                        <FoodItemMenuCard
                                             key={item.id}
                                             item={item}
-                                            onEdit={handleEditItem}
-                                            onDelete={handleDeleteItem}
                                         />
                                     );
                                 }
+                                // No fallback since we only show API items
+                                return null;
                             })}
                         </div>
                     </div>
                 )}
             </div>
             
-            {/* Add/Edit Modal */}
-            <Modal
-                isOpen={showForm}
-                onClose={handleFormCancel}
-                title={editingItem ? 'Edit Menu Item' : 'Add New Menu Item'}
-                size="lg"
-            >
-                <MenuForm
-                    item={editingItem}
-                    onSubmit={handleFormSubmit}
-                    onCancel={handleFormCancel}
-                />
-            </Modal>
         </div>
     );
 });

@@ -67,13 +67,20 @@ export const validateStockItem = [
         .withMessage('Supplier name cannot exceed 100 characters'),
     
     body('expiryDate')
-        .optional()
-        .isISO8601()
-        .withMessage('Expiry date must be a valid date')
+        .optional({ nullable: true, checkFalsy: true })
         .custom(value => {
-            if (value && new Date(value) < new Date()) {
-                throw new Error('Expiry date cannot be in the past');
+            // Allow empty strings, null, undefined
+            if (!value || value === '' || value === null) {
+                return true;
             }
+            
+            // Check if it's a valid date
+            const date = new Date(value);
+            if (isNaN(date.getTime())) {
+                throw new Error('Expiry date must be a valid date');
+            }
+            
+            // Don't restrict past dates - some items might already be expired
             return true;
         }),
     

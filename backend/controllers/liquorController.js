@@ -666,3 +666,67 @@ export const autoDiscardLowVolumes = async (req, res) => {
     });
   }
 };
+
+// Get liquor statistics for admin dashboard
+export const getLiquorStats = async (req, res) => {
+  try {
+    const stats = await Liquor.aggregate([
+      { $match: { isActive: true } },
+      {
+        $group: {
+          _id: null,
+          totalItems: { $sum: 1 },
+          totalBottles: { $sum: '$bottlesInStock' },
+          totalValue: { $sum: { $multiply: ['$bottlesInStock', '$pricePerBottle'] } },
+          lowStockCount: {
+            $sum: {
+              $cond: [{ $lte: ['$bottlesInStock', '$minimumBottles'] }, 1, 0]
+            }
+          },
+          totalVolume: { $sum: { $multiply: ['$bottlesInStock', '$bottleVolume'] } },
+          totalWastedVolume: { $sum: '$wastedVolume' },
+          totalSoldVolume: { $sum: '$totalSoldVolume' },
+          totalPortions: { $sum: { $size: '$portions' } }
+        }
+      }
+    ]);
+
+    const typeStats = await Liquor.aggregate([
+      { $match: { isActive: true } },
+      {
+        $group: {
+          _id: '$type',
+          count: { $sum: 1 },
+          totalBottles: { $sum: '$bottlesInStock' },
+          totalValue: { $sum: { $multiply: ['$bottlesInStock', '$pricePerBottle'] } }
+        }
+      }
+    ]);
+
+    const result = stats[0] || {
+      totalItems: 0,
+      totalBottles: 0,
+      totalValue: 0,
+      lowStockCount: 0,
+      totalVolume: 0,
+      totalWastedVolume: 0,
+      totalSoldVolume: 0,
+      totalPortions: 0
+    };
+
+    res.json({
+      success: true,
+      data: {
+        ...result,
+        typeBreakdown: typeStats
+      }
+    });
+  } catch (error) {
+    console.error('Error getting liquor stats:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch liquor statistics',
+      error: error.message
+    });
+  }
+};

@@ -1,61 +1,84 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import PropTypes from 'prop-types';
 import TableCard from './Components/TableCard';
 import OrderSummary from './Components/OrderSummary';
 import ConfirmationModal from '../../../components/ConfirmationModal';
-import { sriLankanDishes } from '../../../const/const';
+import { useFoodItems } from '../../../hooks/useFoodItems';
+import { useLiquor } from '../../../hooks/useLiquor';
+import { orderService } from '../../../services/orderService';
 
 export default function TableManagement({tableList = []}) {
-    const navigate = useNavigate();
+    // Use custom hooks to fetch real menu data from API
+    const { 
+        getTransformedFoodItemsForMenu, 
+        fetchFoodItems
+    } = useFoodItems();
     
-    // Load menu items from localStorage (managed by MenuManager)
-    const menuItems = useMemo(() => {
-        const saved = localStorage.getItem('restaurant-menu-items');
-        if (saved) {
-            const parsedData = JSON.parse(saved);
-            // Migrate old "Sandy" categories to "Beverage"
-            const migratedData = parsedData.map(item => ({
-                ...item,
-                category: item.category === 'Sandy' ? 'Beverage' : item.category
-            }));
-            return migratedData;
-        }
-        
-        // Fallback to default items if nothing saved
-        return [
-            // Foods
-            { id: 1, name: 'Chicken Rice', price: 450, category: 'Foods' },
-            { id: 2, name: 'Fried Rice', price: 380, category: 'Foods' },
-            { id: 3, name: 'Kottu', price: 500, category: 'Foods' },
-            { id: 6, name: 'Fish Curry', price: 650, category: 'Foods' },
-            { id: 7, name: 'Vegetable Curry', price: 350, category: 'Foods' },
-            { id: 9, name: 'Chicken Curry', price: 550, category: 'Foods' },
-            { id: 10, name: 'Noodles', price: 420, category: 'Foods' },
-            
+    const { 
+        liquorItems, 
+        fetchLiquorItems
+    } = useLiquor();
 
-            
-            // Bites
-            { id: 18, name: 'Chicken Wings', price: 280, category: 'Bites' },
-            { id: 19, name: 'Fish Cutlets', price: 150, category: 'Bites' },
-            { id: 20, name: 'Deviled Chicken', price: 320, category: 'Bites' },
-            { id: 21, name: 'Prawn Crackers', price: 180, category: 'Bites' },
-            { id: 22, name: 'Vadai', price: 120, category: 'Bites' },
-            
-            // Beverage
-            { id: 23, name: 'Chicken Sandwich', price: 250, category: 'Beverage' },
-            { id: 24, name: 'Club Sandwich', price: 350, category: 'Beverage' },
-            { id: 25, name: 'Fish Sandwich', price: 280, category: 'Beverage' },
-            { id: 26, name: 'Egg Sandwich', price: 180, category: 'Beverage' },
-            
-            // Others
-            { id: 4, name: 'Coca Cola', price: 120, category: 'Others' },
-            { id: 5, name: 'Orange Juice', price: 150, category: 'Others' },
-            { id: 8, name: 'Ice Cream', price: 200, category: 'Others' },
-            { id: 27, name: 'Coffee', price: 100, category: 'Others' },
-            { id: 28, name: 'Tea', price: 80, category: 'Others' },
-            { id: 29, name: 'Fresh Lime', price: 120, category: 'Others' }
-        ];
-    }, []);
+    // Fetch menu data on component mount
+    useEffect(() => {
+        const fetchMenuData = async () => {
+            try {
+                await Promise.all([
+                    fetchFoodItems(),
+                    fetchLiquorItems()
+                ]);
+            } catch (error) {
+                console.error('Error fetching menu data:', error);
+            }
+        };
+
+        fetchMenuData();
+    }, [fetchFoodItems, fetchLiquorItems]);
+
+    // Combine food items and liquor items for the menu
+    const menuItems = useMemo(() => {
+        const foodItems = getTransformedFoodItemsForMenu();
+        
+        // Transform liquor items to match menu format
+        const transformedLiquorItems = liquorItems.map(item => {
+            let category;
+            switch (item.type) {
+                case 'hard_liquor':
+                    category = 'Hard Liquor';
+                    break;
+                case 'beer':
+                    category = 'Beer';
+                    break;
+                case 'wine':
+                    category = 'Wine';
+                    break;
+                case 'cigarettes':
+                    category = 'Cigarettes';
+                    break;
+                default:
+                    category = 'Other';
+            }
+
+            return {
+                id: item._id,
+                name: item.name,
+                brand: item.brand,
+                price: item.pricePerBottle || 0,
+                category: category,
+                type: item.type,
+                bottleVolume: item.bottleVolume,
+                portions: item.portions || [],
+                alcoholPercentage: item.alcoholPercentage,
+                stock: {
+                    bottlesInStock: item.bottlesInStock || 0,
+                    millilitersRemaining: item.totalVolumeRemaining || item.currentBottleVolume || 0
+                },
+                isAvailable: (item.bottlesInStock || 0) > 0
+            };
+        });
+
+        return [...foodItems, ...transformedLiquorItems];
+    }, [getTransformedFoodItemsForMenu, liquorItems]);
 
     // Always start with no table selected (reset on page refresh)
     const [selectedTable, setSelectedTable] = useState(null);
@@ -196,58 +219,91 @@ export default function TableManagement({tableList = []}) {
         setShowCloseModal(true);
     }, []);
 
-    const confirmCloseBill = useCallback(() => {
-        if (billToClose) {
-            setBills(prevBills => ({
-                ...prevBills,
-                [billToClose]: {
-                    ...prevBills[billToClose],
-                    status: 'closed',
-                    closedAt: new Date()
+    const confirmCloseBill = useCallback(async () => {
+        if (!billToClose || !bills[billToClose]) return;
+
+        const bill = bills[billToClose];
+
+        try {
+            // Process order payment and consume stock
+            const orderData = {
+                tableId: billToClose,
+                items: bill.items,
+                total: bill.total,
+                serviceCharge: bill.serviceCharge || false,
+                paymentMethod: 'cash',
+                customerId: null
+            };
+
+            console.log('🔍 Processing payment for table:', billToClose);
+
+            // Call the order service to process payment and consume stock
+            const result = await orderService.processOrderPayment(orderData);
+            
+            console.log('Payment result:', result?.success ? 'SUCCESS' : 'FAILED');
+            
+            // Handle successful payment
+            if (result && result.success === true) {
+                // Update bill status to closed
+                setBills(prevBills => ({
+                    ...prevBills,
+                    [billToClose]: {
+                        ...prevBills[billToClose],
+                        status: 'closed',
+                        closedAt: new Date(),
+                        orderId: result.data?.orderId || `ORDER-${Date.now()}`,
+                        stockConsumptions: result.data?.stockConsumptions || 0,
+                        liquorConsumptions: result.data?.liquorConsumptions || 0
+                    }
+                }));
+
+                // Build success message
+                let successMessage = `✅ Payment processed successfully!\n\nOrder ID: ${result.data?.orderId}\nStock items consumed: ${result.data?.stockConsumptions || 0}`;
+                
+                // Add information about missed ingredients if any
+                if (result.data?.missedIngredients && result.data.missedIngredients.length > 0) {
+                    successMessage += `\n\n⚠️ Note: Some ingredients were not available in stock:\n${result.data.missedIngredients.map(ing => `• ${ing.name} (${ing.reason || 'Not in stock'})`).join('\n')}`;
+                    successMessage += `\n\nOnly available ingredients were deducted from stock.`;
+                } else {
+                    successMessage += `\n\nAll ingredients were processed successfully.`;
                 }
-            }));
-            setSelectedTable(null);
-            setBillToClose(null);
+                
+                successMessage += `\n\nTable ${selectedTable?.tableNumber || billToClose} is now available.`;
+
+                // Show success alert
+                alert(successMessage);
+
+                // Clear selected table and close modal
+                setSelectedTable(null);
+                setBillToClose(null);
+                setShowCloseModal(false);
+            } else {
+                // Handle failed response - this should not happen with the updated backend
+                console.error('❌ Unexpected response format:', result);
+                throw new Error(result?.message || 'Unexpected response from server');
+            }
+
+        } catch (error) {
+            console.error('❌ Error processing order payment:', error);
+            
+            // Show user-friendly error message
+            const errorMessage = error.message || 'Unknown error occurred';
+            
+            // Check if this is a network error
+            if (errorMessage.includes('fetch') || errorMessage.includes('Network') || errorMessage.includes('Failed to fetch')) {
+                alert(`❌ Network Error: Unable to connect to server.\n\nPlease check:\n• Backend server is running\n• Internet connection\n• Then try again.`);
+            } else {
+                alert(`❌ Payment processing failed: ${errorMessage}\n\nNote: If some ingredients are missing from stock, the system will only deduct available ingredients and process the payment successfully.\n\nPlease try again or contact support if the issue persists.`);
+            }
+            
+            // Don't close the modal on error, let user try again
         }
-    }, [billToClose]);
+    }, [billToClose, bills]);
 
     const cancelCloseBill = useCallback(() => {
         setShowCloseModal(false);
         setBillToClose(null);
     }, []);
-
-    // Navigation functions
-    const navigateToWelcome = useCallback(() => {
-        navigate('/');
-    }, [navigate]);
-
-    const navigateToUserDashboard = useCallback(() => {
-        navigate('/user/dashboard');
-    }, [navigate]);
-
-    const navigateToAdminDashboard = useCallback(() => {
-        navigate('/admin/dashboard');
-    }, [navigate]);
-
-    const handleLogout = useCallback(() => {
-        // Clear any user session data if needed
-        navigateToWelcome();
-    }, [navigateToWelcome]);
-
-    // Function to clear old closed bills (optional - can be called to clean up storage)
-    const clearOldBills = () => {
-        const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
-        const updatedBills = {};
-        
-        Object.keys(bills).forEach(tableId => {
-            const bill = bills[tableId];
-            if (bill.status === 'active' || (bill.closedAt && new Date(bill.closedAt) > oneDayAgo)) {
-                updatedBills[tableId] = bill;
-            }
-        });
-        
-        setBills(updatedBills);
-    };
 
     // Memoize current bill to prevent unnecessary re-renders
     const currentBill = useMemo(() => {
@@ -341,3 +397,12 @@ export default function TableManagement({tableList = []}) {
         </div>
     )
 }
+
+TableManagement.propTypes = {
+    tableList: PropTypes.arrayOf(
+        PropTypes.shape({
+            id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
+            tableNumber: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired
+        })
+    )
+};

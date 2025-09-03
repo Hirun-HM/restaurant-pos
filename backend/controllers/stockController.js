@@ -100,7 +100,20 @@ export const createStockItem = async (req, res) => {
   session.startTransaction();
 
   try {
-    const stockItem = new Stock(req.body);
+    const stockData = { ...req.body };
+    
+    // Round quantity to avoid floating-point precision issues
+    if (stockData.quantity !== undefined) {
+      stockData.quantity = Math.round(stockData.quantity * 100) / 100;
+    }
+    if (stockData.price !== undefined) {
+      stockData.price = Math.round(stockData.price * 100) / 100;
+    }
+    if (stockData.minimumQuantity !== undefined) {
+      stockData.minimumQuantity = Math.round(stockData.minimumQuantity * 100) / 100;
+    }
+    
+    const stockItem = new Stock(stockData);
     await stockItem.save({ session });
 
     // Create audit log
@@ -155,7 +168,12 @@ export const updateStockItem = async (req, res) => {
 
   try {
     const { id } = req.params;
-    const updateData = req.body;
+    const updateData = { ...req.body };
+    
+    // Round quantity to avoid floating-point precision issues
+    if (updateData.quantity !== undefined) {
+      updateData.quantity = Math.round(updateData.quantity * 100) / 100;
+    }
     
     // Store original for comparison and audit
     const original = await Stock.findById(id).session(session);
@@ -242,6 +260,9 @@ export const updateStockQuantity = async (req, res) => {
         });
       }
     }
+
+    // Round to avoid floating-point precision issues
+    newQuantity = Math.round(newQuantity * 100) / 100;
 
     const updatedStock = await Stock.findByIdAndUpdate(
       id,
@@ -757,5 +778,62 @@ const getStockByCategory = async () => {
   } catch (error) {
     console.error('Error getting stock by category:', error);
     return {};
+  }
+};
+
+// Get stock statistics for admin dashboard
+export const getStockStats = async (req, res) => {
+  try {
+    const stats = await Stock.aggregate([
+      { $match: { isActive: true } },
+      {
+        $group: {
+          _id: null,
+          totalItems: { $sum: 1 },
+          totalValue: { $sum: { $multiply: ['$quantity', '$price'] } },
+          lowStockCount: {
+            $sum: {
+              $cond: [{ $lte: ['$quantity', '$minimumQuantity'] }, 1, 0]
+            }
+          },
+          totalQuantity: { $sum: '$quantity' },
+          averagePrice: { $avg: '$price' }
+        }
+      }
+    ]);
+
+    const categoryStats = await Stock.aggregate([
+      { $match: { isActive: true } },
+      {
+        $group: {
+          _id: '$category',
+          count: { $sum: 1 },
+          totalValue: { $sum: { $multiply: ['$quantity', '$price'] } }
+        }
+      }
+    ]);
+
+    const result = stats[0] || {
+      totalItems: 0,
+      totalValue: 0,
+      lowStockCount: 0,
+      totalQuantity: 0,
+      averagePrice: 0
+    };
+
+    res.json({
+      success: true,
+      data: {
+        ...result,
+        categoryBreakdown: categoryStats
+      }
+    });
+  } catch (error) {
+    console.error('Error getting stock stats:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch stock statistics',
+      error: error.message
+    });
   }
 };

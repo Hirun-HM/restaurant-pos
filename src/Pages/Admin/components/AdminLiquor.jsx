@@ -4,11 +4,11 @@ import { MdLocalBar, MdWarning, MdCheckCircle, MdOutlineWaterDrop } from 'react-
 import Select from '../../../components/Select';
 import { InputField } from '../../../components/InputField';
 import AnimatedNumber from '../../../components/AnimatedNumber';
+import LoadingSpinner from '../../../components/LoadingSpinner';
+import AdminService from '../../../services/adminService';
 
-const LIQUOR_CATEGORIES = ['Whiskey', 'Vodka', 'Gin', 'Rum', 'Brandy', 'Wine', 'Beer', 'Other'];
-const BOTTLE_SIZES = ['750ml', '1000ml', '1750ml', '375ml', '200ml', '50ml'];
+const LIQUOR_CATEGORIES = ['beer', 'hard_liquor', 'wine', 'cigarettes', 'Other'];
 
-// Generate dummy liquor data
 const generateDummyLiquors = () => {
     return [
         {
@@ -144,48 +144,77 @@ const generateDummyLiquors = () => {
 
 export default function AdminLiquor() {
     const [liquors, setLiquors] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedCategory, setSelectedCategory] = useState('All');
 
-    // Load liquors from localStorage
+    // Load liquors from API
     useEffect(() => {
-        const savedLiquors = JSON.parse(localStorage.getItem('restaurant-liquor') || '[]');
-        // If no saved liquors, use dummy data
-        const liquorsData = savedLiquors.length > 0 ? savedLiquors : generateDummyLiquors();
-        setLiquors(liquorsData);
+        const fetchLiquors = async () => {
+            try {
+                setLoading(true);
+                setError(null);
+                const liquorData = await AdminService.getLiquorData();
+                setLiquors(liquorData || []);
+            } catch (error) {
+                console.error('Error fetching liquors:', error);
+                setError('Failed to load liquor data');
+                // Fallback to dummy data on error
+                setLiquors(generateDummyLiquors());
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchLiquors();
     }, []);
 
     // Filter liquors based on search and category
     const filteredLiquors = useMemo(() => {
         return liquors.filter(liquor => {
             const matchesSearch = liquor.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                                liquor.supplier.toLowerCase().includes(searchTerm.toLowerCase());
-            const matchesCategory = selectedCategory === 'All' || liquor.category === selectedCategory;
+                                (liquor.brand || '').toLowerCase().includes(searchTerm.toLowerCase());
+            const liquorCategory = liquor.type || liquor.category || 'Other';
+            const matchesCategory = selectedCategory === 'All' || 
+                                  liquorCategory.toLowerCase() === selectedCategory.toLowerCase();
             return matchesSearch && matchesCategory;
         });
     }, [liquors, searchTerm, selectedCategory]);
 
     // Calculate liquor stats
     const calculateLiquorStats = useCallback((liquor) => {
-        const totalPortions = liquor.totalBottles * liquor.portionsPerBottle;
-        const remainingPortions = liquor.remainingBottles * liquor.portionsPerBottle;
-        const usedPortions = totalPortions - remainingPortions;
-        const usagePercentage = totalPortions > 0 ? (usedPortions / totalPortions) * 100 : 0;
+        // For API data, use bottlesInStock from API response
+        const remainingBottles = liquor.bottlesInStock || liquor.remainingBottles || liquor.currentQuantity || 0;
+        const totalBottles = liquor.totalBottles || liquor.maxQuantity || remainingBottles;
+        const usedBottles = totalBottles - remainingBottles;
+        const usagePercentage = totalBottles > 0 ? (usedBottles / totalBottles) * 100 : 0;
+        
+        // Calculate portions based on volume
+        const bottleVolume = liquor.bottleVolume || liquor.volume || 750;
+        const defaultPortionSize = liquor.type === 'beer' ? bottleVolume : 30; // Beer is served as full bottle
+        const portionSize = liquor.portionSize || defaultPortionSize;
+        const portionsPerBottle = liquor.type === 'beer' ? 1 : Math.floor(bottleVolume / portionSize);
+        const totalPortions = totalBottles * portionsPerBottle;
+        const remainingPortions = remainingBottles * portionsPerBottle;
         
         return {
+            totalBottles,
+            remainingBottles,
+            usedBottles,
+            usagePercentage,
             totalPortions,
             remainingPortions,
-            usedPortions,
-            usagePercentage
+            portionsPerBottle
         };
     }, []);
 
     // Get liquor status
     const getLiquorStatus = useCallback((liquor) => {
         const stats = calculateLiquorStats(liquor);
-        if (stats.remainingPortions <= 5) {
+        if (stats.remainingBottles <= 2) {
             return { status: 'critical', color: 'text-red-600', icon: MdWarning, bgColor: 'bg-red-50' };
-        } else if (stats.remainingPortions <= 20) {
+        } else if (stats.remainingBottles <= 5) {
             return { status: 'low', color: 'text-orange-600', icon: MdWarning, bgColor: 'bg-orange-50' };
         } else {
             return { status: 'good', color: 'text-green-600', icon: MdCheckCircle, bgColor: 'bg-green-50' };
@@ -197,11 +226,13 @@ export default function AdminLiquor() {
         const totalItems = liquors.length;
         const lowStockItems = liquors.filter(liquor => {
             const stats = calculateLiquorStats(liquor);
-            return stats.remainingPortions <= 20;
+            return stats.remainingBottles <= 5;
         }).length;
         
         const totalValue = liquors.reduce((sum, liquor) => {
-            return sum + (liquor.remainingBottles * liquor.unitPrice);
+            const remainingBottles = liquor.bottlesInStock || liquor.remainingBottles || liquor.currentQuantity || 0;
+            const price = liquor.pricePerBottle || liquor.sellingPrice || liquor.unitPrice || 0;
+            return sum + (remainingBottles * price);
         }, 0);
 
         const totalPortions = liquors.reduce((sum, liquor) => {
@@ -219,10 +250,11 @@ export default function AdminLiquor() {
     // Category options for select
     const categoryOptions = useMemo(() => [
         { value: 'All', label: 'All Categories' },
-        ...LIQUOR_CATEGORIES.map(category => ({
-            value: category,
-            label: category
-        }))
+        { value: 'beer', label: 'Beer' },
+        { value: 'hard_liquor', label: 'Hard Liquor' },
+        { value: 'wine', label: 'Wine' },
+        { value: 'cigarettes', label: 'Cigarettes' },
+        { value: 'Other', label: 'Other' }
     ], []);
 
     // Stats cards configuration
@@ -266,6 +298,28 @@ export default function AdminLiquor() {
             isNumber: true
         }
     ], [overallStats]);
+
+    // Show loading spinner
+    if (loading) {
+        return (
+            <div className="h-screen flex items-center justify-center">
+                <LoadingSpinner />
+            </div>
+        );
+    }
+
+    // Show error state
+    if (error && liquors.length === 0) {
+        return (
+            <div className="h-screen flex items-center justify-center">
+                <div className="text-center">
+                    <MdWarning className="h-12 w-12 text-red-500 mx-auto mb-4" />
+                    <h2 className="text-xl font-semibold text-gray-900 mb-2">Error Loading Liquor Data</h2>
+                    <p className="text-gray-600">{error}</p>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="h-screen flex flex-col p-3 sm:p-6">
@@ -347,7 +401,9 @@ export default function AdminLiquor() {
                                             <MdLocalBar className="h-5 w-5 sm:h-6 sm:w-6 text-primaryColor flex-shrink-0" />
                                             <div className="min-w-0 flex-1">
                                                 <h3 className="font-semibold text-other1 text-sm sm:text-base truncate">{liquor.name}</h3>
-                                                <p className="text-xs sm:text-sm text-gray-600 truncate">{liquor.category}</p>
+                                                <p className="text-xs sm:text-sm text-gray-600 truncate">
+                                                    {liquor.type || liquor.category || 'Other'} - {liquor.brand || 'No Brand'}
+                                                </p>
                                             </div>
                                         </div>
                                         <div className={`flex items-center gap-1 ${status.color} flex-shrink-0`}>
@@ -359,16 +415,16 @@ export default function AdminLiquor() {
                                 <div className="p-3 sm:p-4 space-y-2 sm:space-y-3">
                                     <div className="grid grid-cols-2 gap-2 sm:gap-4 text-xs sm:text-sm">
                                         <div>
-                                            <span className="text-gray-500">Bottle Size:</span>
-                                            <p className="font-medium truncate">{liquor.bottleSize}</p>
+                                            <span className="text-gray-500">Volume:</span>
+                                            <p className="font-medium truncate">{liquor.bottleVolume || liquor.volume || 750}ml</p>
                                         </div>
                                         <div>
                                             <span className="text-gray-500">Alcohol %:</span>
-                                            <p className="font-medium">{liquor.alcoholContent}%</p>
+                                            <p className="font-medium">{liquor.alcoholPercentage || liquor.alcoholContent || 0}%</p>
                                         </div>
                                         <div>
                                             <span className="text-gray-500">Remaining:</span>
-                                            <p className="font-medium">{liquor.remainingBottles} bottles</p>
+                                            <p className="font-medium">{stats.remainingBottles} bottles</p>
                                         </div>
                                         <div>
                                             <span className="text-gray-500">Portions Left:</span>
@@ -393,8 +449,8 @@ export default function AdminLiquor() {
                                     <div className="flex items-center justify-between pt-2">
                                         <div>
                                             <span className="text-base sm:text-lg font-bold text-green-600">
-                                                <span className="hidden sm:inline">LKR {liquor.unitPrice.toFixed(2)}</span>
-                                                <span className="sm:hidden">₨{liquor.unitPrice.toFixed(0)}</span>
+                                                <span className="hidden sm:inline">LKR {(liquor.pricePerBottle || liquor.sellingPrice || liquor.unitPrice || 0).toFixed(2)}</span>
+                                                <span className="sm:hidden">₨{(liquor.pricePerBottle || liquor.sellingPrice || liquor.unitPrice || 0).toFixed(0)}</span>
                                             </span>
                                             <p className="text-xs text-gray-500">per bottle</p>
                                         </div>

@@ -1,5 +1,5 @@
 // API Configuration
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
 // Stock API Service
 class StockAPI {
@@ -45,7 +45,26 @@ class StockAPI {
       }
 
       if (!response.ok) {
-        throw new Error(data.message || `HTTP Error: ${response.status}`);
+        console.error('API Error Response:', {
+          status: response.status,
+          statusText: response.statusText,
+          data: data
+        });
+        
+        // Enhanced error message for validation errors
+        if (response.status === 400) {
+          const errorMessage = data.message || data.error || 'Validation failed';
+          const validationErrors = data.errors || data.details || [];
+          
+          if (validationErrors.length > 0) {
+            console.error('Validation errors:', validationErrors);
+            throw new Error(`${errorMessage}: ${validationErrors.join(', ')}`);
+          } else {
+            throw new Error(errorMessage);
+          }
+        }
+        
+        throw new Error(data.message || data.error || `HTTP Error: ${response.status}`);
       }
 
       return data;

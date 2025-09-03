@@ -35,6 +35,7 @@ export default function LiquorStockForm({ item, onSubmit, onCancel }) {
     bottleVolume: 750,
     bottlesInStock: 0,
     pricePerBottle: '',
+    buyingPrice: '', // New field for buying price
     minimumBottles: 2,
     alcoholPercentage: '',
     customBottleVolume: '' // For custom bottle volume input
@@ -52,6 +53,7 @@ export default function LiquorStockForm({ item, onSubmit, onCancel }) {
         bottleVolume: item.bottleVolume || 750,
         bottlesInStock: item.bottlesInStock || 0,
         pricePerBottle: item.pricePerBottle || '',
+        buyingPrice: item.buyingPrice || '', // Add buying price
         minimumBottles: item.minimumBottles || 2,
         alcoholPercentage: item.alcoholPercentage || '',
         customBottleVolume: ''
@@ -76,6 +78,16 @@ export default function LiquorStockForm({ item, onSubmit, onCancel }) {
 
     if (!formData.pricePerBottle || formData.pricePerBottle <= 0) {
       newErrors.pricePerBottle = 'Valid price per bottle is required';
+    }
+
+    if (!formData.buyingPrice || formData.buyingPrice <= 0) {
+      newErrors.buyingPrice = 'Valid buying price is required';
+    }
+
+    // Validate that selling price is higher than buying price
+    if (formData.pricePerBottle && formData.buyingPrice && 
+        parseFloat(formData.pricePerBottle) <= parseFloat(formData.buyingPrice)) {
+      newErrors.pricePerBottle = 'Selling price must be higher than buying price';
     }
 
     if (formData.bottlesInStock < 0) {
@@ -142,6 +154,7 @@ export default function LiquorStockForm({ item, onSubmit, onCancel }) {
         ...formData,
         bottleVolume: needsBottleVolume() ? finalBottleVolume : undefined,
         pricePerBottle: parseFloat(formData.pricePerBottle),
+        buyingPrice: parseFloat(formData.buyingPrice), // Add buying price
         bottlesInStock: parseInt(formData.bottlesInStock),
         minimumBottles: parseInt(formData.minimumBottles),
         alcoholPercentage: isHardLiquor() && formData.alcoholPercentage ? parseFloat(formData.alcoholPercentage) : undefined
@@ -296,9 +309,22 @@ export default function LiquorStockForm({ item, onSubmit, onCancel }) {
               <h4 className="text-lg font-semibold text-gray-800">Stock & Pricing</h4>
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
               <InputField
-                label={`Price per ${isCigarettes() ? 'Pack' : 'Bottle'} (LKR)`}
+                label={`Buying Price per ${isCigarettes() ? 'Pack' : 'Bottle'} (LKR)`}
+                id="buyingPrice"
+                type="number"
+                step="0.01"
+                min="0"
+                value={formData.buyingPrice}
+                onChange={(e) => handleInputChange('buyingPrice', e.target.value)}
+                placeholder="35.00"
+                error={errors.buyingPrice}
+                required
+              />
+
+              <InputField
+                label={`Selling Price per ${isCigarettes() ? 'Pack' : 'Bottle'} (LKR)`}
                 id="pricePerBottle"
                 type="number"
                 step="0.01"

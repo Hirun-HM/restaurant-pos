@@ -2,40 +2,61 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { FaUsers, FaUtensils, FaMoneyBillWave, FaChartLine } from 'react-icons/fa';
 import { MdInventory, MdLocalBar, MdTableRestaurant } from 'react-icons/md';
 import AnimatedNumber from '../../../components/AnimatedNumber';
+import AdminService from '../../../services/adminService';
 
 export default function AdminOverview() {
     const [stats, setStats] = useState({
-        totalTables: 0,
+        totalTables: 8, // Static for now - could be made dynamic later
         activeBills: 0,
         totalRevenue: 0,
+        totalProfit: 0,
         menuItems: 0,
         stockItems: 0,
-        liquorItems: 0
+        liquorItems: 0,
+        lowStockCount: 0
     });
+    
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
 
-    // Get data from localStorage
+    // Fetch real data from APIs
     useEffect(() => {
-        const bills = JSON.parse(localStorage.getItem('restaurant-bills') || '{}');
-        const menuItems = JSON.parse(localStorage.getItem('restaurant-menu-items') || '[]');
-        const stockItems = JSON.parse(localStorage.getItem('restaurant-stocks') || '[]');
-        const liquorItems = JSON.parse(localStorage.getItem('restaurant-liquor') || '[]');
+        const fetchOverviewData = async () => {
+            try {
+                setLoading(true);
+                const data = await AdminService.getOverviewStats();
+                
+                // Calculate derived values
+                const activeBills = data.orders.activeOrders || 0;
+                const totalRevenue = data.orders.totalRevenue || 0;
+                const totalProfit = data.orders.totalProfit || 0;
+                
+                setStats({
+                    totalTables: 8, // Static for now
+                    activeBills: activeBills,
+                    totalRevenue: totalRevenue,
+                    totalProfit: totalProfit,
+                    menuItems: (data.food.totalItems || 0) + (data.liquor.totalItems || 0),
+                    stockItems: data.stock.totalItems || 0,
+                    liquorItems: data.liquor.totalItems || 0,
+                    lowStockCount: (data.stock.lowStockCount || 0) + (data.liquor.lowStockCount || 0)
+                });
+                setError(null);
+            } catch (err) {
+                console.error('Error fetching overview data:', err);
+                setError('Failed to load overview data');
+                // Keep existing stats or set defaults
+            } finally {
+                setLoading(false);
+            }
+        };
 
-        const activeBills = Object.values(bills).filter(bill => bill.status === 'active');
-        const totalRevenue = Object.values(bills)
-            .filter(bill => bill.status === 'closed')
-            .reduce((sum, bill) => {
-                const serviceCharge = bill.serviceCharge ? bill.total * 0.1 : 0;
-                return sum + bill.total + serviceCharge;
-            }, 0);
-
-        setStats({
-            totalTables: 7, // Static for now
-            activeBills: activeBills.length,
-            totalRevenue: totalRevenue,
-            menuItems: menuItems.length,
-            stockItems: stockItems.length,
-            liquorItems: liquorItems.length
-        });
+        fetchOverviewData();
+        
+        // Refresh data every 30 seconds
+        const interval = setInterval(fetchOverviewData, 30000);
+        
+        return () => clearInterval(interval);
     }, []);
 
     const statsCards = useMemo(() => [

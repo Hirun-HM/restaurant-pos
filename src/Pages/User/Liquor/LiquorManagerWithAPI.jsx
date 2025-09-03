@@ -198,7 +198,7 @@ export default function LiquorManagerWithAPI() {
         <>
           {/* Analytics Summary Cards */}
           {analytics && (
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
               <div className="bg-white rounded-lg p-6 shadow-sm border">
                 <div className="flex items-center">
                   <div className="p-2 bg-yellow-100 rounded-lg">
@@ -209,20 +209,6 @@ export default function LiquorManagerWithAPI() {
                   <div className="ml-4">
                     <p className="text-sm font-medium text-gray-600">Total Items</p>
                     <p className="text-2xl font-bold text-gray-900">{analytics.totalItems}</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-white rounded-lg p-6 shadow-sm border">
-                <div className="flex items-center">
-                  <div className="p-2 bg-green-100 rounded-lg">
-                    <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
-                    </svg>
-                  </div>
-                  <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-600">Total Value</p>
-                    <p className="text-2xl font-bold text-gray-900">${analytics.totalValue?.toFixed(2) || '0.00'}</p>
                   </div>
                 </div>
               </div>
