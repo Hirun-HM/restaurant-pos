@@ -3,6 +3,7 @@ import PropTypes from 'prop-types';
 import TableCard from './Components/TableCard';
 import OrderSummary from './Components/OrderSummary';
 import ConfirmationModal from '../../../components/ConfirmationModal';
+import MessageModal from './Components/MessageModal';
 import { useFoodItems } from '../../../hooks/useFoodItems';
 import { useLiquor } from '../../../hooks/useLiquor';
 import { orderService } from '../../../services/orderService';
@@ -88,6 +89,14 @@ export default function TableManagement({tableList = []}) {
     const [showClearAllModal, setShowClearAllModal] = useState(false);
     const [billToClose, setBillToClose] = useState(null);
     
+    // State for message modal
+    const [messageModal, setMessageModal] = useState({
+        isOpen: false,
+        title: '',
+        message: '',
+        type: 'info'
+    });
+    
     // Load bills from localStorage on component mount
     const [bills, setBills] = useState(() => {
         try {
@@ -154,6 +163,31 @@ export default function TableManagement({tableList = []}) {
         }
     }, [bills]);
 
+    // Helper function to show message modal
+    const showMessage = useCallback((title, message, type = 'info') => {
+        setMessageModal({
+            isOpen: true,
+            title,
+            message,
+            type
+        });
+    }, []);
+
+    const closeMessageModal = useCallback(() => {
+        setMessageModal({
+            isOpen: false,
+            title: '',
+            message: '',
+            type: 'info'
+        });
+        
+        // Ensure that the close bill modal is closed and state is reset
+        if (showCloseModal) {
+            setShowCloseModal(false);
+            setBillToClose(null);
+        }
+    }, [showCloseModal]);
+
     const handleTableClick = useCallback((table) => {
         setSelectedTable(table);
     }, []);
@@ -183,9 +217,13 @@ export default function TableManagement({tableList = []}) {
             }
         } catch (error) {
             console.error('Error creating bill:', error);
-            alert('❌ Failed to create bill. Please try again.');
+            showMessage(
+                'Failed to Create Bill',
+                'Failed to create bill. Please try again.',
+                'error'
+            );
         }
-    }, []);
+    }, [showMessage]);
 
     const handleAddItemToBill = useCallback(async (tableId, menuItem, quantity = 1) => {
         setBills(prevBills => {
@@ -318,11 +356,23 @@ export default function TableManagement({tableList = []}) {
 
         const bill = bills[billToClose];
 
+        console.log('🔍 Current bill structure:', JSON.stringify(bill, null, 2));
+
         try {
+            // Validate bill data before sending
+            if (!bill.items || bill.items.length === 0) {
+                showMessage(
+                    'Cannot Close Bill',
+                    'No items in the bill. Please add items before closing.',
+                    'warning'
+                );
+                return;
+            }
+
             // Process order payment and consume stock
             const orderData = {
                 orderId: bill.orderId, // Pass the existing order ID
-                tableId: billToClose,
+                tableId: String(billToClose), // Ensure it's a string
                 items: bill.items,
                 total: bill.total,
                 serviceCharge: bill.serviceCharge || false,
@@ -335,10 +385,16 @@ export default function TableManagement({tableList = []}) {
             // Call the order service to process payment and consume stock
             const result = await orderService.processOrderPayment(orderData);
             
+            console.log('🔍 Sent order data:', JSON.stringify(orderData, null, 2));
             console.log('Payment result:', result?.success ? 'SUCCESS' : 'FAILED');
             
             // Handle successful payment
             if (result && result.success === true) {
+                // Clear selected table and close modal FIRST
+                setSelectedTable(null);
+                setBillToClose(null);
+                setShowCloseModal(false);
+                
                 // Update bill status to closed
                 setBills(prevBills => ({
                     ...prevBills,
@@ -353,11 +409,11 @@ export default function TableManagement({tableList = []}) {
                 }));
 
                 // Build success message
-                let successMessage = `✅ Payment processed successfully!\n\nOrder ID: ${result.data?.orderId}\nStock items consumed: ${result.data?.stockConsumptions || 0}`;
+                let successMessage = `Payment processed successfully!\n\nOrder ID: ${result.data?.orderId}\nStock items consumed: ${result.data?.stockConsumptions || 0}`;
                 
                 // Add information about missed ingredients if any
                 if (result.data?.missedIngredients && result.data.missedIngredients.length > 0) {
-                    successMessage += `\n\n⚠️ Note: Some ingredients were not available in stock:\n${result.data.missedIngredients.map(ing => `• ${ing.name} (${ing.reason || 'Not in stock'})`).join('\n')}`;
+                    successMessage += `\n\nNote: Some ingredients were not available in stock:\n${result.data.missedIngredients.map(ing => `• ${ing.name} (${ing.reason || 'Not in stock'})`).join('\n')}`;
                     successMessage += `\n\nOnly available ingredients were deducted from stock.`;
                 } else {
                     successMessage += `\n\nAll ingredients were processed successfully.`;
@@ -365,13 +421,12 @@ export default function TableManagement({tableList = []}) {
                 
                 successMessage += `\n\nTable ${selectedTable?.tableNumber || billToClose} is now available.`;
 
-                // Show success alert
-                alert(successMessage);
-
-                // Clear selected table and close modal
-                setSelectedTable(null);
-                setBillToClose(null);
-                setShowCloseModal(false);
+                // Show success modal
+                showMessage(
+                    'Payment Successful',
+                    successMessage,
+                    'success'
+                );
             } else {
                 // Handle failed response - this should not happen with the updated backend
                 console.error('❌ Unexpected response format:', result);
@@ -382,18 +437,35 @@ export default function TableManagement({tableList = []}) {
             console.error('❌ Error processing order payment:', error);
             
             // Show user-friendly error message
-            const errorMessage = error.message || 'Unknown error occurred';
+            let errorMessage = error.message || 'Unknown error occurred';
+            let errorDetails = '';
+            
+            // Try to get more detailed error information
+            if (error.response && error.response.data) {
+                errorMessage = error.response.data.message || errorMessage;
+                if (error.response.data.error) {
+                    errorDetails = `\n\nTechnical details: ${error.response.data.error}`;
+                }
+            }
             
             // Check if this is a network error
             if (errorMessage.includes('fetch') || errorMessage.includes('Network') || errorMessage.includes('Failed to fetch')) {
-                alert(`❌ Network Error: Unable to connect to server.\n\nPlease check:\n• Backend server is running\n• Internet connection\n• Then try again.`);
+                showMessage(
+                    'Network Error',
+                    `Unable to connect to server.\n\nPlease check:\n• Backend server is running\n• Internet connection\n• Then try again.`,
+                    'error'
+                );
             } else {
-                alert(`❌ Payment processing failed: ${errorMessage}\n\nNote: If some ingredients are missing from stock, the system will only deduct available ingredients and process the payment successfully.\n\nPlease try again or contact support if the issue persists.`);
+                showMessage(
+                    'Payment Processing Failed',
+                    `Payment processing failed: ${errorMessage}${errorDetails}\n\nPlease check the console for more details and try again.`,
+                    'error'
+                );
             }
             
             // Don't close the modal on error, let user try again
         }
-    }, [billToClose, bills]);
+    }, [billToClose, bills, selectedTable, showMessage]);
 
     const cancelCloseBill = useCallback(() => {
         setShowCloseModal(false);
@@ -421,70 +493,7 @@ export default function TableManagement({tableList = []}) {
         setShowClearAllModal(false);
     }, []);
 
-    // Force refresh function to sync with database
-    const forceRefresh = useCallback(async () => {
-        try {
-            console.log('🔄 Force refreshing - clearing cache and syncing with database...');
-            
-            // Clear localStorage
-            localStorage.removeItem('restaurant-bills');
-            
-            // Reset bills state
-            setBills({});
-            setSelectedTable(null);
-            
-            // Try to fetch any active orders from database
-            const response = await fetch('http://localhost:3001/api/orders/debug');
-            if (response.ok) {
-                const data = await response.json();
-                console.log('📊 Orders from database:', data);
-                
-                // Filter for active orders (not completed, paid, or cancelled)
-                const activeOrders = data.orders?.filter(order => 
-                    order.status && !['completed', 'paid', 'cancelled'].includes(order.status)
-                ) || [];
-                
-                if (activeOrders.length > 0) {
-                    console.log('📋 Found active orders:', activeOrders);
-                    const newBills = {};
-                    
-                    // We need to fetch full order details for active orders
-                    for (const order of activeOrders) {
-                        try {
-                            const fullOrderResponse = await fetch(`http://localhost:3001/api/orders/${order.id}`);
-                            if (fullOrderResponse.ok) {
-                                const fullOrder = await fullOrderResponse.json();
-                                const tableId = fullOrder.data.tableNumber || fullOrder.data.tableId;
-                                if (tableId) {
-                                    newBills[tableId] = {
-                                        orderId: fullOrder.data._id,
-                                        items: fullOrder.data.items || [],
-                                        total: fullOrder.data.total || 0,
-                                        status: fullOrder.data.status || 'created'
-                                    };
-                                }
-                            }
-                        } catch (fetchError) {
-                            console.log(`⚠️ Could not fetch details for order ${order.id}:`, fetchError.message);
-                        }
-                    }
-                    
-                    setBills(newBills);
-                    console.log('✅ Rebuilt bills state from database:', newBills);
-                } else {
-                    console.log('✅ No active orders found in database');
-                }
-                
-                alert(`✅ Cache cleared and synced with database!\n\nFound ${activeOrders.length} active orders`);
-            } else {
-                console.log('⚠️ Could not fetch orders from database');
-                alert('⚠️ Could not connect to database. Cache cleared locally.');
-            }
-        } catch (error) {
-            console.error('❌ Error during force refresh:', error);
-            alert('⚠️ Refresh completed but there may have been connection issues');
-        }
-    }, []);
+
 
     return (
         <div className='flex flex-col md:flex-row gap-2 h-full md:h-[78vh] mt-5'>
@@ -493,14 +502,6 @@ export default function TableManagement({tableList = []}) {
                 <div className="flex justify-between items-center mb-4">
                     <h1 className='text-[24px] font-[500] text-other1'>Table List</h1>
                     <div className="flex gap-2">
-                        {/* Force refresh button */}
-                        <button 
-                            onClick={forceRefresh}
-                            className="text-xs bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600"
-                            title="Sync with database and clear cache"
-                        >
-                            🔄 Refresh
-                        </button>
                         {/* Development helper - remove in production */}
                         <button 
                             onClick={clearAllBills}
@@ -563,6 +564,15 @@ export default function TableManagement({tableList = []}) {
                 confirmText="Clear All"
                 cancelText="Cancel"
                 type="danger"
+            />
+
+            {/* Message Modal */}
+            <MessageModal
+                isOpen={messageModal.isOpen}
+                onClose={closeMessageModal}
+                title={messageModal.title}
+                message={messageModal.message}
+                type={messageModal.type}
             />
         </div>
     )
