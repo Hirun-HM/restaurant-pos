@@ -42,17 +42,6 @@ export default function AdminAnalytics() {
             subtitle: `Food: LKR ${(analytics.revenue.foodRevenue || 0).toFixed(0)} | Liquor: LKR ${(analytics.revenue.liquorRevenue || 0).toFixed(0)}`
         },
         {
-            id: 'profit',
-            title: 'Total Profit',
-            value: analytics.profit.total,
-            isNumber: true,
-            prefix: 'LKR ',
-            icon: <MdTrendingUp className="h-8 w-8 text-blue-600" />,
-            className: 'bg-white rounded-lg shadow-md p-6 border border-gray-200',
-            delay: 100,
-            subtitle: `Margin: ${(analytics.profit.margin || 0).toFixed(1)}%`
-        },
-        {
             id: 'orders',
             title: 'Total Orders',
             value: analytics.orders.total,
@@ -192,7 +181,7 @@ export default function AdminAnalytics() {
             </div>
 
             {/* Key Metrics */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {keyMetrics.map(metric => (
                     <div key={metric.id}>
                         {renderMetricCard(metric)}

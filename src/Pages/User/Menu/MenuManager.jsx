@@ -6,6 +6,7 @@ import LiquorMenuCard from './components/LiquorMenuCardEnhanced';
 import LiquorService from '../../../services/liquorService';
 import { useFoodItems } from '../../../hooks/useFoodItems';
 import { InputField } from '../../../components/InputField';
+import LoadingSpinner from '../../../components/LoadingSpinner';
 
 // Allowed categories for Menu Manager (now only API-based items)
 const ALLOWED_CATEGORIES = ['Foods', 'Liquor', 'Cigarettes', 'Bites', 'Others'];
@@ -26,6 +27,8 @@ export default memo(function MenuManager() {
     const { foodItems, loading: foodItemsLoading, fetchFoodItems } = useFoodItems();
 
     const [liquorItems, setLiquorItems] = useState([]);
+    const [liquorItemsLoading, setLiquorItemsLoading] = useState(false);
+    const [refreshing, setRefreshing] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedCategory, setSelectedCategory] = useState('All');
     
@@ -42,17 +45,21 @@ export default memo(function MenuManager() {
     }, []);
 
     const fetchLiquorItems = async () => {
+        setLiquorItemsLoading(true);
         try {
             const response = await LiquorService.getAllLiquors();
             setLiquorItems(response.data || []);
         } catch (error) {
             console.error('Error fetching liquor items:', error);
             setLiquorItems([]);
+        } finally {
+            setLiquorItemsLoading(false);
         }
     };
 
     // Refresh all data from APIs
     const refreshAllData = async () => {
+        setRefreshing(true);
         try {
             await Promise.all([
                 fetchLiquorItems(),
@@ -61,6 +68,8 @@ export default memo(function MenuManager() {
             console.log('All menu data refreshed successfully');
         } catch (error) {
             console.error('Error refreshing menu data:', error);
+        } finally {
+            setRefreshing(false);
         }
     };
     
@@ -155,7 +164,7 @@ export default memo(function MenuManager() {
             console.error('Error updating portions:', error);
         }
     };
-    
+
     // Memoize category buttons
     const categoryButtons = useMemo(() => {
         return categories.map(category => (
@@ -178,6 +187,13 @@ export default memo(function MenuManager() {
             )
         ));
     }, [categories, selectedCategory, handleCategoryChange]);
+
+    // Show loading spinner during initial load
+    const isInitialLoading = (foodItemsLoading && foodItems.length === 0) || (liquorItemsLoading && liquorItems.length === 0);
+    
+    if (isInitialLoading) {
+        return <LoadingSpinner />;
+    }
     
     return (
         <div className="p-8 min-h-screen bg-gray-50">
@@ -196,10 +212,10 @@ export default memo(function MenuManager() {
                             onClick={refreshAllData}
                             className="flex items-center gap-2 px-6 py-3"
                             title="Refresh all menu data from APIs"
-                            disabled={foodItemsLoading}
+                            disabled={foodItemsLoading || liquorItemsLoading || refreshing}
                         >
-                            <FaSync className={`w-4 h-4 ${foodItemsLoading ? 'animate-spin' : ''}`} />
-                            {foodItemsLoading ? 'Refreshing...' : 'Refresh All'}
+                            <FaSync className={`w-4 h-4 ${refreshing || foodItemsLoading || liquorItemsLoading ? 'animate-spin' : ''}`} />
+                            {refreshing ? 'Refreshing...' : 'Refresh All'}
                         </SecondaryButton>
                     </div>
                 </div>
@@ -229,8 +245,11 @@ export default memo(function MenuManager() {
                         </div>
                         
                         {/* Results Count */}
-                        <div className="text-sm text-gray-600 bg-gray-100 px-3 py-2 rounded-lg">
+                        <div className="text-sm text-gray-600 bg-gray-100 px-3 py-2 rounded-lg flex items-center gap-2">
                             <span className="font-medium">{filteredItems.length}</span> items found
+                            {(liquorItemsLoading || foodItemsLoading) && (
+                                <FaSync className="w-3 h-3 animate-spin text-gray-500" />
+                            )}
                         </div>
                     </div>
                     
@@ -247,7 +266,17 @@ export default memo(function MenuManager() {
             </div>
             
             {/* Content Section */}
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 min-h-[600px]">
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 min-h-[600px] relative">
+                {/* Loading overlay for refresh */}
+                {refreshing && (
+                    <div className="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center z-10 rounded-2xl">
+                        <div className="flex items-center gap-3 bg-white px-6 py-3 rounded-lg shadow-lg">
+                            <FaSync className="w-5 h-5 animate-spin text-primaryColor" />
+                            <span className="text-gray-700 font-medium">Refreshing menu data...</span>
+                        </div>
+                    </div>
+                )}
+                
                 {filteredItems.length === 0 ? (
                     <div className="flex items-center justify-center h-96">
                         <div className="text-center space-y-4">

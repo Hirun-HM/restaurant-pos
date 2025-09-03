@@ -12,8 +12,7 @@ const stockSchema = new mongoose.Schema({
         type: String,
         required: [true, 'Category is required'],
         enum: ['ingredients', 'food', 'drinks', 'supplies'],
-        lowercase: true,
-        index: true
+        lowercase: true
     },
     quantity: {
         type: Number,
@@ -29,8 +28,20 @@ const stockSchema = new mongoose.Schema({
     },
     price: {
         type: Number,
-        required: [true, 'Price is required'],
-        min: [0, 'Price cannot be negative']
+        required: [true, 'Selling price is required'],
+        min: [0, 'Selling price cannot be negative'],
+        validate: {
+            validator: function(value) {
+                // Only validate if buyingPrice is also set
+                return !this.buyingPrice || value > this.buyingPrice;
+            },
+            message: 'Selling price must be higher than buying price'
+        }
+    },
+    buyingPrice: {
+        type: Number,
+        required: [true, 'Buying price is required'],
+        min: [0, 'Buying price cannot be negative']
     },
     minimumQuantity: {
         type: Number,
@@ -78,9 +89,30 @@ const stockSchema = new mongoose.Schema({
         return this.quantity <= this.minimumQuantity;
     });
 
-    // Virtual for total value
+    // Virtual for total value (at selling price)
     stockSchema.virtual('totalValue').get(function() {
         return this.quantity * this.price;
+    });
+
+    // Virtual for total cost (at buying price)
+    stockSchema.virtual('totalCost').get(function() {
+        return this.quantity * (this.buyingPrice || 0);
+    });
+
+    // Virtual for profit per unit
+    stockSchema.virtual('profitPerUnit').get(function() {
+        return this.price - (this.buyingPrice || 0);
+    });
+
+    // Virtual for total profit
+    stockSchema.virtual('totalProfit').get(function() {
+        return this.quantity * this.profitPerUnit;
+    });
+
+    // Virtual for profit margin percentage
+    stockSchema.virtual('profitMargin').get(function() {
+        if (!this.buyingPrice || this.buyingPrice === 0) return 0;
+        return ((this.price - this.buyingPrice) / this.buyingPrice) * 100;
     });
 
     // Ensure virtual fields are serialized

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { PrimaryButton, SecondaryButton } from "../../../../components/Button";
+import { formatQuantity } from "../../../../utils/numberFormat";
 
 export default function StockItemCard({ item, onEdit, onDelete }) {
     const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -29,7 +30,9 @@ export default function StockItemCard({ item, onEdit, onDelete }) {
             <div className="space-y-2 mb-4">
                 <div className="flex justify-between">
                     <span className="text-sm text-text">Quantity:</span>
-                    <span className="font-medium text-other1">{item.quantity} {item.unit}</span>
+                    <span className="font-medium text-other1">
+                        {formatQuantity(item.quantity)} {item.unit}
+                    </span>
                 </div>
                 <div className="flex justify-between">
                     <span className="text-sm text-text">Price:</span>

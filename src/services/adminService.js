@@ -74,6 +74,39 @@ export const AdminService = {
             console.error('Error fetching food/liquor breakdown:', error);
             throw error;
         }
+    },
+
+    // Get active table count
+    async getActiveTableCount() {
+        try {
+            const response = await api.get('/orders/active-table-count');
+            return response.count || 0;
+        } catch (error) {
+            console.error('Error fetching active table count:', error);
+            return 0;
+        }
+    },
+
+    // Get active bills count
+    async getActiveBillsCount() {
+        try {
+            const response = await api.get('/orders/active-bills-count');
+            return response.count || 0;
+        } catch (error) {
+            console.error('Error fetching active bills count:', error);
+            return 0;
+        }
+    },
+
+    // Debug method to get orders info
+    async getDebugOrders() {
+        try {
+            const response = await api.get('/orders/debug');
+            return response;
+        } catch (error) {
+            console.error('Error fetching debug orders:', error);
+            return { totalOrders: 0, orders: [] };
+        }
     }
 };
 

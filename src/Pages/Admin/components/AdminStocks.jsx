@@ -6,6 +6,7 @@ import Select from '../../../components/Select';
 import AnimatedNumber from '../../../components/AnimatedNumber';
 import LoadingSpinner from '../../../components/LoadingSpinner';
 import AdminService from '../../../services/adminService';
+import { formatQuantity } from '../../../utils/numberFormat';
 
 const STOCK_CATEGORIES = ['Vegetables', 'Meat', 'Seafood', 'Dairy', 'Spices', 'Beverage', 'Other'];
 
@@ -267,10 +268,10 @@ export default function AdminStocks() {
                 return (
                     <div>
                         <div className="text-sm text-other1">
-                            {currentQty} {stock.unit}
+                            {formatQuantity(currentQty)} {stock.unit}
                         </div>
                         <div className="text-xs text-gray-500">
-                            Min: {minQty} | Max: {maxQty}
+                            Min: {formatQuantity(minQty)} | Max: {formatQuantity(maxQty)}
                         </div>
                     </div>
                 );

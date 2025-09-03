@@ -291,7 +291,7 @@ const OrderSummary = memo(function OrderSummary({
     // Memoize bill status checks
     const billStatus = useMemo(() => {
         return {
-            hasActiveBill: bill && bill.status === 'active',
+            hasActiveBill: bill && (bill.status === 'created' || bill.status === 'pending'),
             hasItems: bill?.items?.length > 0,
             isNoBill: !bill || bill.status === 'closed'
         };
@@ -402,7 +402,17 @@ const OrderSummary = memo(function OrderSummary({
 
                     {/* Current Bill Section */}
                     <div className="w-full overflow-y-auto md:w-80 bg-white rounded-lg p-4 border border-gray-200 flex flex-col">
-                        <h3 className="text-lg font-semibold text-other1 mb-3">Current Bill</h3>
+                        <div className="flex justify-between items-center mb-3">
+                            <h3 className="text-lg font-semibold text-other1">Current Bill</h3>
+                            {billStatus.hasItems && (
+                                <SecondaryButton 
+                                    onClick={handleCloseBill}
+                                    className="text-xs px-3 py-1 bg-red-500 hover:bg-red-600 border-red-500 hover:border-red-600 text-white"
+                                >
+                                    Close Bill
+                                </SecondaryButton>
+                            )}
+                        </div>
                         
                         {!billStatus.hasItems ? (
                             emptyCartContent

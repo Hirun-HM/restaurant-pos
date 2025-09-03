@@ -3,6 +3,7 @@ import PropTypes from 'prop-types';
 import { InputField } from '../../../../components/InputField';
 import Select from '../../../../components/Select';
 import { PrimaryButton, SecondaryButton } from '../../../../components/Button';
+import { formatQuantity } from '../../../../utils/numberFormat';
 
 const categories = [
         { value: 'food', label: 'Food Items' },
@@ -47,6 +48,7 @@ export default function StockForm({
 
     useEffect(() => {
         if (editingItem) {
+            
             // Format expiry date for input field (YYYY-MM-DD format)
             let formattedExpiryDate = '';
             if (editingItem.expiryDate) {
@@ -60,18 +62,20 @@ export default function StockForm({
                 }
             }
             
-            setFormData({
+            const formattedData = {
                 name: editingItem.name || '',
                 category: editingItem.category || 'ingredients',
-                quantity: editingItem.quantity?.toString() || '',
+                quantity: editingItem.quantity ? formatQuantity(editingItem.quantity) : '',
                 unit: editingItem.unit || 'g',
-                price: editingItem.price?.toString() || '',
-                buyingPrice: editingItem.buyingPrice?.toString() || '', // Add buying price
-                minimumQuantity: editingItem.minimumQuantity?.toString() || '5',
+                price: editingItem.price ? formatQuantity(editingItem.price) : '',
+                buyingPrice: editingItem.buyingPrice ? formatQuantity(editingItem.buyingPrice) : (editingItem.price ? formatQuantity(editingItem.price * 0.8) : ''), // Fallback to 80% of selling price if no buying price
+                minimumQuantity: editingItem.minimumQuantity ? formatQuantity(editingItem.minimumQuantity) : '5',
                 supplier: editingItem.supplier || '',
                 description: editingItem.description || '',
                 expiryDate: formattedExpiryDate
-            });
+            };
+            
+            setFormData(formattedData);
             setErrors({});
         } else {
             // Reset form for new item
@@ -205,16 +209,14 @@ export default function StockForm({
                         error={errors.name}
                     />
 
-                    <div className="w-full">
-                        <Select
-                            label="Category"
-                            value={formData.category}
-                            onChange={(value) => setFormData({...formData, category: value})}
-                            options={categories}
-                            required
-                        />
-                        {errors.category && <p className="mt-1 text-sm text-red-500">{errors.category}</p>}
-                    </div>
+                    <Select
+                        label="Category"
+                        value={formData.category}
+                        onChange={(value) => setFormData({...formData, category: value})}
+                        options={categories}
+                        required
+                        error={errors.category}
+                    />
                 </div>
 
                 {/* Quantity and Price */}
@@ -231,16 +233,14 @@ export default function StockForm({
                         error={errors.quantity}
                     />
 
-                    <div className="w-full">
-                        <Select
-                            label="Unit"
-                            value={formData.unit}
-                            onChange={(value) => setFormData({...formData, unit: value})}
-                            options={units}
-                            required
-                        />
-                        {errors.unit && <p className="mt-1 text-sm text-red-500">{errors.unit}</p>}
-                    </div>
+                    <Select
+                        label="Unit"
+                        value={formData.unit}
+                        onChange={(value) => setFormData({...formData, unit: value})}
+                        options={units}
+                        required
+                        error={errors.unit}
+                    />
 
                     <InputField
                         label="Buying Price per Unit (LKR)"

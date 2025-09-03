@@ -2,6 +2,7 @@ import React, { useMemo, useCallback } from 'react';
 import PropTypes from 'prop-types';
 import { SecondaryButton } from '../../../../components/Button';
 import LiquorAnalyticsCard from '../../../../components/LiquorAnalyticsCard';
+import { formatQuantity } from '../../../../utils/numberFormat';
 
 const LiquorItemCard = React.memo(({ 
     item, 

@@ -5,6 +5,63 @@ import { api } from '../utils/api.js';
  */
 class OrderService {
     /**
+     * Create a new order (bill) when table is selected
+     * @param {string} tableId - Table identifier
+     * @returns {Promise} - Promise resolving to created order
+     */
+    async createOrder(tableId) {
+        try {
+            console.log('🔍 OrderService: Creating order for table:', tableId);
+            const orderData = {
+                tableNumber: parseInt(tableId), // Ensure it's a number
+                items: [],
+                subtotal: 0,
+                total: 0,
+                status: 'created', // Initial status when bill is created
+                paymentStatus: 'unpaid'
+            };
+            console.log('🔍 OrderService: Sending order data:', orderData);
+            const response = await api.post('/orders', orderData);
+            return response;
+        } catch (error) {
+            console.error('❌ OrderService: Create order error:', error);
+            throw this.handleError(error);
+        }
+    }
+
+    /**
+     * Update an existing order with new items
+     * @param {string} orderId - Order ID
+     * @param {Array} items - Array of order items
+     * @param {number} total - Order total
+     * @returns {Promise} - Promise resolving to updated order
+     */
+    async updateOrder(orderId, items, total) {
+        try {
+            console.log('🔍 OrderService: Updating order:', orderId);
+            const updateData = {
+                items: items.map(item => ({
+                    name: item.name,
+                    itemType: item.type === 'liquor' || ['hard_liquor', 'beer', 'wine', 'cigarettes'].includes(item.type) ? 'liquor' : 'food',
+                    itemId: item.id,
+                    quantity: item.quantity,
+                    unitPrice: item.price,
+                    totalPrice: item.price * item.quantity,
+                    portionSize: item.portionSize || null
+                })),
+                subtotal: total,
+                total: total,
+                status: items.length > 0 ? 'pending' : 'created' // Change to pending when items are added
+            };
+            const response = await api.put(`/orders/${orderId}`, updateData);
+            return response;
+        } catch (error) {
+            console.error('❌ OrderService: Update order error:', error);
+            throw this.handleError(error);
+        }
+    }
+
+    /**
      * Process an order payment and handle stock deduction
      * @param {Object} orderData - Order data containing items and quantities
      * @returns {Promise} - Promise resolving to order processing result
@@ -128,19 +185,9 @@ class OrderService {
     }
 
     /**
-     * Create a new order record
-     * @param {Object} orderData - Order details
-     * @returns {Promise} - Promise resolving to created order
+     * Create a new order record (duplicate method removed)
+     * This functionality is handled by the first createOrder method above
      */
-    async createOrder(orderData) {
-        try {
-            const response = await api.post('/orders', orderData);
-            return response.data;
-        } catch (error) {
-            console.error('Error creating order:', error);
-            throw this.handleError(error);
-        }
-    }
 
     /**
      * Update order status

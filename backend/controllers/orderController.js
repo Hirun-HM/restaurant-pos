@@ -1,54 +1,34 @@
 import mongoose from 'mongoose';
 import Order from '../models/Order.js';
+import Liquor from '../models/Liquor.js';
 import { stockManagement } from '../utils/stockManagement.js';
 
 /**
  * Create a new order (existing functionality)
  */
 export const createOrder = async (req, res) => {
-    const session = await mongoose.startSession();
-    session.startTransaction();
-
     try {
-        const { items, tableId, customerId, ...orderData } = req.body;
-
-        // First, check if we have sufficient stock for all items
-        const stockCheck = await reduceStockFromOrder(items, 'preview');
-        
-        if (!stockCheck.success) {
-            return res.status(400).json({
-                success: false,
-                message: 'Insufficient stock for some items',
-                insufficientItems: stockCheck.insufficientStock.map(item => ({
-                    name: item.itemName,
-                    required: item.required,
-                    available: item.available
-                }))
-            });
-        }
+        const { tableNumber, items = [], subtotal = 0, total = 0, status = 'created' } = req.body;
 
         // Create the order
         const order = new Order({
-            items,
-            tableId,
-            customerId,
-            ...orderData
+            tableNumber,
+            items: items.map(item => ({
+                name: item.name || 'Unknown Item',
+                itemType: item.itemType || 'food',
+                itemId: item.itemId || new mongoose.Types.ObjectId(),
+                quantity: item.quantity || 1,
+                unitPrice: item.unitPrice || 0,
+                totalPrice: item.totalPrice || 0,
+                portionSize: item.portionSize || null
+            })),
+            subtotal,
+            total,
+            status,
+            paymentStatus: 'unpaid'
         });
 
-        await order.save({ session });
-
-        // Reduce stock quantities
-        const stockReduction = await reduceStockFromOrder(items, order._id);
-        
-        if (!stockReduction.success) {
-            await session.abortTransaction();
-            return res.status(500).json({
-                success: false,
-                message: 'Error reducing stock quantities'
-            });
-        }
-
-        await session.commitTransaction();
+        await order.save();
 
         res.status(201).json({
             success: true,
@@ -57,15 +37,96 @@ export const createOrder = async (req, res) => {
         });
 
     } catch (error) {
-        await session.abortTransaction();
         console.error('Error creating order:', error);
         res.status(500).json({
             success: false,
             message: 'Error creating order',
             error: error.message
         });
-    } finally {
-        session.endSession();
+    }
+};
+
+/**
+ * Update an existing order
+ */
+export const updateOrder = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const updateData = req.body;
+
+        console.log('🔍 OrderController: Updating order ID:', id);
+        console.log('🔍 OrderController: Update data:', JSON.stringify(updateData, null, 2));
+
+        // Handle composite itemIds for liquor items with portions
+        if (updateData.items && Array.isArray(updateData.items)) {
+            console.log('🔍 OrderController: Processing', updateData.items.length, 'items');
+            
+            updateData.items = updateData.items.map((item, index) => {
+                console.log(`🔍 OrderController: Processing item ${index + 1}:`, item.name, 'ID:', item.itemId);
+                
+                // If itemId contains underscore, it's a composite ID (liquorId_portionType)
+                if (item.itemId && typeof item.itemId === 'string' && item.itemId.includes('_')) {
+                    // Extract the original liquor ID (before the underscore)
+                    const originalId = item.itemId.split('_')[0];
+                    console.log('🔍 OrderController: Composite ID detected. Extracting:', originalId, 'from:', item.itemId);
+                    
+                    // Validate that the extracted ID is a valid ObjectId
+                    if (mongoose.Types.ObjectId.isValid(originalId)) {
+                        console.log('✅ OrderController: Valid ObjectId extracted for', item.name);
+                        return {
+                            ...item,
+                            itemId: originalId, // Use the original liquor ID for database storage
+                            originalCompositeId: item.itemId // Keep track of the composite ID
+                        };
+                    } else {
+                        console.log('⚠️ OrderController: Invalid ObjectId extracted for', item.name);
+                    }
+                }
+                
+                // For regular items or if validation fails, keep as is
+                console.log('➡️ OrderController: Using original ID for', item.name);
+                return item;
+            });
+        }
+
+        const order = await Order.findByIdAndUpdate(id, updateData, { 
+            new: true,
+            runValidators: true // Ensure validation rules are applied
+        });
+
+        if (!order) {
+            console.log('❌ OrderController: Order not found with ID:', id);
+            return res.status(404).json({
+                success: false,
+                message: 'Order not found'
+            });
+        }
+
+        console.log('✅ OrderController: Order updated successfully');
+        res.status(200).json({
+            success: true,
+            message: 'Order updated successfully',
+            data: order
+        });
+
+    } catch (error) {
+        console.error('❌ OrderController: Error updating order:', error);
+        
+        // Provide more specific error messages for common issues
+        let errorMessage = 'Error updating order';
+        if (error.name === 'ValidationError') {
+            errorMessage = 'Invalid order data provided';
+            console.error('❌ OrderController: Validation errors:', error.errors);
+        } else if (error.name === 'CastError') {
+            errorMessage = 'Invalid ID format in order items';
+            console.error('❌ OrderController: Cast error details:', error.path, error.value);
+        }
+        
+        res.status(500).json({
+            success: false,
+            message: errorMessage,
+            error: error.message
+        });
     }
 };
 
@@ -73,14 +134,18 @@ export const createOrder = async (req, res) => {
  * Process order payment and handle stock deduction
  */
 export const processOrderPayment = async (req, res) => {
-    const session = await mongoose.startSession();
-    session.startTransaction();
-
+    let session = null;
+    
     try {
         console.log('🔍 Backend: Received order payment request');
         console.log('🔍 Backend: Request body:', JSON.stringify(req.body, null, 2));
         
+        // Start session and transaction
+        session = await mongoose.startSession();
+        session.startTransaction();
+        
         const { 
+            orderId, // Add orderId to identify existing order
             tableId, 
             items, 
             total, 
@@ -90,18 +155,42 @@ export const processOrderPayment = async (req, res) => {
         } = req.body;
 
         console.log('🔍 Backend: Extracted data:');
+        console.log('  - orderId:', orderId);
         console.log('  - tableId:', tableId);
         console.log('  - items count:', items?.length);
-        console.log('  - items:', items);
         console.log('  - total:', total);
 
         // Validate required fields
         if (!tableId || !items || !Array.isArray(items) || items.length === 0) {
-            console.log('❌ Backend: Validation failed');
+            console.log('❌ Backend: Validation failed - missing required fields');
             return res.status(400).json({
                 success: false,
                 message: 'Missing required fields: tableId and items are required'
             });
+        }
+
+        // If orderId is provided, find and update existing order
+        let existingOrder = null;
+        if (orderId) {
+            console.log('🔍 Looking for existing order with ID:', orderId);
+            try {
+                existingOrder = await Order.findById(orderId).session(session);
+                if (!existingOrder) {
+                    console.log('❌ Order not found with ID:', orderId);
+                    return res.status(404).json({
+                        success: false,
+                        message: 'Order not found'
+                    });
+                }
+                console.log('✅ Found existing order:', existingOrder._id);
+            } catch (findError) {
+                console.error('❌ Error finding order:', findError);
+                return res.status(400).json({
+                    success: false,
+                    message: 'Invalid order ID format',
+                    error: findError.message
+                });
+            }
         }
 
         // Separate food items and liquor items
@@ -143,29 +232,77 @@ export const processOrderPayment = async (req, res) => {
             }
         }
 
-        // Handle liquor consumption if needed
+        // Handle liquor consumption for hard liquors only (exclude beers and cigarettes)
         const liquorConsumptionResults = [];
         for (const liquorItem of liquorItems) {
             try {
-                // Import liquor controller functions
-                const { consumeLiquorStock } = await import('./liquorController.js');
+                console.log(`🍺 Processing liquor item: ${liquorItem.name} (quantity: ${liquorItem.quantity})`);
                 
-                const portion = liquorItem.selectedPortion || { volume: liquorItem.bottleVolume || 750 };
-                const totalVolumeConsumed = portion.volume * liquorItem.quantity;
+                // Only process hard liquors - skip beers and cigarettes
+                if (liquorItem.type !== 'hard_liquor') {
+                    console.log(`⏭️ Skipping ${liquorItem.type}: ${liquorItem.name} (volume tracking only for hard liquors)`);
+                    liquorConsumptionResults.push({
+                        itemName: liquorItem.name,
+                        type: liquorItem.type,
+                        quantity: liquorItem.quantity,
+                        note: `${liquorItem.type} - no volume tracking applied`,
+                        skipped: true
+                    });
+                    continue;
+                }
                 
-                const consumptionResult = await consumeLiquorStock(
-                    liquorItem.id || liquorItem._id,
-                    totalVolumeConsumed,
-                    `Order for Table ${tableId} - ${liquorItem.name}`,
-                    session
-                );
-                liquorConsumptionResults.push(consumptionResult);
+                // Get the actual liquor item from database using originalItemId
+                const liquorId = liquorItem.originalItemId || (liquorItem.id && liquorItem.id.includes('_') ? liquorItem.id.split('_')[0] : liquorItem.id);
+                if (!liquorId) {
+                    throw new Error('No valid liquor ID found');
+                }
+                
+                const liquorFromDB = await Liquor.findById(liquorId).session(session);
+                if (!liquorFromDB) {
+                    throw new Error(`Liquor item not found in database: ${liquorId}`);
+                }
+                
+                // Calculate volume to consume based on portion
+                const portion = liquorItem.portion || liquorItem.selectedPortion || { ml: liquorItem.bottleVolume || 750 };
+                const volumePerItem = portion.ml || portion.volume || 25; // Default to 25ml if no portion specified
+                const totalVolumeToConsume = volumePerItem * liquorItem.quantity;
+                
+                console.log(`📊 Consuming ${totalVolumeToConsume}ml (${volumePerItem}ml × ${liquorItem.quantity}) from ${liquorFromDB.name}`);
+                
+                // Actually consume the liquor volume
+                const consumptionResult = liquorFromDB.consumeLiquor(totalVolumeToConsume);
+                
+                // Save the updated liquor data
+                await liquorFromDB.save({ session });
+                
+                liquorConsumptionResults.push({
+                    itemName: liquorItem.name,
+                    type: liquorItem.type,
+                    liquorId: liquorId,
+                    volumeConsumed: consumptionResult.consumed,
+                    volumeWasted: consumptionResult.wasted,
+                    bottlesCompleted: consumptionResult.bottlesCompleted,
+                    quantity: liquorItem.quantity,
+                    portionSize: `${volumePerItem}ml`,
+                    remainingBottles: consumptionResult.remainingBottles,
+                    remainingVolume: consumptionResult.remainingVolume,
+                    note: 'Volume successfully deducted from stock'
+                });
+                
+                console.log(`✅ Successfully consumed: ${liquorItem.name} - ${totalVolumeToConsume}ml`);
+                if (consumptionResult.wasted > 0) {
+                    console.log(`🗑️ Wasted volume (≤30ml): ${consumptionResult.wasted}ml`);
+                }
+                
             } catch (liquorError) {
-                await session.abortTransaction();
-                return res.status(400).json({
-                    success: false,
-                    message: `Insufficient liquor stock for ${liquorItem.name}`,
-                    liquorError: liquorError.message
+                console.log(`⚠️ Liquor processing error: ${liquorItem.name} - ${liquorError.message}`);
+                // Don't abort transaction for liquor issues - just log and continue
+                liquorConsumptionResults.push({
+                    itemName: liquorItem.name,
+                    type: liquorItem.type || 'unknown',
+                    quantity: liquorItem.quantity,
+                    error: liquorError.message,
+                    note: 'Liquor consumption failed but order continues'
                 });
             }
         }
@@ -195,31 +332,57 @@ export const processOrderPayment = async (req, res) => {
             completedAt: new Date()
         };
 
-        // Save order to database
-        const savedOrder = new Order({
-            tableNumber: tableId,
-            items: items.map(item => ({
+        // Update existing order or create new order record
+        let savedOrder;
+        if (existingOrder) {
+            // Update existing order
+            existingOrder.items = items.map(item => ({
                 name: item.name,
                 itemType: item.type === 'liquor' || ['hard_liquor', 'beer', 'wine', 'cigarettes'].includes(item.type) ? 'liquor' : 'food',
-                itemId: new mongoose.Types.ObjectId(), // Generate a dummy ObjectId for now
+                itemId: item.originalItemId || (item.id && item.id.includes('_') ? item.id.split('_')[0] : item.id) || new mongoose.Types.ObjectId(),
                 quantity: item.quantity,
                 unitPrice: item.price,
                 totalPrice: item.price * item.quantity,
-                portionSize: item.portionSize || null
-            })),
-            subtotal: total,
-            serviceCharge: serviceCharge ? Math.round(total * 0.1) : 0,
-            total: serviceCharge ? total + Math.round(total * 0.1) : total,
-            paymentMethod,
-            customerId,
-            status: 'paid',
-            paymentStatus: 'paid',
-            createdAt: new Date(),
-            orderTime: new Date()
-        });
+                portionSize: item.portionSize || (item.portion ? `${item.portion.ml}ml` : null)
+            }));
+            existingOrder.subtotal = total;
+            existingOrder.serviceCharge = serviceCharge ? Math.round(total * 0.1) : 0;
+            existingOrder.total = serviceCharge ? total + Math.round(total * 0.1) : total;
+            existingOrder.paymentMethod = paymentMethod;
+            existingOrder.status = 'paid';
+            existingOrder.paymentStatus = 'paid';
+            existingOrder.paidAt = new Date();
 
-        await savedOrder.save({ session });
-        console.log('✅ Order saved to database with ID:', savedOrder._id);
+            await existingOrder.save({ session });
+            savedOrder = existingOrder;
+            console.log('✅ Existing order updated with ID:', savedOrder._id);
+        } else {
+            // Create new order (fallback for backward compatibility)
+            savedOrder = new Order({
+                tableNumber: tableId,
+                items: items.map(item => ({
+                    name: item.name,
+                    itemType: item.type === 'liquor' || ['hard_liquor', 'beer', 'wine', 'cigarettes'].includes(item.type) ? 'liquor' : 'food',
+                    itemId: item.originalItemId || (item.id && item.id.includes('_') ? item.id.split('_')[0] : item.id) || new mongoose.Types.ObjectId(),
+                    quantity: item.quantity,
+                    unitPrice: item.price,
+                    totalPrice: item.price * item.quantity,
+                    portionSize: item.portionSize || (item.portion ? `${item.portion.ml}ml` : null)
+                })),
+                subtotal: total,
+                serviceCharge: serviceCharge ? Math.round(total * 0.1) : 0,
+                total: serviceCharge ? total + Math.round(total * 0.1) : total,
+                paymentMethod,
+                customerId,
+                status: 'paid',
+                paymentStatus: 'paid',
+                createdAt: new Date(),
+                paidAt: new Date()
+            });
+
+            await savedOrder.save({ session });
+            console.log('✅ New order created with ID:', savedOrder._id);
+        }
         
         // Log summary of what was processed
         console.log(`📊 Processing Summary:`);
@@ -230,9 +393,13 @@ export const processOrderPayment = async (req, res) => {
             console.log('   - Skipped ingredients:', missedIngredients.map(ing => ing.name).join(', '));
         }
 
+        // Commit the transaction BEFORE sending response
+        console.log('💾 Committing transaction...');
         await session.commitTransaction();
+        console.log('✅ Transaction committed successfully');
 
-        res.status(200).json({
+        // Prepare the response data
+        const responseData = {
             success: true,
             message: 'Order payment processed successfully',
             data: {
@@ -254,18 +421,65 @@ export const processOrderPayment = async (req, res) => {
                     ? `${missedIngredients.length} ingredient(s) were skipped due to unavailability: ${missedIngredients.map(ing => ing.name).join(', ')}` 
                     : 'All ingredients were processed successfully'
             }
-        });
+        };
+
+        console.log('📤 Sending success response...');
+        res.status(200).json(responseData);
+        console.log('✅ Response sent successfully');
 
     } catch (error) {
-        await session.abortTransaction();
-        console.error('Error processing order payment:', error);
+        console.error('❌ Error processing order payment:', error);
+        console.error('❌ Error stack:', error.stack);
+        
+        try {
+            await session.abortTransaction();
+        } catch (abortError) {
+            console.error('❌ Error aborting transaction:', abortError);
+        }
+        
+        // Don't return a 500 for insufficient stock - this is expected behavior
+        if (error.message && error.message.includes('Insufficient stock')) {
+            return res.status(400).json({
+                success: false,
+                message: 'Some ingredients are out of stock, but payment can still be processed with available items only',
+                error: error.message,
+                recommendation: 'Consider updating menu availability or restocking ingredients'
+            });
+        }
+        
+        // Handle specific error types
+        if (error.name === 'ValidationError') {
+            return res.status(400).json({
+                success: false,
+                message: 'Data validation failed',
+                error: error.message
+            });
+        }
+
+        if (error.name === 'CastError') {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid data format provided',
+                error: error.message
+            });
+        }
+        
         res.status(500).json({
             success: false,
             message: 'Failed to process order payment',
-            error: error.message
+            error: error.message,
+            stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
         });
     } finally {
-        session.endSession();
+        if (session) {
+            console.log('🔄 Ending session...');
+            try {
+                await session.endSession();
+                console.log('✅ Session ended');
+            } catch (sessionError) {
+                console.error('❌ Error ending session:', sessionError);
+            }
+        }
     }
 };
 
@@ -492,7 +706,6 @@ export const getOrderStats = async (req, res) => {
 
 export const getRevenueData = async (req, res) => {
     try {
-        const Order = (await import('../models/Order.js')).default;
         const { period = 'today' } = req.query;
         
         // Calculate date filter based on period
@@ -513,13 +726,59 @@ export const getRevenueData = async (req, res) => {
                 const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
                 dateFilter = { createdAt: { $gte: monthAgo } };
                 break;
+            case 'year':
+                const yearAgo = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+                dateFilter = { createdAt: { $gte: yearAgo } };
+                break;
+            default:
+                // If no filter, get all time data
+                dateFilter = {};
         }
         
-        const analytics = await Order.getRevenueAnalytics(dateFilter);
+        // Get revenue data from paid orders
+        const revenueData = await Order.aggregate([
+            { 
+                $match: { 
+                    paymentStatus: 'paid',
+                    ...dateFilter 
+                } 
+            },
+            {
+                $unwind: '$items'
+            },
+            {
+                $group: {
+                    _id: '$items.itemType',
+                    revenue: { $sum: '$items.totalPrice' },
+                    orders: { $addToSet: '$_id' }
+                }
+            }
+        ]);
+        
+        // Calculate total revenue and breakdown
+        let totalRevenue = 0;
+        let foodRevenue = 0;
+        let liquorRevenue = 0;
+        
+        revenueData.forEach(item => {
+            if (item._id === 'food') {
+                foodRevenue = item.revenue;
+            } else if (item._id === 'liquor') {
+                liquorRevenue = item.revenue;
+            }
+            totalRevenue += item.revenue;
+        });
+        
+        const result = {
+            total: totalRevenue,
+            foodRevenue: foodRevenue,
+            liquorRevenue: liquorRevenue,
+            trend: 0 // Would need historical comparison for real trend
+        };
         
         res.json({
             success: true,
-            data: analytics,
+            data: result,
             period
         });
     } catch (error) {
@@ -555,7 +814,19 @@ export const getAnalyticsData = async (req, res) => {
                 const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
                 dateFilter = { createdAt: { $gte: monthAgo } };
                 break;
+            case 'year':
+                const yearAgo = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+                dateFilter = { createdAt: { $gte: yearAgo } };
+                break;
+            default:
+                dateFilter = {};
         }
+        
+        // Get order count
+        const orderCount = await Order.countDocuments({ 
+            paymentStatus: 'paid', 
+            ...dateFilter 
+        });
         
         // Get top selling items
         const topItems = await Order.aggregate([
@@ -575,6 +846,8 @@ export const getAnalyticsData = async (req, res) => {
         res.json({
             success: true,
             data: {
+                total: orderCount,
+                trend: 0, // Could implement trend calculation later
                 topItems,
                 period
             }
@@ -591,7 +864,6 @@ export const getAnalyticsData = async (req, res) => {
 
 export const getProfitData = async (req, res) => {
     try {
-        const Order = (await import('../models/Order.js')).default;
         const { period = 'today' } = req.query;
         
         // Calculate date filter
@@ -612,32 +884,78 @@ export const getProfitData = async (req, res) => {
                 const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
                 dateFilter = { createdAt: { $gte: monthAgo } };
                 break;
+            case 'year':
+                const yearAgo = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+                dateFilter = { createdAt: { $gte: yearAgo } };
+                break;
+            default:
+                // If no filter, get all time data
+                dateFilter = {};
         }
         
+        // Calculate profit based on selling price vs estimated cost
+        // Since we don't have exact cost tracking, we'll estimate based on food items
         const profitData = await Order.aggregate([
-            { $match: { paymentStatus: 'paid', ...dateFilter } },
+            { 
+                $match: { 
+                    paymentStatus: 'paid',
+                    ...dateFilter 
+                } 
+            },
+            {
+                $unwind: '$items'
+            },
             {
                 $group: {
-                    _id: null,
-                    totalRevenue: { $sum: '$total' },
-                    totalCost: { $sum: '$totalCost' },
-                    totalProfit: { $sum: '$totalProfit' },
-                    orderCount: { $sum: 1 }
+                    _id: '$items.itemType',
+                    revenue: { $sum: '$items.totalPrice' },
+                    // Estimate cost as 40% of selling price for food, 20% for liquor
+                    estimatedCost: {
+                        $sum: {
+                            $cond: {
+                                if: { $eq: ['$items.itemType', 'food'] },
+                                then: { $multiply: ['$items.totalPrice', 0.4] }, // 40% cost for food
+                                else: { $multiply: ['$items.totalPrice', 0.2] }  // 20% cost for liquor
+                            }
+                        }
+                    },
+                    orders: { $addToSet: '$_id' }
                 }
             }
         ]);
         
-        const result = profitData[0] || {
-            totalRevenue: 0,
-            totalCost: 0,
-            totalProfit: 0,
-            orderCount: 0
-        };
+        // Calculate totals
+        let totalRevenue = 0;
+        let totalCost = 0;
+        let foodProfit = 0;
+        let liquorProfit = 0;
         
-        // Calculate profit margin
-        result.profitMargin = result.totalRevenue > 0 
-            ? ((result.totalProfit / result.totalRevenue) * 100).toFixed(2)
-            : 0;
+        profitData.forEach(item => {
+            const itemRevenue = item.revenue;
+            const itemCost = item.estimatedCost;
+            const itemProfit = itemRevenue - itemCost;
+            
+            totalRevenue += itemRevenue;
+            totalCost += itemCost;
+            
+            if (item._id === 'food') {
+                foodProfit = itemProfit;
+            } else if (item._id === 'liquor') {
+                liquorProfit = itemProfit;
+            }
+        });
+        
+        const totalProfit = totalRevenue - totalCost;
+        const profitMargin = totalRevenue > 0 ? ((totalProfit / totalRevenue) * 100) : 0;
+        
+        const result = {
+            total: totalProfit,
+            foodProfit: foodProfit,
+            liquorProfit: liquorProfit,
+            margin: profitMargin,
+            revenue: totalRevenue,
+            cost: totalCost
+        };
             
         res.json({
             success: true,
@@ -695,3 +1013,66 @@ export const getFoodLiquorBreakdown = async (req, res) => {
         });
     }
 };
+
+// Get active table count for admin overview
+export async function getActiveTableCount(req, res) {
+  try {
+    // Count distinct tables that have bills created but with NO items (empty bills)
+    // These are tables that have been "claimed" but don't have any items yet
+    const activeStatuses = ['created', 'pending'];
+    const emptyBillTables = await Order.distinct('tableNumber', { 
+      status: { $in: activeStatuses },
+      $or: [
+        { items: { $exists: false } },
+        { items: { $size: 0 } }
+      ]
+    });
+    res.json({ count: emptyBillTables.length });
+  } catch (error) {
+    console.error('Error fetching active table count:', error);
+    res.status(500).json({ error: 'Failed to fetch active table count' });
+  }
+}
+
+// Get active bills count (bills with at least one item and not paid/cancelled)
+export async function getActiveBillsCount(req, res) {
+  try {
+    // Count bills that have items added to them (but not yet paid)
+    const activeStatuses = ['pending', 'confirmed', 'preparing', 'ready', 'served'];
+    const activeBills = await Order.countDocuments({ 
+      status: { $in: activeStatuses }, 
+      items: { $exists: true, $not: { $size: 0 } } 
+    });
+    res.json({ count: activeBills });
+  } catch (error) {
+    console.error('Error fetching active bills count:', error);
+    res.status(500).json({ error: 'Failed to fetch active bills count' });
+  }
+}
+
+// Debug endpoint to see all orders and their statuses
+export async function getDebugOrders(req, res) {
+  try {
+    const orders = await Order.find({}, {
+      tableNumber: 1,
+      status: 1,
+      items: 1,
+      total: 1,
+      createdAt: 1
+    }).sort({ createdAt: -1 }).limit(20);
+    
+    res.json({
+      totalOrders: orders.length,
+      orders: orders.map(order => ({
+        id: order._id,
+        tableNumber: order.tableNumber,
+        status: order.status,
+        itemCount: order.items ? order.items.length : 0,
+        total: order.total,
+        createdAt: order.createdAt
+      }))
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch debug orders' });
+  }
+}

@@ -1,0 +1,22 @@
+{
+    "tableId": "02",
+    "items": [
+        {
+            "id": "1",
+            "name": "fried rice", 
+            "price": 2000,
+            "quantity": 1,
+            "type": "food",
+            "ingredients": [
+                {
+                    "name": "rice",
+                    "quantity": 100,
+                    "unit": "g"
+                }
+            ]
+        }
+    ],
+    "total": 2000,
+    "serviceCharge": false,
+    "paymentMethod": "cash"
+}

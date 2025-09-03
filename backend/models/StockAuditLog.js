@@ -4,8 +4,7 @@ const stockAuditLogSchema = new mongoose.Schema({
     stockId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Stock',
-        required: true,
-        index: true
+        required: true
     },
     userId: {
         type: mongoose.Schema.Types.ObjectId,
@@ -42,8 +41,7 @@ const stockAuditLogSchema = new mongoose.Schema({
     timestamp: {
         type: Date,
         default: Date.now,
-        required: true,
-        index: true
+        required: true
     }
 }, {
     timestamps: true

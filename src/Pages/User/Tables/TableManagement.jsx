@@ -99,6 +99,53 @@ export default function TableManagement({tableList = []}) {
         }
     });
 
+    // Sync with database state on component mount
+    useEffect(() => {
+        const syncWithDatabase = async () => {
+            try {
+                // Check if we have any cached bills
+                const cachedBills = Object.keys(bills);
+                if (cachedBills.length > 0) {
+                    console.log('🔄 Syncing cached bills with database...');
+                    
+                    // Verify each cached bill exists in database
+                    for (const tableId of cachedBills) {
+                        const bill = bills[tableId];
+                        if (bill.orderId) {
+                            try {
+                                // Try to fetch the order from database
+                                const response = await fetch(`http://localhost:3001/api/orders/${bill.orderId}`);
+                                if (!response.ok) {
+                                    console.log(`⚠️ Order ${bill.orderId} not found in database, removing from cache`);
+                                    // Remove invalid bill from cache
+                                    setBills(prevBills => {
+                                        const newBills = { ...prevBills };
+                                        delete newBills[tableId];
+                                        return newBills;
+                                    });
+                                }
+                            } catch (error) {
+                                console.log(`⚠️ Error checking order ${bill.orderId}, removing from cache:`, error.message);
+                                // Remove invalid bill from cache
+                                setBills(prevBills => {
+                                    const newBills = { ...prevBills };
+                                    delete newBills[tableId];
+                                    return newBills;
+                                });
+                            }
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('Error syncing with database:', error);
+            }
+        };
+
+        // Run sync after component mounts
+        const timer = setTimeout(syncWithDatabase, 1000);
+        return () => clearTimeout(timer);
+    }, []); // Empty dependency array - run only on mount
+
     useEffect(() => {
         try {
             localStorage.setItem('restaurant-bills', JSON.stringify(bills));
@@ -111,23 +158,36 @@ export default function TableManagement({tableList = []}) {
         setSelectedTable(table);
     }, []);
 
-    const handleCreateBill = useCallback((tableId) => {
-        const newBill = {
-            id: Date.now(),
-            tableId: tableId,
-            items: [],
-            total: 0,
-            serviceCharge: false, // Default to not include service charge
-            createdAt: new Date(),
-            status: 'active'
-        };
-        setBills(prevBills => ({
-            ...prevBills,
-            [tableId]: newBill
-        }));
+    const handleCreateBill = useCallback(async (tableId) => {
+        try {
+            // Create order in database immediately with status "created"
+            const orderResponse = await orderService.createOrder(tableId);
+            
+            if (orderResponse && orderResponse.success) {
+                const newBill = {
+                    id: Date.now(),
+                    orderId: orderResponse.data._id, // Store the database order ID
+                    tableId: tableId,
+                    items: [],
+                    total: 0,
+                    serviceCharge: false,
+                    createdAt: new Date(),
+                    status: 'created' // This matches the database status
+                };
+                setBills(prevBills => ({
+                    ...prevBills,
+                    [tableId]: newBill
+                }));
+            } else {
+                throw new Error('Failed to create order in database');
+            }
+        } catch (error) {
+            console.error('Error creating bill:', error);
+            alert('❌ Failed to create bill. Please try again.');
+        }
     }, []);
 
-    const handleAddItemToBill = useCallback((tableId, menuItem, quantity = 1) => {
+    const handleAddItemToBill = useCallback(async (tableId, menuItem, quantity = 1) => {
         setBills(prevBills => {
             if (!prevBills[tableId]) return prevBills;
 
@@ -148,36 +208,59 @@ export default function TableManagement({tableList = []}) {
 
             const total = updatedItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
+            const updatedBill = {
+                ...prevBills[tableId],
+                items: updatedItems,
+                total,
+                status: updatedItems.length > 0 ? 'pending' : 'created' // Change status when items are added
+            };
+
+            // Update order in database asynchronously
+            if (prevBills[tableId].orderId) {
+                orderService.updateOrder(prevBills[tableId].orderId, updatedItems, total)
+                    .catch(error => {
+                        console.error('Error updating order in database:', error);
+                        // Don't show error to user for now, just log it
+                    });
+            }
+
             return {
                 ...prevBills,
-                [tableId]: {
-                    ...prevBills[tableId],
-                    items: updatedItems,
-                    total
-                }
+                [tableId]: updatedBill
             };
         });
     }, []);
 
-    const handleRemoveItemFromBill = useCallback((tableId, itemId) => {
+    const handleRemoveItemFromBill = useCallback(async (tableId, itemId) => {
         setBills(prevBills => {
             if (!prevBills[tableId]) return prevBills;
 
             const updatedItems = prevBills[tableId].items.filter(item => item.id !== itemId);
             const total = updatedItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
+            const updatedBill = {
+                ...prevBills[tableId],
+                items: updatedItems,
+                total,
+                status: updatedItems.length > 0 ? 'pending' : 'created' // Update status based on items
+            };
+
+            // Update order in database asynchronously
+            if (prevBills[tableId].orderId) {
+                orderService.updateOrder(prevBills[tableId].orderId, updatedItems, total)
+                    .catch(error => {
+                        console.error('Error updating order in database:', error);
+                    });
+            }
+
             return {
                 ...prevBills,
-                [tableId]: {
-                    ...prevBills[tableId],
-                    items: updatedItems,
-                    total
-                }
+                [tableId]: updatedBill
             };
         });
     }, []);
 
-    const handleUpdateItemQuantity = useCallback((tableId, itemId, newQuantity) => {
+    const handleUpdateItemQuantity = useCallback(async (tableId, itemId, newQuantity) => {
         setBills(prevBills => {
             if (!prevBills[tableId] || newQuantity <= 0) return prevBills;
 
@@ -189,13 +272,24 @@ export default function TableManagement({tableList = []}) {
 
             const total = updatedItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
+            const updatedBill = {
+                ...prevBills[tableId],
+                items: updatedItems,
+                total,
+                status: updatedItems.length > 0 ? 'pending' : 'created' // Update status based on items
+            };
+
+            // Update order in database asynchronously
+            if (prevBills[tableId].orderId) {
+                orderService.updateOrder(prevBills[tableId].orderId, updatedItems, total)
+                    .catch(error => {
+                        console.error('Error updating order in database:', error);
+                    });
+            }
+
             return {
                 ...prevBills,
-                [tableId]: {
-                    ...prevBills[tableId],
-                    items: updatedItems,
-                    total
-                }
+                [tableId]: updatedBill
             };
         });
     }, []);
@@ -227,6 +321,7 @@ export default function TableManagement({tableList = []}) {
         try {
             // Process order payment and consume stock
             const orderData = {
+                orderId: bill.orderId, // Pass the existing order ID
                 tableId: billToClose,
                 items: bill.items,
                 total: bill.total,
@@ -326,20 +421,95 @@ export default function TableManagement({tableList = []}) {
         setShowClearAllModal(false);
     }, []);
 
+    // Force refresh function to sync with database
+    const forceRefresh = useCallback(async () => {
+        try {
+            console.log('🔄 Force refreshing - clearing cache and syncing with database...');
+            
+            // Clear localStorage
+            localStorage.removeItem('restaurant-bills');
+            
+            // Reset bills state
+            setBills({});
+            setSelectedTable(null);
+            
+            // Try to fetch any active orders from database
+            const response = await fetch('http://localhost:3001/api/orders/debug');
+            if (response.ok) {
+                const data = await response.json();
+                console.log('📊 Orders from database:', data);
+                
+                // Filter for active orders (not completed, paid, or cancelled)
+                const activeOrders = data.orders?.filter(order => 
+                    order.status && !['completed', 'paid', 'cancelled'].includes(order.status)
+                ) || [];
+                
+                if (activeOrders.length > 0) {
+                    console.log('📋 Found active orders:', activeOrders);
+                    const newBills = {};
+                    
+                    // We need to fetch full order details for active orders
+                    for (const order of activeOrders) {
+                        try {
+                            const fullOrderResponse = await fetch(`http://localhost:3001/api/orders/${order.id}`);
+                            if (fullOrderResponse.ok) {
+                                const fullOrder = await fullOrderResponse.json();
+                                const tableId = fullOrder.data.tableNumber || fullOrder.data.tableId;
+                                if (tableId) {
+                                    newBills[tableId] = {
+                                        orderId: fullOrder.data._id,
+                                        items: fullOrder.data.items || [],
+                                        total: fullOrder.data.total || 0,
+                                        status: fullOrder.data.status || 'created'
+                                    };
+                                }
+                            }
+                        } catch (fetchError) {
+                            console.log(`⚠️ Could not fetch details for order ${order.id}:`, fetchError.message);
+                        }
+                    }
+                    
+                    setBills(newBills);
+                    console.log('✅ Rebuilt bills state from database:', newBills);
+                } else {
+                    console.log('✅ No active orders found in database');
+                }
+                
+                alert(`✅ Cache cleared and synced with database!\n\nFound ${activeOrders.length} active orders`);
+            } else {
+                console.log('⚠️ Could not fetch orders from database');
+                alert('⚠️ Could not connect to database. Cache cleared locally.');
+            }
+        } catch (error) {
+            console.error('❌ Error during force refresh:', error);
+            alert('⚠️ Refresh completed but there may have been connection issues');
+        }
+    }, []);
+
     return (
         <div className='flex flex-col md:flex-row gap-2 h-full md:h-[78vh] mt-5'>
             {/* for tables */}
             <div className='p-6 w-full md:w-1/3 overflow-y-auto bg-fourthColor rounded-[32px]'>
                 <div className="flex justify-between items-center mb-4">
                     <h1 className='text-[24px] font-[500] text-other1'>Table List</h1>
-                    {/* Development helper - remove in production */}
-                    <button 
-                        onClick={clearAllBills}
-                        className="text-xs bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600"
-                        title="Clear all bills (Development only)"
-                    >
-                        Clear All
-                    </button>
+                    <div className="flex gap-2">
+                        {/* Force refresh button */}
+                        <button 
+                            onClick={forceRefresh}
+                            className="text-xs bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600"
+                            title="Sync with database and clear cache"
+                        >
+                            🔄 Refresh
+                        </button>
+                        {/* Development helper - remove in production */}
+                        <button 
+                            onClick={clearAllBills}
+                            className="text-xs bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600"
+                            title="Clear all bills (Development only)"
+                        >
+                            Clear All
+                        </button>
+                    </div>
                 </div>
                 <div className='grid grid-cols-1 gap-2 md:grid-cols-2'>
                     {
@@ -348,7 +518,7 @@ export default function TableManagement({tableList = []}) {
                                 key={table.id}
                                 tableNumber={table.tableNumber}
                                 isSelected={selectedTable?.id === table.id}
-                                hasBill={bills[table.id] && bills[table.id].status === 'active'}
+                                hasBill={bills[table.id] && (bills[table.id].status === 'created' || bills[table.id].status === 'pending')}
                                 onClick={() => handleTableClick(table)}
                             />
                         ))
