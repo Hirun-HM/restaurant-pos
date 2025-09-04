@@ -37,22 +37,14 @@ app.use(cors({
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// MongoDB Connection
-const connectDB = async () => {
-  try {
-    const conn = await mongoose.connect(process.env.MONGODB_URI);
-    console.log(`MongoDB Connected: ${conn.connection.host}`);
-  } catch (error) {
-    console.error('Error connecting to MongoDB:', error.message);
-    process.exit(1);
-  }
-};
-
 // Import routes
 import stockRoutes from './routes/stockRoutes.js';
 import liquorRoutes from './routes/liquorRoutes.js';
 import foodItemRoutes from './routes/foodItemRoutes.js';
 import orderRoutes from './routes/orderRoutes.js';
+
+// Import database connection
+import connectDB from './utils/database.js';
 
 // Connect to database
 connectDB();

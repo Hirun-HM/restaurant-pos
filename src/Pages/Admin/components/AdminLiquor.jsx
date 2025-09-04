@@ -6,141 +6,45 @@ import { InputField } from '../../../components/InputField';
 import AnimatedNumber from '../../../components/AnimatedNumber';
 import LoadingSpinner from '../../../components/LoadingSpinner';
 import AdminService from '../../../services/adminService';
+import { formatQuantity } from '../../../utils/numberFormat';
 
 const LIQUOR_CATEGORIES = ['beer', 'hard_liquor', 'wine', 'cigarettes', 'Other'];
 
-const generateDummyLiquors = () => {
-    return [
-        {
-            id: '1',
-            name: 'Jack Daniels',
-            category: 'Whiskey',
-            bottleSize: '750ml',
-            totalBottles: 20,
-            remainingBottles: 12,
-            portionsPerBottle: 25,
-            portionSize: 30,
-            unitPrice: 4500.00,
-            supplier: 'Premium Spirits Ltd.',
-            alcoholContent: 40.0,
-            notes: 'Premium Tennessee whiskey',
-            createdAt: '2024-01-10T09:00:00Z',
-            lastUpdated: '2024-01-25T14:30:00Z'
-        },
-        {
-            id: '2',
-            name: 'Absolut Vodka',
-            category: 'Vodka',
-            bottleSize: '1000ml',
-            totalBottles: 15,
-            remainingBottles: 3,
-            portionsPerBottle: 33,
-            portionSize: 30,
-            unitPrice: 3200.00,
-            supplier: 'Global Liquor Co.',
-            alcoholContent: 40.0,
-            notes: 'Swedish premium vodka',
-            createdAt: '2024-01-08T11:15:00Z',
-            lastUpdated: '2024-01-24T16:45:00Z'
-        },
-        {
-            id: '3',
-            name: 'Bombay Sapphire',
-            category: 'Gin',
-            bottleSize: '750ml',
-            totalBottles: 10,
-            remainingBottles: 7,
-            portionsPerBottle: 25,
-            portionSize: 30,
-            unitPrice: 3800.00,
-            supplier: 'Premium Spirits Ltd.',
-            alcoholContent: 47.0,
-            notes: 'London dry gin with botanicals',
-            createdAt: '2024-01-12T13:20:00Z',
-            lastUpdated: '2024-01-23T10:15:00Z'
-        },
-        {
-            id: '4',
-            name: 'Bacardi White Rum',
-            category: 'Rum',
-            bottleSize: '750ml',
-            totalBottles: 18,
-            remainingBottles: 15,
-            portionsPerBottle: 25,
-            portionSize: 30,
-            unitPrice: 2800.00,
-            supplier: 'Island Imports',
-            alcoholContent: 37.5,
-            notes: 'Light Caribbean rum',
-            createdAt: '2024-01-05T08:45:00Z',
-            lastUpdated: '2024-01-22T12:30:00Z'
-        },
-        {
-            id: '5',
-            name: 'Hennessy VS',
-            category: 'Brandy',
-            bottleSize: '750ml',
-            totalBottles: 8,
-            remainingBottles: 2,
-            portionsPerBottle: 25,
-            portionSize: 30,
-            unitPrice: 6500.00,
-            supplier: 'Luxury Spirits',
-            alcoholContent: 40.0,
-            notes: 'French cognac',
-            createdAt: '2024-01-15T15:30:00Z',
-            lastUpdated: '2024-01-25T09:20:00Z'
-        },
-        {
-            id: '6',
-            name: 'Cabernet Sauvignon',
-            category: 'Wine',
-            bottleSize: '750ml',
-            totalBottles: 25,
-            remainingBottles: 18,
-            portionsPerBottle: 5,
-            portionSize: 150,
-            unitPrice: 1800.00,
-            supplier: 'Wine Estate Co.',
-            alcoholContent: 13.5,
-            notes: 'Full-bodied red wine',
-            createdAt: '2024-01-07T10:00:00Z',
-            lastUpdated: '2024-01-24T14:45:00Z'
-        },
-        {
-            id: '7',
-            name: 'Corona Extra',
-            category: 'Beer',
-            bottleSize: '375ml',
-            totalBottles: 50,
-            remainingBottles: 35,
-            portionsPerBottle: 1,
-            portionSize: 375,
-            unitPrice: 350.00,
-            supplier: 'Beer Distribution Co.',
-            alcoholContent: 4.5,
-            notes: 'Mexican lager beer',
-            createdAt: '2024-01-03T12:15:00Z',
-            lastUpdated: '2024-01-23T18:20:00Z'
-        },
-        {
-            id: '8',
-            name: 'Chardonnay',
-            category: 'Wine',
-            bottleSize: '750ml',
-            totalBottles: 20,
-            remainingBottles: 14,
-            portionsPerBottle: 5,
-            portionSize: 150,
-            unitPrice: 2200.00,
-            supplier: 'Wine Estate Co.',
-            alcoholContent: 12.5,
-            notes: 'Crisp white wine',
-            createdAt: '2024-01-09T14:30:00Z',
-            lastUpdated: '2024-01-25T11:10:00Z'
-        }
-    ];
-};
+// Generate dummy liquor data for fallback
+const generateDummyLiquors = () => [
+    {
+        id: 1,
+        name: 'Premium Whiskey',
+        brand: 'Premium Brand',
+        type: 'hard_liquor',
+        bottleVolume: 750,
+        alcoholPercentage: 40,
+        bottlesInStock: 6,
+        totalBottles: 10,
+        pricePerBottle: 150.00,
+        portionSize: 30,
+        totalVolumeRemaining: 4650, // 6 full bottles (4500ml) + current bottle (150ml remaining)
+        currentBottleVolume: 650, // Current bottle has 650ml remaining (100ml used from 750ml bottle)
+        totalSoldItems: 100,
+        wastedVolume: 50
+    },
+    {
+        id: 2,
+        name: 'Local Beer',
+        brand: 'Lion Lager',
+        type: 'beer',
+        bottleVolume: 625,
+        alcoholPercentage: 4.8,
+        bottlesInStock: 15,
+        totalBottles: 24,
+        pricePerBottle: 250.00,
+        portionSize: 625,
+        totalVolumeRemaining: 9375, // 15 full bottles remaining
+        currentBottleVolume: 625, // Current bottle is full
+        totalSoldItems: 9,
+        wastedVolume: 0
+    }
+];
 
 export default function AdminLiquor() {
     const [liquors, setLiquors] = useState([]);
@@ -177,7 +81,7 @@ export default function AdminLiquor() {
                                 (liquor.brand || '').toLowerCase().includes(searchTerm.toLowerCase());
             const liquorCategory = liquor.type || liquor.category || 'Other';
             const matchesCategory = selectedCategory === 'All' || 
-                                  liquorCategory.toLowerCase() === selectedCategory.toLowerCase();
+            liquorCategory.toLowerCase() === selectedCategory.toLowerCase();
             return matchesSearch && matchesCategory;
         });
     }, [liquors, searchTerm, selectedCategory]);
@@ -186,17 +90,44 @@ export default function AdminLiquor() {
     const calculateLiquorStats = useCallback((liquor) => {
         // For API data, use bottlesInStock from API response
         const remainingBottles = liquor.bottlesInStock || liquor.remainingBottles || liquor.currentQuantity || 0;
-        const totalBottles = liquor.totalBottles || liquor.maxQuantity || remainingBottles;
+        // Better fallback for totalBottles - assume some bottles were consumed if we have remaining bottles
+        const totalBottles = liquor.totalBottles || liquor.maxQuantity || Math.max(remainingBottles + 2, 10);
         const usedBottles = totalBottles - remainingBottles;
-        const usagePercentage = totalBottles > 0 ? (usedBottles / totalBottles) * 100 : 0;
+        
+        // Calculate volume-based usage for current bottle
+        const bottleVolume = liquor.bottleVolume || liquor.volume || 750;
+        const currentBottleVolume = liquor.currentBottleVolume || bottleVolume;
+        const totalVolumeRemaining = liquor.totalVolumeRemaining || (remainingBottles * bottleVolume);
+        
+        // Calculate usage percentage based on current bottle volume consumption
+        let usagePercentage = 0;
+        if (remainingBottles > 0 && currentBottleVolume < bottleVolume) {
+            // If we have a partially used bottle, calculate based on volume consumed from current bottle
+            const volumeConsumed = bottleVolume - currentBottleVolume;
+            usagePercentage = (volumeConsumed / bottleVolume) * 100;
+        } else if (usedBottles > 0) {
+            // If no current bottle info, fall back to bottle-based calculation
+            usagePercentage = (usedBottles / totalBottles) * 100;
+        }
+        
+        // Debug logging
+        console.log('Liquor Stats Debug:', {
+            name: liquor.name,
+            remainingBottles,
+            totalBottles,
+            usedBottles,
+            bottleVolume,
+            currentBottleVolume,
+            volumeConsumed: bottleVolume - currentBottleVolume,
+            usagePercentage
+        });
         
         // Calculate portions based on volume
-        const bottleVolume = liquor.bottleVolume || liquor.volume || 750;
         const defaultPortionSize = liquor.type === 'beer' ? bottleVolume : 30; // Beer is served as full bottle
         const portionSize = liquor.portionSize || defaultPortionSize;
         const portionsPerBottle = liquor.type === 'beer' ? 1 : Math.floor(bottleVolume / portionSize);
         const totalPortions = totalBottles * portionsPerBottle;
-        const remainingPortions = remainingBottles * portionsPerBottle;
+        const remainingPortions = Math.floor(totalVolumeRemaining / portionSize);
         
         return {
             totalBottles,
@@ -205,7 +136,8 @@ export default function AdminLiquor() {
             usagePercentage,
             totalPortions,
             remainingPortions,
-            portionsPerBottle
+            portionsPerBottle,
+            volumeConsumed: bottleVolume - currentBottleVolume
         };
     }, []);
 
@@ -416,11 +348,11 @@ export default function AdminLiquor() {
                                     <div className="grid grid-cols-2 gap-2 sm:gap-4 text-xs sm:text-sm">
                                         <div>
                                             <span className="text-gray-500">Volume:</span>
-                                            <p className="font-medium truncate">{liquor.bottleVolume || liquor.volume || 750}ml</p>
+                                            <p className="font-medium truncate">{formatQuantity(liquor.bottleVolume || liquor.volume || 750)}ml</p>
                                         </div>
                                         <div>
                                             <span className="text-gray-500">Alcohol %:</span>
-                                            <p className="font-medium">{liquor.alcoholPercentage || liquor.alcoholContent || 0}%</p>
+                                            <p className="font-medium">{formatQuantity(liquor.alcoholPercentage || liquor.alcoholContent || 0)}%</p>
                                         </div>
                                         <div>
                                             <span className="text-gray-500">Remaining:</span>
@@ -432,10 +364,42 @@ export default function AdminLiquor() {
                                         </div>
                                     </div>
 
+                                    {/* Sales and Analytics Information - Same as User Side */}
+                                    {liquor.type !== 'beer' && liquor.type !== 'cigarettes' && (
+                                        <div className="bg-gray-50 rounded-lg p-3 mt-4">
+                                            <div className="grid grid-cols-2 gap-3">
+                                                <div className="bg-white p-2 rounded border">
+                                                    <div className="text-sm text-gray-600">Total Remaining</div>
+                                                    <div className="text-md font-semibold text-green-600">
+                                                        {formatQuantity(liquor.totalVolumeRemaining || (stats.remainingBottles * (liquor.bottleVolume || liquor.volume || 750)))}ml
+                                                    </div>
+                                                </div>
+                                                <div className="bg-white p-2 rounded border">
+                                                    <div className="text-sm text-gray-600">Current Bottle</div>
+                                                    <div className="text-md font-semibold text-yellow-600">
+                                                        {formatQuantity(liquor.currentBottleVolume || (liquor.bottleVolume || liquor.volume || 750))}ml
+                                                    </div>
+                                                </div>
+                                                <div className="bg-white p-2 rounded border">
+                                                    <div className="text-sm text-gray-600">Total Sold</div>
+                                                    <div className="text-md font-semibold text-purple-600">
+                                                        {liquor.totalSoldItems || (stats.totalPortions - stats.remainingPortions) || 0}
+                                                    </div>
+                                                </div>
+                                                <div className="bg-white p-2 rounded border">
+                                                    <div className="text-sm text-gray-600">Total Wasted</div>
+                                                    <div className="text-md font-semibold text-red-600">
+                                                        {formatQuantity(liquor.wastedVolume || 0)}ml
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+
                                     {/* Usage Progress Bar */}
                                     <div>
                                         <div className="flex justify-between text-xs sm:text-sm text-gray-600 mb-1">
-                                            <span>Usage</span>
+                                            <span>Current Bottle Usage</span>
                                             <span>{stats.usagePercentage.toFixed(1)}%</span>
                                         </div>
                                         <div className="w-full bg-gray-200 rounded-full h-2">
@@ -444,6 +408,11 @@ export default function AdminLiquor() {
                                                 style={{ width: `${Math.min(stats.usagePercentage, 100)}%` }}
                                             ></div>
                                         </div>
+                                        {stats.volumeConsumed > 0 && (
+                                            <div className="text-xs text-gray-500 mt-1">
+                                                {formatQuantity(stats.volumeConsumed)}ml used from current bottle
+                                            </div>
+                                        )}
                                     </div>
 
                                     <div className="flex items-center justify-between pt-2">

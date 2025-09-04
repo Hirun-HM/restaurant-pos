@@ -46,9 +46,8 @@ const recipeSchema = new mongoose.Schema({
     timestamps: true
 });
 
-// Index for better query performance
-recipeSchema.index({ menuItemId: 1 });
-recipeSchema.index({ name: 1 });
+// Note: Indexes are automatically created for fields with unique: true
+// Removed duplicate explicit indexes to avoid warnings
 
 const Recipe = mongoose.model('Recipe', recipeSchema);
 

@@ -3,6 +3,7 @@ import PropTypes from 'prop-types';
 import { InputField } from '../../../../components/InputField';
 import Select from '../../../../components/Select';
 import { SecondaryButton } from '../../../../components/Button';
+import { formatQuantity } from '../../../../utils/numberFormat';
 
 const SmartIngredientInput = ({ 
     ingredient, 
@@ -101,7 +102,7 @@ const SmartIngredientInput = ({
                                         {item.category} • {item.unit} • LKR {item.price}/unit
                                     </div>
                                     <div className="text-xs text-gray-400">
-                                        Stock: {item.quantity} {item.unit}
+                                        Stock: {formatQuantity(item.quantity)} {item.unit}
                                     </div>
                                 </button>
                             ))}

@@ -109,6 +109,9 @@ export const createStockItem = async (req, res) => {
     if (stockData.price !== undefined) {
       stockData.price = Math.round(stockData.price * 100) / 100;
     }
+    if (stockData.buyingPrice !== undefined) {
+      stockData.buyingPrice = Math.round(stockData.buyingPrice * 100) / 100;
+    }
     if (stockData.minimumQuantity !== undefined) {
       stockData.minimumQuantity = Math.round(stockData.minimumQuantity * 100) / 100;
     }
@@ -173,6 +176,15 @@ export const updateStockItem = async (req, res) => {
     // Round quantity to avoid floating-point precision issues
     if (updateData.quantity !== undefined) {
       updateData.quantity = Math.round(updateData.quantity * 100) / 100;
+    }
+    if (updateData.price !== undefined) {
+      updateData.price = Math.round(updateData.price * 100) / 100;
+    }
+    if (updateData.buyingPrice !== undefined) {
+      updateData.buyingPrice = Math.round(updateData.buyingPrice * 100) / 100;
+    }
+    if (updateData.minimumQuantity !== undefined) {
+      updateData.minimumQuantity = Math.round(updateData.minimumQuantity * 100) / 100;
     }
     
     // Store original for comparison and audit

@@ -43,9 +43,21 @@ export const validateStockItem = [
     
     body('price')
         .isNumeric()
-        .withMessage('Price must be a number')
+        .withMessage('Selling price must be a number')
         .isFloat({ min: 0 })
-        .withMessage('Price cannot be negative'),
+        .withMessage('Selling price cannot be negative')
+        .custom((value, { req }) => {
+            if (req.body.buyingPrice && parseFloat(value) <= parseFloat(req.body.buyingPrice)) {
+                throw new Error('Selling price must be higher than buying price');
+            }
+            return true;
+        }),
+    
+    body('buyingPrice')
+        .isNumeric()
+        .withMessage('Buying price must be a number')
+        .isFloat({ min: 0 })
+        .withMessage('Buying price cannot be negative'),
     
     body('minimumQuantity')
         .optional()

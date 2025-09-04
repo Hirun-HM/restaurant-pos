@@ -7,7 +7,8 @@ import AdminService from '../../../services/adminService';
 export default function AdminOverview() {
     const [stats, setStats] = useState({
         totalTables: 8, // Static for now - could be made dynamic later
-        activeBills: 0,
+        activeTables: 0, // Tables with empty bills (created but no items)
+        activeBills: 0,  // Tables with bills that have items
         totalRevenue: 0,
         totalProfit: 0,
         menuItems: 0,
@@ -24,22 +25,26 @@ export default function AdminOverview() {
         const fetchOverviewData = async () => {
             try {
                 setLoading(true);
-                const data = await AdminService.getOverviewStats();
+                const [overviewData, activeTableCount, activeBillCount] = await Promise.all([
+                    AdminService.getOverviewStats(),
+                    AdminService.getActiveTableCount(),
+                    AdminService.getActiveBillsCount()
+                ]);
                 
                 // Calculate derived values
-                const activeBills = data.orders.activeOrders || 0;
-                const totalRevenue = data.orders.totalRevenue || 0;
-                const totalProfit = data.orders.totalProfit || 0;
+                const totalRevenue = overviewData.orders.totalRevenue || 0;
+                const totalProfit = overviewData.orders.totalProfit || 0;
                 
                 setStats({
                     totalTables: 8, // Static for now
-                    activeBills: activeBills,
+                    activeTables: activeTableCount, // Tables with empty bills
+                    activeBills: activeBillCount,   // Tables with bills containing items
                     totalRevenue: totalRevenue,
                     totalProfit: totalProfit,
-                    menuItems: (data.food.totalItems || 0) + (data.liquor.totalItems || 0),
-                    stockItems: data.stock.totalItems || 0,
-                    liquorItems: data.liquor.totalItems || 0,
-                    lowStockCount: (data.stock.lowStockCount || 0) + (data.liquor.lowStockCount || 0)
+                    menuItems: (overviewData.food.totalItems || 0) + (overviewData.liquor.totalItems || 0),
+                    stockItems: overviewData.stock.totalItems || 0,
+                    liquorItems: overviewData.liquor.totalItems || 0,
+                    lowStockCount: (overviewData.stock.lowStockCount || 0) + (overviewData.liquor.lowStockCount || 0)
                 });
                 setError(null);
             } catch (err) {
@@ -63,10 +68,10 @@ export default function AdminOverview() {
         {
             id: 'active-tables',
             title: 'Active Tables',
-            value: stats.activeBills,
+            value: stats.activeTables,
             icon: MdTableRestaurant,
             color: 'bg-primaryColor',
-            subtitle: `${stats.totalTables - stats.activeBills} Available`,
+            subtitle: 'Bills Created (No Items)',
             isNumber: true
         },
         {
@@ -113,7 +118,7 @@ export default function AdminOverview() {
             value: stats.activeBills,
             icon: FaChartLine,
             color: 'bg-red',
-            subtitle: 'Pending Orders',
+            subtitle: 'Bills With Items',
             isNumber: true
         }
     ], [stats]);
