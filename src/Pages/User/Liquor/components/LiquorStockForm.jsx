@@ -32,13 +32,16 @@ export default function LiquorStockForm({ item, onSubmit, onCancel }) {
     name: '',
     brand: '',
     type: '', // Start with empty type to force user selection
-    bottleVolume: 750,
-    bottlesInStock: 0,
+    bottleVolume: '750',
+    bottlesInStock: '0',
     pricePerBottle: '',
     buyingPrice: '', // New field for buying price
-    minimumBottles: 0,
+    minimumBottles: '0',
     alcoholPercentage: '',
-    customBottleVolume: '' // For custom bottle volume input
+    customBottleVolume: '', // For custom bottle volume input
+    // Cigarette-specific fields
+    cigaretteIndividualPrice: '',
+    cigarettesPerPack: '20'
   });
 
   const [errors, setErrors] = useState({});
@@ -50,13 +53,16 @@ export default function LiquorStockForm({ item, onSubmit, onCancel }) {
         name: item.name || '',
         brand: item.brand || '',
         type: item.type || '',
-        bottleVolume: item.bottleVolume || 750,
-        bottlesInStock: item.bottlesInStock || 0,
-        pricePerBottle: item.pricePerBottle || '',
-        buyingPrice: item.buyingPrice || '', // Add buying price
-        minimumBottles: item.minimumBottles || 2,
-        alcoholPercentage: item.alcoholPercentage || '',
-        customBottleVolume: ''
+        bottleVolume: (item.bottleVolume || 750).toString(),
+        bottlesInStock: (item.bottlesInStock || 0).toString(),
+        pricePerBottle: (item.pricePerBottle || '').toString(),
+        buyingPrice: (item.buyingPrice || '').toString(), // Add buying price
+        minimumBottles: (item.minimumBottles || 2).toString(),
+        alcoholPercentage: (item.alcoholPercentage || '').toString(),
+        customBottleVolume: '',
+        // Cigarette-specific fields
+        cigaretteIndividualPrice: (item.cigaretteIndividualPrice || '').toString(),
+        cigarettesPerPack: (item.cigarettesPerPack || 20).toString()
       });
     }
   }, [item]);
@@ -76,11 +82,11 @@ export default function LiquorStockForm({ item, onSubmit, onCancel }) {
       newErrors.brand = 'Brand is required';
     }
 
-    if (!formData.pricePerBottle || formData.pricePerBottle <= 0) {
+    if (!formData.pricePerBottle || parseFloat(formData.pricePerBottle) <= 0) {
       newErrors.pricePerBottle = 'Valid price per bottle is required';
     }
 
-    if (!formData.buyingPrice || formData.buyingPrice <= 0) {
+    if (!formData.buyingPrice || parseFloat(formData.buyingPrice) <= 0) {
       newErrors.buyingPrice = 'Valid buying price is required';
     }
 
@@ -90,25 +96,48 @@ export default function LiquorStockForm({ item, onSubmit, onCancel }) {
       newErrors.pricePerBottle = 'Selling price must be higher than buying price';
     }
 
-    if (formData.bottlesInStock < 0) {
+    if (parseInt(formData.bottlesInStock) < 0) {
       newErrors.bottlesInStock = 'Items in stock cannot be negative';
     }
 
-    if (formData.minimumBottles < 0) {
+    if (parseInt(formData.minimumBottles) < 0) {
       newErrors.minimumBottles = 'Minimum items cannot be negative';
     }
 
     // Only validate alcohol percentage for hard liquor
     if (HARD_LIQUOR_TYPES.includes(formData.type)) {
-      if (formData.alcoholPercentage && (formData.alcoholPercentage < 0 || formData.alcoholPercentage > 100)) {
+      if (formData.alcoholPercentage && (parseFloat(formData.alcoholPercentage) < 0 || parseFloat(formData.alcoholPercentage) > 100)) {
         newErrors.alcoholPercentage = 'Alcohol percentage must be between 0-100';
       }
     }
 
     // Validate custom bottle volume if selected (only for types that need bottle volume)
     if (BOTTLE_VOLUME_TYPES.includes(formData.type)) {
-      if (formData.bottleVolume === 'custom' && (!formData.customBottleVolume || formData.customBottleVolume < 100)) {
+      if (formData.bottleVolume === 'custom' && (!formData.customBottleVolume || parseInt(formData.customBottleVolume) < 100)) {
         newErrors.customBottleVolume = 'Custom volume must be at least 100ml';
+      }
+    }
+
+    // Cigarette-specific validations
+    if (isCigarettes()) {
+      if (!formData.cigaretteIndividualPrice || parseFloat(formData.cigaretteIndividualPrice) <= 0) {
+        newErrors.cigaretteIndividualPrice = 'Individual cigarette price is required';
+      }
+
+      if (!formData.cigarettesPerPack || parseInt(formData.cigarettesPerPack) < 1) {
+        newErrors.cigarettesPerPack = 'Cigarettes per pack must be at least 1';
+      }
+
+      // Validate that individual price makes sense compared to pack price
+      const packPrice = parseFloat(formData.pricePerBottle);
+      const individualPrice = parseFloat(formData.cigaretteIndividualPrice);
+      const cigarettesPerPack = parseInt(formData.cigarettesPerPack);
+      
+      if (packPrice && individualPrice && cigarettesPerPack) {
+        const totalIndividualValue = individualPrice * cigarettesPerPack;
+        if (totalIndividualValue <= packPrice) {
+          newErrors.cigaretteIndividualPrice = 'Individual price should be higher to encourage pack sales';
+        }
       }
     }
 
@@ -122,9 +151,25 @@ export default function LiquorStockForm({ item, onSubmit, onCancel }) {
   const isCigarettes = () => formData.type === 'cigarettes';
 
   const handleInputChange = (field, value) => {
+    // For text inputs, keep the value as string but validate numeric inputs
+    let processedValue = value;
+    
+    // For numeric fields, ensure we don't allow invalid characters but keep as string for display
+    const numericFields = ['bottlesInStock', 'minimumBottles', 'pricePerBottle', 'buyingPrice', 'alcoholPercentage', 'customBottleVolume', 'cigaretteIndividualPrice', 'cigarettesPerPack'];
+    
+    if (numericFields.includes(field)) {
+      // Allow empty string, numbers, and decimal points
+      if (value === '' || /^\d*\.?\d*$/.test(value)) {
+        processedValue = value;
+      } else {
+        // If invalid input, keep the previous value
+        return;
+      }
+    }
+    
     setFormData(prev => ({
       ...prev,
-      [field]: value
+      [field]: processedValue
     }));
     
     // Clear error when user starts typing
@@ -148,7 +193,7 @@ export default function LiquorStockForm({ item, onSubmit, onCancel }) {
       // Determine final bottle volume
       const finalBottleVolume = formData.bottleVolume === 'custom' 
         ? parseInt(formData.customBottleVolume)
-        : formData.bottleVolume;
+        : parseInt(formData.bottleVolume);
 
       const submitData = {
         ...formData,
@@ -157,12 +202,17 @@ export default function LiquorStockForm({ item, onSubmit, onCancel }) {
         buyingPrice: parseFloat(formData.buyingPrice), // Add buying price
         bottlesInStock: parseInt(formData.bottlesInStock),
         minimumBottles: parseInt(formData.minimumBottles),
-        alcoholPercentage: isHardLiquor() && formData.alcoholPercentage ? parseFloat(formData.alcoholPercentage) : undefined
+        alcoholPercentage: isHardLiquor() && formData.alcoholPercentage ? parseFloat(formData.alcoholPercentage) : undefined,
+        // Cigarette-specific fields
+        cigaretteIndividualPrice: isCigarettes() && formData.cigaretteIndividualPrice ? parseFloat(formData.cigaretteIndividualPrice) : undefined,
+        cigarettesPerPack: isCigarettes() && formData.cigarettesPerPack ? parseInt(formData.cigarettesPerPack) : undefined
       };
 
       // Remove empty optional fields and custom volume field
       if (!submitData.alcoholPercentage) delete submitData.alcoholPercentage;
       if (!needsBottleVolume()) delete submitData.bottleVolume;
+      if (!submitData.cigaretteIndividualPrice) delete submitData.cigaretteIndividualPrice;
+      if (!submitData.cigarettesPerPack) delete submitData.cigarettesPerPack;
       delete submitData.customBottleVolume;
       
       await onSubmit(submitData);
@@ -254,7 +304,7 @@ export default function LiquorStockForm({ item, onSubmit, onCancel }) {
                   <SelectField
                     label="Bottle Volume"
                     value={formData.bottleVolume}
-                    onChange={(e) => handleInputChange('bottleVolume', parseInt(e.target.value) || e.target.value)}
+                    onChange={(e) => handleInputChange('bottleVolume', e.target.value)}
                     options={[
                       ...BOTTLE_VOLUMES,
                       { value: 'custom', label: 'Custom Volume' }
@@ -269,10 +319,7 @@ export default function LiquorStockForm({ item, onSubmit, onCancel }) {
                     <InputField
                       label="Custom Volume (ml)"
                       id="customBottleVolume"
-                      type="number"
-                      min="100"
-                      max="5000"
-                      step="50"
+                      type="text"
                       value={formData.customBottleVolume}
                       onChange={(e) => handleInputChange('customBottleVolume', e.target.value)}
                       placeholder="e.g., 500"
@@ -288,16 +335,72 @@ export default function LiquorStockForm({ item, onSubmit, onCancel }) {
                 <InputField
                   label="Alcohol Percentage"
                   id="alcoholPercentage"
-                  type="number"
-                  step="0.1"
-                  min="0"
-                  max="100"
+                  type="text"
                   value={formData.alcoholPercentage}
                   onChange={(e) => handleInputChange('alcoholPercentage', e.target.value)}
                   placeholder="e.g., 40"
                   error={errors.alcoholPercentage}
                   required
                 />
+              )}
+
+              {/* Show cigarette-specific fields only for cigarettes */}
+              {isCigarettes() && (
+                <div className="md:col-span-2 bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="text-lg">🚬</span>
+                    <h5 className="font-semibold text-blue-800">Cigarette Configuration</h5>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <InputField
+                      label="Cigarettes per Pack"
+                      id="cigarettesPerPack"
+                      type="text"
+                      value={formData.cigarettesPerPack}
+                      onChange={(e) => handleInputChange('cigarettesPerPack', e.target.value)}
+                      placeholder="e.g., 20"
+                      error={errors.cigarettesPerPack}
+                      required
+                    />
+                    <InputField
+                      label="Individual Cigarette Price"
+                      id="cigaretteIndividualPrice"
+                      type="text"
+                      value={formData.cigaretteIndividualPrice}
+                      onChange={(e) => handleInputChange('cigaretteIndividualPrice', e.target.value)}
+                      placeholder="e.g., 2.75"
+                      error={errors.cigaretteIndividualPrice}
+                      required
+                    />
+                  </div>
+                  
+                  {/* Show pricing comparison */}
+                  {formData.pricePerBottle && formData.cigaretteIndividualPrice && formData.cigarettesPerPack && (
+                    <div className="mt-3 p-3 bg-white border border-blue-200 rounded-lg">
+                      <div className="text-sm text-blue-700">
+                        <div className="flex justify-between items-center">
+                          <span>Pack price per cigarette:</span>
+                          <span className="font-semibold">
+                            ${(parseFloat(formData.pricePerBottle) / parseInt(formData.cigarettesPerPack)).toFixed(2)}
+                          </span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span>Individual cigarette price:</span>
+                          <span className="font-semibold">${parseFloat(formData.cigaretteIndividualPrice).toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between items-center pt-2 border-t border-blue-200">
+                          <span>Individual markup:</span>
+                          <span className={`font-semibold ${
+                            parseFloat(formData.cigaretteIndividualPrice) > (parseFloat(formData.pricePerBottle) / parseInt(formData.cigarettesPerPack))
+                              ? 'text-green-600' : 'text-red-600'
+                          }`}>
+                            {(((parseFloat(formData.cigaretteIndividualPrice) / (parseFloat(formData.pricePerBottle) / parseInt(formData.cigarettesPerPack))) - 1) * 100).toFixed(1)}%
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
               )}
             </div>
           </div>
@@ -313,9 +416,7 @@ export default function LiquorStockForm({ item, onSubmit, onCancel }) {
               <InputField
                 label={`Buying Price per ${isCigarettes() ? 'Pack' : 'Bottle'}`}
                 id="buyingPrice"
-                type="number"
-                step="0.01"
-                min="0"
+                type="text"
                 value={formData.buyingPrice}
                 onChange={(e) => handleInputChange('buyingPrice', e.target.value)}
                 placeholder="35.00"
@@ -326,9 +427,7 @@ export default function LiquorStockForm({ item, onSubmit, onCancel }) {
               <InputField
                 label={`Selling Price per ${isCigarettes() ? 'Pack' : 'Bottle'}`}
                 id="pricePerBottle"
-                type="number"
-                step="0.01"
-                min="0"
+                type="text"
                 value={formData.pricePerBottle}
                 onChange={(e) => handleInputChange('pricePerBottle', e.target.value)}
                 placeholder="45.99"
@@ -341,7 +440,7 @@ export default function LiquorStockForm({ item, onSubmit, onCancel }) {
                 id="bottlesInStock"
                 type="text"
                 value={formData.bottlesInStock}
-                onChange={(e) => handleInputChange('bottlesInStock', parseInt(e.target.value) || 0)}
+                onChange={(e) => handleInputChange('bottlesInStock', e.target.value)}
                 error={errors.bottlesInStock}
                 required
               />
@@ -351,7 +450,7 @@ export default function LiquorStockForm({ item, onSubmit, onCancel }) {
                 id="minimumBottles"
                 type="text"
                 value={formData.minimumBottles}
-                onChange={(e) => handleInputChange('minimumBottles', parseInt(e.target.value) || 0)}
+                onChange={(e) => handleInputChange('minimumBottles', e.target.value)}
                 error={errors.minimumBottles}
                 required
               />
@@ -382,7 +481,7 @@ export default function LiquorStockForm({ item, onSubmit, onCancel }) {
                 <p className="text-sm text-gray-700 leading-relaxed mb-3">
                   {isHardLiquor() && 'This item will have standard portions (25ml, 50ml, 75ml, 100ml, quarter, half, full bottle) automatically generated. Cashiers can set individual prices for each portion.'}
                   {(formData.type === 'beer' || formData.type === 'wine') && 'This item will be sold as whole bottles only. No portion pricing or bottle volume configuration needed.'}
-                  {isCigarettes() && 'This item will be sold as individual packs. No bottle volume or alcohol percentage is required.'}
+                  {isCigarettes() && 'This item can be sold both as individual packs or individual cigarettes. The individual cigarette price is typically higher to encourage pack sales. Customers can choose to buy a full pack or individual cigarettes.'}
                   {formData.type === 'other' && 'This is a miscellaneous item that will be sold as whole units.'}
                 </p>
                 
@@ -393,8 +492,24 @@ export default function LiquorStockForm({ item, onSubmit, onCancel }) {
                     Name, Brand, Price, Stock
                     {needsBottleVolume() && ', Volume'}
                     {isHardLiquor() && ', Alcohol Percentage'}
+                    {isCigarettes() && ', Individual Price, Cigarettes per Pack'}
                   </span>
                 </div>
+                
+                {/* Show pricing explanation for cigarettes */}
+                {isCigarettes() && (
+                  <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-blue-600">💡</span>
+                      <span className="text-sm font-semibold text-blue-800">Cigarette Pricing Strategy</span>
+                    </div>
+                    <ul className="text-xs text-blue-700 space-y-1">
+                      <li>• <strong>Pack Price:</strong> Wholesale price per pack (encourages bulk buying)</li>
+                      <li>• <strong>Individual Price:</strong> Higher per-cigarette price (discourages single purchases)</li>
+                      <li>• <strong>Recommendation:</strong> Individual price should be 20-30% higher than pack price per cigarette</li>
+                    </ul>
+                  </div>
+                )}
               </div>
             </div>
           )}
