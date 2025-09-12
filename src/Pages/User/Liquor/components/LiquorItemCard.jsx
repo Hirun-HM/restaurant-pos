@@ -73,7 +73,17 @@ const LiquorItemCard = React.memo(({
                     <div>
                         <div className="text-sm text-gray-600">In Stock</div>
                         <div className={`text-lg font-semibold ${isLowStock ? 'text-red-600' : 'text-gray-900'}`}>
-                            {item.quantity || item.bottlesInStock || 0} {item.unit || 'unit'}s
+                            {item.type === 'cigarettes' ? (
+                                // Special display for cigarettes
+                                <div>
+                                    <div>{item.quantity || item.bottlesInStock || 0} packs</div>
+                                    <div className="text-sm text-gray-500">
+                                        ({((item.quantity || item.bottlesInStock || 0) * (item.cigarettesPerPack || 20))} individual)
+                                    </div>
+                                </div>
+                            ) : (
+                                `${item.quantity || item.bottlesInStock || 0} ${item.unit || (item.type === 'hard_liquor' ? 'bottle' : 'unit')}s`
+                            )}
                         </div>
                     </div>
                 </div>
@@ -99,11 +109,35 @@ const LiquorItemCard = React.memo(({
                 )}
 
                 {/* Category Specific Information */}
-                {item.category === 'cigarette' && (
-                    <div className="mt-4 p-3 bg-gray-50 rounded-lg">
-                        <div className="text-sm text-gray-600">Category</div>
-                        <div className="text-md font-medium text-gray-900 capitalize">
-                            {item.cigaretteType?.replace(/_/g, ' ')}
+                {item.type === 'cigarettes' && (
+                    <div className="mt-4 p-3 bg-orange-50 rounded-lg">
+                        <div className="grid grid-cols-2 gap-3 mb-3">
+                            <div>
+                                <div className="text-sm text-gray-600">Cigarettes per Pack</div>
+                                <div className="text-lg font-semibold text-orange-600">
+                                    {item.cigarettesPerPack || 20} pieces
+                                </div>
+                            </div>
+                            <div>
+                                <div className="text-sm text-gray-600">Individual Price</div>
+                                <div className="text-lg font-semibold text-green-600">
+                                    LKR {item.cigaretteIndividualPrice ? Number(item.cigaretteIndividualPrice).toFixed(2) : 'N/A'}
+                                </div>
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                            <div className="bg-white p-2 rounded border">
+                                <div className="text-sm text-gray-600">Packs Sold</div>
+                                <div className="text-md font-semibold text-purple-600">
+                                    {item.totalSoldItems || 0} packs
+                                </div>
+                            </div>
+                            <div className="bg-white p-2 rounded border">
+                                <div className="text-sm text-gray-600">Individual Sales</div>
+                                <div className="text-md font-semibold text-blue-600">
+                                    {item.individualCigaretteSales || 0} pieces
+                                </div>
+                            </div>
                         </div>
                     </div>
                 )}

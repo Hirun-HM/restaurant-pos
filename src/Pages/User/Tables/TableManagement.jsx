@@ -70,6 +70,9 @@ export default function TableManagement({tableList = []}) {
                 bottleVolume: item.bottleVolume,
                 portions: item.portions || [],
                 alcoholPercentage: item.alcoholPercentage,
+                // Cigarette-specific fields
+                cigaretteIndividualPrice: item.cigaretteIndividualPrice,
+                cigarettesPerPack: item.cigarettesPerPack || 20,
                 stock: {
                     bottlesInStock: item.bottlesInStock || 0,
                     millilitersRemaining: item.totalVolumeRemaining || item.currentBottleVolume || 0
@@ -370,10 +373,53 @@ export default function TableManagement({tableList = []}) {
             }
 
             // Process order payment and consume stock
+            // Enhanced items with proper liquor identification
+            const enhancedItems = bill.items.map(item => {
+                // Check if this is a liquor item
+                const isLiquorItem = item.type && ['hard_liquor', 'beer', 'wine', 'cigarettes'].includes(item.type);
+                
+                if (isLiquorItem) {
+                    // For liquor items, ensure we have all necessary properties
+                    const enhancedItem = {
+                        ...item,
+                        // Determine the original liquor ID for database lookup
+                        originalItemId: item.originalItemId || (
+                            item.id && item.id.includes('_') 
+                                ? item.id.split('_')[0] // Extract original ID from composite ID
+                                : item.id // Use the ID as is if it's not composite
+                        ),
+                        // Add portion information if available
+                        portion: item.selectedPortion || item.portion,
+                        // Add liquor-specific properties
+                        bottleVolume: item.bottleVolume,
+                        portions: item.portions,
+                        // Determine if this is a full bottle or portion sale
+                        isFullBottle: item.id?.includes('_full') || item.isFullBottle,
+                        // For cigarettes, check if individual sale
+                        isIndividual: item.id?.includes('_individual') || 
+                                    (item.type === 'cigarettes' && item.price !== item.pricePerBottle && !item.id?.includes('_pack'))
+                    };
+                    
+                    console.log(`🍺 Enhanced liquor item: ${item.name}`, {
+                        originalId: item.id,
+                        extractedId: enhancedItem.originalItemId,
+                        type: item.type,
+                        isFullBottle: enhancedItem.isFullBottle,
+                        isIndividual: enhancedItem.isIndividual,
+                        portion: enhancedItem.portion
+                    });
+                    
+                    return enhancedItem;
+                }
+                
+                // For food items, return as-is
+                return item;
+            });
+
             const orderData = {
                 orderId: bill.orderId, // Pass the existing order ID
                 tableId: String(billToClose), // Ensure it's a string
-                items: bill.items,
+                items: enhancedItems,
                 total: bill.total,
                 serviceCharge: bill.serviceCharge || false,
                 paymentMethod: 'cash',
@@ -408,15 +454,43 @@ export default function TableManagement({tableList = []}) {
                     }
                 }));
 
-                // Build success message
-                let successMessage = `Payment processed successfully!\n\nOrder ID: ${result.data?.orderId}\nStock items consumed: ${result.data?.stockConsumptions || 0}`;
+                // Build success message with both stock and liquor consumption details
+                let successMessage = `Payment processed successfully!\n\nOrder ID: ${result.data?.orderId}`;
+                
+                // Add stock consumption info
+                const stockCount = result.data?.stockConsumptions || 0;
+                if (stockCount > 0) {
+                    successMessage += `\nFood stock items consumed: ${stockCount}`;
+                }
+                
+                // Add liquor consumption info
+                const liquorCount = result.data?.liquorConsumptions || 0;
+                if (liquorCount > 0) {
+                    successMessage += `\nLiquor items consumed: ${liquorCount}`;
+                }
+                
+                if (stockCount === 0 && liquorCount === 0) {
+                    successMessage += `\nNo stock consumption required`;
+                }
                 
                 // Add information about missed ingredients if any
                 if (result.data?.missedIngredients && result.data.missedIngredients.length > 0) {
                     successMessage += `\n\nNote: Some ingredients were not available in stock:\n${result.data.missedIngredients.map(ing => `• ${ing.name} (${ing.reason || 'Not in stock'})`).join('\n')}`;
                     successMessage += `\n\nOnly available ingredients were deducted from stock.`;
-                } else {
-                    successMessage += `\n\nAll ingredients were processed successfully.`;
+                } else if (stockCount > 0) {
+                    successMessage += `\n\nAll food ingredients were processed successfully.`;
+                }
+                
+                // Add liquor consumption details if available
+                if (result.data?.liquorConsumptionDetails && result.data.liquorConsumptionDetails.length > 0) {
+                    successMessage += `\n\nLiquor consumption details:`;
+                    result.data.liquorConsumptionDetails.forEach(detail => {
+                        if (detail.error) {
+                            successMessage += `\n• ${detail.itemName}: ${detail.error}`;
+                        } else {
+                            successMessage += `\n• ${detail.itemName}: ${detail.note}`;
+                        }
+                    });
                 }
                 
                 successMessage += `\n\nTable ${selectedTable?.tableNumber || billToClose} is now available.`;

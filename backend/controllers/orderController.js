@@ -232,24 +232,11 @@ export const processOrderPayment = async (req, res) => {
             }
         }
 
-        // Handle liquor consumption for hard liquors only (exclude beers and cigarettes)
+        // Handle liquor consumption with different strategies for different types
         const liquorConsumptionResults = [];
         for (const liquorItem of liquorItems) {
             try {
-                console.log(`🍺 Processing liquor item: ${liquorItem.name} (quantity: ${liquorItem.quantity})`);
-                
-                // Only process hard liquors - skip beers and cigarettes
-                if (liquorItem.type !== 'hard_liquor') {
-                    console.log(`⏭️ Skipping ${liquorItem.type}: ${liquorItem.name} (volume tracking only for hard liquors)`);
-                    liquorConsumptionResults.push({
-                        itemName: liquorItem.name,
-                        type: liquorItem.type,
-                        quantity: liquorItem.quantity,
-                        note: `${liquorItem.type} - no volume tracking applied`,
-                        skipped: true
-                    });
-                    continue;
-                }
+                console.log(`🍺 Processing liquor item: ${liquorItem.name} (type: ${liquorItem.type}, quantity: ${liquorItem.quantity})`);
                 
                 // Get the actual liquor item from database using originalItemId
                 const liquorId = liquorItem.originalItemId || (liquorItem.id && liquorItem.id.includes('_') ? liquorItem.id.split('_')[0] : liquorItem.id);
@@ -261,41 +248,184 @@ export const processOrderPayment = async (req, res) => {
                 if (!liquorFromDB) {
                     throw new Error(`Liquor item not found in database: ${liquorId}`);
                 }
+
+                // Check if we have enough stock
+                if (liquorFromDB.bottlesInStock <= 0) {
+                    throw new Error(`No stock available for ${liquorFromDB.name}`);
+                }
+
+                let consumptionResult;
                 
-                // Calculate volume to consume based on portion
-                const portion = liquorItem.portion || liquorItem.selectedPortion || { ml: liquorItem.bottleVolume || 750 };
-                const volumePerItem = portion.ml || portion.volume || 25; // Default to 25ml if no portion specified
-                const totalVolumeToConsume = volumePerItem * liquorItem.quantity;
-                
-                console.log(`📊 Consuming ${totalVolumeToConsume}ml (${volumePerItem}ml × ${liquorItem.quantity}) from ${liquorFromDB.name}`);
-                
-                // Actually consume the liquor volume
-                const consumptionResult = liquorFromDB.consumeLiquor(totalVolumeToConsume);
+                if (liquorItem.type === 'hard_liquor') {
+                    // Check if this is a full bottle sale or portion sale
+                    const isFullBottleSale = liquorItem.isFullBottle || liquorItem.id?.includes('_full');
+                    
+                    if (isFullBottleSale) {
+                        // Full bottle sale - treat as unit-based consumption
+                        const quantityToConsume = liquorItem.quantity;
+                        
+                        console.log(`🍾 Full bottle sale: consuming ${quantityToConsume} bottles of ${liquorFromDB.name}`);
+                        
+                        if (liquorFromDB.bottlesInStock < quantityToConsume) {
+                            throw new Error(`Insufficient bottles for full bottle sale. Required: ${quantityToConsume}, Available: ${liquorFromDB.bottlesInStock}`);
+                        }
+                        
+                        // Reduce bottle count
+                        liquorFromDB.bottlesInStock -= quantityToConsume;
+                        liquorFromDB.totalSoldItems += quantityToConsume;
+                        
+                        // Also reduce total volume accordingly
+                        const volumeConsumed = quantityToConsume * liquorFromDB.bottleVolume;
+                        liquorFromDB.totalVolumeRemaining -= volumeConsumed;
+                        
+                        consumptionResult = {
+                            consumed: quantityToConsume,
+                            volumeConsumed: volumeConsumed,
+                            remainingBottles: liquorFromDB.bottlesInStock,
+                            remainingVolume: liquorFromDB.totalVolumeRemaining
+                        };
+                        
+                        liquorConsumptionResults.push({
+                            itemName: liquorItem.name,
+                            type: liquorItem.type,
+                            liquorId: liquorId,
+                            bottlesConsumed: quantityToConsume,
+                            volumeConsumed: volumeConsumed,
+                            quantity: liquorItem.quantity,
+                            saleType: 'full_bottle',
+                            remainingBottles: liquorFromDB.bottlesInStock,
+                            remainingVolume: liquorFromDB.totalVolumeRemaining,
+                            note: `Full bottle sale - ${quantityToConsume} bottle(s) sold`
+                        });
+                    } else {
+                        // Portion sale - Handle volume-based consumption
+                        const portion = liquorItem.portion || liquorItem.selectedPortion || { ml: 25 }; // Default to 25ml
+                        const volumePerItem = portion.ml || portion.volume || 25;
+                        const totalVolumeToConsume = volumePerItem * liquorItem.quantity;
+                        
+                        console.log(`📊 Consuming ${totalVolumeToConsume}ml (${volumePerItem}ml × ${liquorItem.quantity}) from ${liquorFromDB.name}`);
+                        
+                        // Check if we have enough volume
+                        if (liquorFromDB.totalVolumeRemaining < totalVolumeToConsume) {
+                            throw new Error(`Insufficient volume for ${liquorFromDB.name}. Required: ${totalVolumeToConsume}ml, Available: ${liquorFromDB.totalVolumeRemaining}ml`);
+                        }
+                        
+                        // Consume the liquor volume
+                        consumptionResult = liquorFromDB.consumeLiquor(totalVolumeToConsume);
+                        
+                        liquorConsumptionResults.push({
+                            itemName: liquorItem.name,
+                            type: liquorItem.type,
+                            liquorId: liquorId,
+                            volumeConsumed: consumptionResult.consumed,
+                            volumeWasted: consumptionResult.wasted,
+                            bottlesCompleted: consumptionResult.bottlesCompleted,
+                            quantity: liquorItem.quantity,
+                            portionSize: `${volumePerItem}ml`,
+                            saleType: 'portion',
+                            remainingBottles: consumptionResult.remainingBottles,
+                            remainingVolume: consumptionResult.remainingVolume,
+                            note: 'Volume successfully deducted from stock'
+                        });
+                    }
+                    
+                } else {
+                    // Beer, Wine, Cigarettes, Other: Handle unit-based consumption (whole bottles/packs)
+                    const quantityToConsume = liquorItem.quantity;
+                    
+                    console.log(`📦 Consuming ${quantityToConsume} units of ${liquorFromDB.name}`);
+                    
+                    // Check if we have enough units in stock
+                    if (liquorFromDB.bottlesInStock < quantityToConsume) {
+                        throw new Error(`Insufficient stock for ${liquorFromDB.name}. Required: ${quantityToConsume}, Available: ${liquorFromDB.bottlesInStock}`);
+                    }
+                    
+                    // For cigarettes, handle both pack and individual sales
+                    if (liquorItem.type === 'cigarettes') {
+                        // Check if this is individual cigarette sale or pack sale
+                        const isIndividualSale = liquorItem.isIndividual || (liquorItem.price !== liquorFromDB.pricePerBottle);
+                        
+                        if (isIndividualSale) {
+                            // Individual cigarette sale - convert to packs
+                            const cigarettesPerPack = liquorFromDB.cigarettesPerPack || 20;
+                            const packsNeeded = Math.ceil(quantityToConsume / cigarettesPerPack);
+                            
+                            console.log(`� Individual cigarette sale: ${quantityToConsume} cigarettes = ${packsNeeded} pack(s) needed`);
+                            
+                            if (liquorFromDB.bottlesInStock < packsNeeded) {
+                                throw new Error(`Insufficient packs for individual cigarette sale. Need ${packsNeeded} pack(s), have ${liquorFromDB.bottlesInStock}`);
+                            }
+                            
+                            // Reduce pack count and track individual sales
+                            liquorFromDB.bottlesInStock -= packsNeeded;
+                            liquorFromDB.totalSoldItems += packsNeeded;
+                            liquorFromDB.individualCigaretteSales += quantityToConsume; // Track individual cigarettes sold
+                            
+                            consumptionResult = {
+                                consumed: quantityToConsume,
+                                packsUsed: packsNeeded,
+                                remainingBottles: liquorFromDB.bottlesInStock
+                            };
+                            
+                            liquorConsumptionResults.push({
+                                itemName: liquorItem.name,
+                                type: liquorItem.type,
+                                liquorId: liquorId,
+                                cigarettesConsumed: quantityToConsume,
+                                packsUsed: packsNeeded,
+                                quantity: liquorItem.quantity,
+                                saleType: 'individual',
+                                remainingPacks: liquorFromDB.bottlesInStock,
+                                note: `Individual cigarette sale - ${quantityToConsume} cigarettes from ${packsNeeded} pack(s)`
+                            });
+                        } else {
+                            // Pack sale
+                            liquorFromDB.bottlesInStock -= quantityToConsume;
+                            liquorFromDB.totalSoldItems += quantityToConsume;
+                            
+                            consumptionResult = {
+                                consumed: quantityToConsume,
+                                remainingBottles: liquorFromDB.bottlesInStock
+                            };
+                            
+                            liquorConsumptionResults.push({
+                                itemName: liquorItem.name,
+                                type: liquorItem.type,
+                                liquorId: liquorId,
+                                packsConsumed: quantityToConsume,
+                                quantity: liquorItem.quantity,
+                                saleType: 'pack',
+                                remainingPacks: liquorFromDB.bottlesInStock,
+                                note: `Pack sale - ${quantityToConsume} pack(s) sold`
+                            });
+                        }
+                    } else {
+                        // Beer, Wine, Other - simple unit consumption
+                        liquorFromDB.bottlesInStock -= quantityToConsume;
+                        liquorFromDB.totalSoldItems += quantityToConsume;
+                        
+                        consumptionResult = {
+                            consumed: quantityToConsume,
+                            remainingBottles: liquorFromDB.bottlesInStock
+                        };
+                        
+                        liquorConsumptionResults.push({
+                            itemName: liquorItem.name,
+                            type: liquorItem.type,
+                            liquorId: liquorId,
+                            unitsConsumed: quantityToConsume,
+                            quantity: liquorItem.quantity,
+                            remainingUnits: liquorFromDB.bottlesInStock,
+                            note: `Unit-based sale - ${quantityToConsume} ${liquorItem.type}(s) sold`
+                        });
+                    }
+                }
                 
                 // Save the updated liquor data
                 await liquorFromDB.save({ session });
                 
-                liquorConsumptionResults.push({
-                    itemName: liquorItem.name,
-                    type: liquorItem.type,
-                    liquorId: liquorId,
-                    volumeConsumed: consumptionResult.consumed,
-                    volumeWasted: consumptionResult.wasted,
-                    bottlesCompleted: consumptionResult.bottlesCompleted,
-                    quantity: liquorItem.quantity,
-                    portionSize: `${volumePerItem}ml`,
-                    remainingBottles: consumptionResult.remainingBottles,
-                    remainingVolume: consumptionResult.remainingVolume,
-                    note: 'Volume successfully deducted from stock'
-                });
-                
-                console.log(`✅ Successfully consumed: ${liquorItem.name} - ${totalVolumeToConsume}ml`);
-                if (consumptionResult.wasted > 0) {
-                    console.log(`🗑️ Wasted volume (≤30ml): ${consumptionResult.wasted}ml`);
-                }
                 
             } catch (liquorError) {
-                console.log(`⚠️ Liquor processing error: ${liquorItem.name} - ${liquorError.message}`);
                 // Don't abort transaction for liquor issues - just log and continue
                 liquorConsumptionResults.push({
                     itemName: liquorItem.name,
@@ -414,6 +544,7 @@ export const processOrderPayment = async (req, res) => {
                 paymentStatus: savedOrder.paymentStatus,
                 stockConsumptions: stockConsumptionResults.length,
                 liquorConsumptions: liquorConsumptionResults.length,
+                liquorConsumptionDetails: liquorConsumptionResults, // Include detailed liquor consumption info
                 createdAt: savedOrder.createdAt,
                 orderTime: savedOrder.orderTime,
                 missedIngredients: missedIngredients, // Include info about skipped ingredients
@@ -1016,63 +1147,63 @@ export const getFoodLiquorBreakdown = async (req, res) => {
 
 // Get active table count for admin overview
 export async function getActiveTableCount(req, res) {
-  try {
-    // Count distinct tables that have bills created but with NO items (empty bills)
-    // These are tables that have been "claimed" but don't have any items yet
-    const activeStatuses = ['created', 'pending'];
-    const emptyBillTables = await Order.distinct('tableNumber', { 
-      status: { $in: activeStatuses },
-      $or: [
-        { items: { $exists: false } },
-        { items: { $size: 0 } }
-      ]
-    });
-    res.json({ count: emptyBillTables.length });
-  } catch (error) {
-    console.error('Error fetching active table count:', error);
-    res.status(500).json({ error: 'Failed to fetch active table count' });
-  }
+    try {
+        // Count distinct tables that have bills created but with NO items (empty bills)
+        // These are tables that have been "claimed" but don't have any items yet
+        const activeStatuses = ['created', 'pending'];
+        const emptyBillTables = await Order.distinct('tableNumber', { 
+        status: { $in: activeStatuses },
+        $or: [
+            { items: { $exists: false } },
+            { items: { $size: 0 } }
+        ]
+        });
+        res.json({ count: emptyBillTables.length });
+    } catch (error) {
+        console.error('Error fetching active table count:', error);
+        res.status(500).json({ error: 'Failed to fetch active table count' });
+    }
 }
 
 // Get active bills count (bills with at least one item and not paid/cancelled)
 export async function getActiveBillsCount(req, res) {
-  try {
-    // Count bills that have items added to them (but not yet paid)
-    const activeStatuses = ['pending', 'confirmed', 'preparing', 'ready', 'served'];
-    const activeBills = await Order.countDocuments({ 
-      status: { $in: activeStatuses }, 
-      items: { $exists: true, $not: { $size: 0 } } 
-    });
-    res.json({ count: activeBills });
-  } catch (error) {
-    console.error('Error fetching active bills count:', error);
-    res.status(500).json({ error: 'Failed to fetch active bills count' });
-  }
+    try {
+        // Count bills that have items added to them (but not yet paid)
+        const activeStatuses = ['pending', 'confirmed', 'preparing', 'ready', 'served'];
+        const activeBills = await Order.countDocuments({ 
+        status: { $in: activeStatuses }, 
+        items: { $exists: true, $not: { $size: 0 } } 
+        });
+        res.json({ count: activeBills });
+    } catch (error) {
+        console.error('Error fetching active bills count:', error);
+        res.status(500).json({ error: 'Failed to fetch active bills count' });
+    }
 }
 
 // Debug endpoint to see all orders and their statuses
 export async function getDebugOrders(req, res) {
-  try {
-    const orders = await Order.find({}, {
-      tableNumber: 1,
-      status: 1,
-      items: 1,
-      total: 1,
-      createdAt: 1
-    }).sort({ createdAt: -1 }).limit(20);
-    
-    res.json({
-      totalOrders: orders.length,
-      orders: orders.map(order => ({
-        id: order._id,
-        tableNumber: order.tableNumber,
-        status: order.status,
-        itemCount: order.items ? order.items.length : 0,
-        total: order.total,
-        createdAt: order.createdAt
-      }))
-    });
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch debug orders' });
-  }
+    try {
+        const orders = await Order.find({}, {
+        tableNumber: 1,
+        status: 1,
+        items: 1,
+        total: 1,
+        createdAt: 1
+        }).sort({ createdAt: -1 }).limit(20);
+        
+        res.json({
+        totalOrders: orders.length,
+        orders: orders.map(order => ({
+            id: order._id,
+            tableNumber: order.tableNumber,
+            status: order.status,
+            itemCount: order.items ? order.items.length : 0,
+            total: order.total,
+            createdAt: order.createdAt
+        }))
+        });
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to fetch debug orders' });
+    }
 }

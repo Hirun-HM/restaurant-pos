@@ -90,12 +90,6 @@ export default function LiquorStockForm({ item, onSubmit, onCancel }) {
       newErrors.buyingPrice = 'Valid buying price is required';
     }
 
-    // Validate that selling price is higher than buying price
-    if (formData.pricePerBottle && formData.buyingPrice && 
-        parseFloat(formData.pricePerBottle) <= parseFloat(formData.buyingPrice)) {
-      newErrors.pricePerBottle = 'Selling price must be higher than buying price';
-    }
-
     if (parseInt(formData.bottlesInStock) < 0) {
       newErrors.bottlesInStock = 'Items in stock cannot be negative';
     }
@@ -126,18 +120,6 @@ export default function LiquorStockForm({ item, onSubmit, onCancel }) {
 
       if (!formData.cigarettesPerPack || parseInt(formData.cigarettesPerPack) < 1) {
         newErrors.cigarettesPerPack = 'Cigarettes per pack must be at least 1';
-      }
-
-      // Validate that individual price makes sense compared to pack price
-      const packPrice = parseFloat(formData.pricePerBottle);
-      const individualPrice = parseFloat(formData.cigaretteIndividualPrice);
-      const cigarettesPerPack = parseInt(formData.cigarettesPerPack);
-      
-      if (packPrice && individualPrice && cigarettesPerPack) {
-        const totalIndividualValue = individualPrice * cigarettesPerPack;
-        if (totalIndividualValue <= packPrice) {
-          newErrors.cigaretteIndividualPrice = 'Individual price should be higher to encourage pack sales';
-        }
       }
     }
 
@@ -189,6 +171,8 @@ export default function LiquorStockForm({ item, onSubmit, onCancel }) {
     }
 
     setIsSubmitting(true);
+    setErrors({});
+    
     try {
       // Determine final bottle volume
       const finalBottleVolume = formData.bottleVolume === 'custom' 
@@ -196,26 +180,28 @@ export default function LiquorStockForm({ item, onSubmit, onCancel }) {
         : parseInt(formData.bottleVolume);
 
       const submitData = {
-        ...formData,
+        name: formData.name.trim(),
+        brand: formData.brand.trim(),
+        type: formData.type,
         bottleVolume: needsBottleVolume() ? finalBottleVolume : undefined,
         pricePerBottle: parseFloat(formData.pricePerBottle),
-        buyingPrice: parseFloat(formData.buyingPrice), // Add buying price
+        buyingPrice: parseFloat(formData.buyingPrice),
         bottlesInStock: parseInt(formData.bottlesInStock),
         minimumBottles: parseInt(formData.minimumBottles),
         alcoholPercentage: isHardLiquor() && formData.alcoholPercentage ? parseFloat(formData.alcoholPercentage) : undefined,
-        // Cigarette-specific fields
         cigaretteIndividualPrice: isCigarettes() && formData.cigaretteIndividualPrice ? parseFloat(formData.cigaretteIndividualPrice) : undefined,
         cigarettesPerPack: isCigarettes() && formData.cigarettesPerPack ? parseInt(formData.cigarettesPerPack) : undefined
       };
 
-      // Remove empty optional fields and custom volume field
-      if (!submitData.alcoholPercentage) delete submitData.alcoholPercentage;
-      if (!needsBottleVolume()) delete submitData.bottleVolume;
-      if (!submitData.cigaretteIndividualPrice) delete submitData.cigaretteIndividualPrice;
-      if (!submitData.cigarettesPerPack) delete submitData.cigarettesPerPack;
-      delete submitData.customBottleVolume;
+      // Clean up undefined values
+      Object.keys(submitData).forEach(key => {
+        if (submitData[key] === undefined) {
+          delete submitData[key];
+        }
+      });
       
       await onSubmit(submitData);
+      
     } catch (error) {
       console.error('Error submitting form:', error);
       setErrors({ submit: 'Failed to save liquor item. Please try again.' });
@@ -381,12 +367,12 @@ export default function LiquorStockForm({ item, onSubmit, onCancel }) {
                         <div className="flex justify-between items-center">
                           <span>Pack price per cigarette:</span>
                           <span className="font-semibold">
-                            ${(parseFloat(formData.pricePerBottle) / parseInt(formData.cigarettesPerPack)).toFixed(2)}
+                            LKR {(parseFloat(formData.pricePerBottle) / parseInt(formData.cigarettesPerPack)).toFixed(2)}
                           </span>
                         </div>
                         <div className="flex justify-between items-center">
                           <span>Individual cigarette price:</span>
-                          <span className="font-semibold">${parseFloat(formData.cigaretteIndividualPrice).toFixed(2)}</span>
+                          <span className="font-semibold">LKR {parseFloat(formData.cigaretteIndividualPrice).toFixed(2)}</span>
                         </div>
                         <div className="flex justify-between items-center pt-2 border-t border-blue-200">
                           <span>Individual markup:</span>

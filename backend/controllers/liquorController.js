@@ -164,6 +164,8 @@ export const updateLiquorItem = async (req, res) => {
     const { id } = req.params;
     const updateData = req.body;
     
+    console.log(`🔄 Updating liquor item ${id} with:`, updateData);
+    
     const liquor = await Liquor.findByIdAndUpdate(
       id,
       updateData,
@@ -171,21 +173,24 @@ export const updateLiquorItem = async (req, res) => {
     );
     
     if (!liquor) {
+      console.log(`❌ Liquor item not found: ${id}`);
       return res.status(404).json({
         success: false,
         message: 'Liquor item not found'
       });
     }
     
+    console.log(`✅ Liquor item updated successfully:`, liquor.name);
     res.json({
       success: true,
       message: 'Liquor item updated successfully',
       data: liquor
     });
   } catch (error) {
-    console.error('Error updating liquor item:', error);
+    console.error('❌ Error updating liquor item:', error);
     
     if (error.name === 'ValidationError') {
+      console.log('🔍 Validation errors:', error.errors);
       return res.status(400).json({
         success: false,
         message: 'Validation error',

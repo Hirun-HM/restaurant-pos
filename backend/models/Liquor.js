@@ -113,13 +113,7 @@ const liquorSchema = new mongoose.Schema({
     buyingPrice: {
         type: Number,
         required: [true, 'Buying price is required'],
-        min: [0, 'Buying price cannot be negative'],
-        validate: {
-            validator: function(value) {
-                return !this.pricePerBottle || this.pricePerBottle > value;
-            },
-            message: 'Selling price must be higher than buying price'
-        }
+        min: [0, 'Buying price cannot be negative']
     },
     // Cigarette-specific fields
     cigaretteIndividualPrice: {
@@ -157,6 +151,11 @@ const liquorSchema = new mongoose.Schema({
             },
             message: 'Cigarettes per pack must be a positive integer'
         }
+    },
+    individualCigaretteSales: {
+        type: Number,
+        default: 0,
+        min: [0, 'Individual cigarette sales cannot be negative']
     },
     description: {
         type: String,
