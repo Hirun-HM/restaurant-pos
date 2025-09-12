@@ -36,7 +36,7 @@ export default function LiquorStockForm({ item, onSubmit, onCancel }) {
     bottlesInStock: 0,
     pricePerBottle: '',
     buyingPrice: '', // New field for buying price
-    minimumBottles: 2,
+    minimumBottles: 0,
     alcoholPercentage: '',
     customBottleVolume: '' // For custom bottle volume input
   });
@@ -311,7 +311,7 @@ export default function LiquorStockForm({ item, onSubmit, onCancel }) {
             
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
               <InputField
-                label={`Buying Price per ${isCigarettes() ? 'Pack' : 'Bottle'} (LKR)`}
+                label={`Buying Price per ${isCigarettes() ? 'Pack' : 'Bottle'}`}
                 id="buyingPrice"
                 type="number"
                 step="0.01"
@@ -324,7 +324,7 @@ export default function LiquorStockForm({ item, onSubmit, onCancel }) {
               />
 
               <InputField
-                label={`Selling Price per ${isCigarettes() ? 'Pack' : 'Bottle'} (LKR)`}
+                label={`Selling Price per ${isCigarettes() ? 'Pack' : 'Bottle'}`}
                 id="pricePerBottle"
                 type="number"
                 step="0.01"
@@ -339,8 +339,7 @@ export default function LiquorStockForm({ item, onSubmit, onCancel }) {
               <InputField
                 label={`${isCigarettes() ? 'Packs' : 'Bottles'} in Stock`}
                 id="bottlesInStock"
-                type="number"
-                min="0"
+                type="text"
                 value={formData.bottlesInStock}
                 onChange={(e) => handleInputChange('bottlesInStock', parseInt(e.target.value) || 0)}
                 error={errors.bottlesInStock}
@@ -350,8 +349,7 @@ export default function LiquorStockForm({ item, onSubmit, onCancel }) {
               <InputField
                 label={`Minimum ${isCigarettes() ? 'Packs' : 'Bottles'}`}
                 id="minimumBottles"
-                type="number"
-                min="0"
+                type="text"
                 value={formData.minimumBottles}
                 onChange={(e) => handleInputChange('minimumBottles', parseInt(e.target.value) || 0)}
                 error={errors.minimumBottles}

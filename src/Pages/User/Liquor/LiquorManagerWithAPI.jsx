@@ -158,201 +158,65 @@ export default function LiquorManagerWithAPI() {
         </div>
       )}
 
-      {/* Tabs */}
-      <div className="border-b border-gray-200 mb-6">
-        <nav className="-mb-px flex space-x-8">
-          <button
-            onClick={() => setActiveTab('items')}
-            className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
-              activeTab === 'items'
-                ? 'border-yellow-500 text-yellow-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
-          >
-            Liquor Items ({filteredItems.length})
-          </button>
-          <button
-            onClick={() => setActiveTab('analytics')}
-            className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
-              activeTab === 'analytics'
-                ? 'border-yellow-500 text-yellow-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
-          >
-            Analytics
-          </button>
-          <button
-            onClick={() => setActiveTab('billing')}
-            className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
-              activeTab === 'billing'
-                ? 'border-yellow-500 text-yellow-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
-          >
-            Billing
-          </button>
-        </nav>
+      {/* Only show items tab and its content */}
+      {/* Filters and Search */}
+      <div className="flex flex-col md:flex-row gap-4 mb-6">
+        <div className="flex-1">
+          <InputField
+            type="text"
+            placeholder="Search liquor items..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full"
+          />
+        </div>
+        <div className="md:w-48">
+          <Select
+            value={typeFilter}
+            onChange={(value) => setTypeFilter(value)}
+            options={LIQUOR_TYPES}
+          />
+        </div>
+        <label className="flex items-center gap-2 px-4 py-2 bg-gray-50 rounded-lg whitespace-nowrap">
+          <input
+            type="checkbox"
+            checked={showLowStock}
+            onChange={(e) => setShowLowStock(e.target.checked)}
+            className="rounded border-gray-300 text-primaryColor focus:ring-primaryColor"
+          />
+          <span className="text-sm text-gray-700">Low Stock Only</span>
+        </label>
       </div>
 
-      {activeTab === 'items' && (
-        <>
-          {/* Analytics Summary Cards */}
-          {analytics && (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-              <div className="bg-white rounded-lg p-6 shadow-sm border">
-                <div className="flex items-center">
-                  <div className="p-2 bg-yellow-100 rounded-lg">
-                    <svg className="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                    </svg>
-                  </div>
-                  <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-600">Total Items</p>
-                    <p className="text-2xl font-bold text-gray-900">{analytics.totalItems}</p>
-                  </div>
-                </div>
-              </div>
+      {/* Loading */}
+      {loading && <LoadingSpinner />}
 
-              <div className="bg-white rounded-lg p-6 shadow-sm border">
-                <div className="flex items-center">
-                  <div className="p-2 bg-red-100 rounded-lg">
-                    <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
-                    </svg>
-                  </div>
-                  <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-600">Low Stock</p>
-                    <p className="text-2xl font-bold text-gray-900">{analytics.lowStockCount}</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-white rounded-lg p-6 shadow-sm border">
-                <div className="flex items-center">
-                  <div className="p-2 bg-orange-100 rounded-lg">
-                    <svg className="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 7.172V5L8 4z" />
-                    </svg>
-                  </div>
-                  <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-600">Total Wasted</p>
-                    <p className="text-2xl font-bold text-gray-900">{analytics.totalWastedVolume?.toFixed(0) || '0'} ml</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Filters and Search */}
-          <div className="flex flex-col md:flex-row gap-4 mb-6">
-            <div className="flex-1">
-              <InputField
-                type="text"
-                placeholder="Search liquor items..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full"
-              />
-            </div>
-            
-            <div className="md:w-48">
-              <Select
-                value={typeFilter}
-                onChange={(value) => setTypeFilter(value)}
-                options={LIQUOR_TYPES}
-              />
-            </div>
-            
-            <label className="flex items-center gap-2 px-4 py-2 bg-gray-50 rounded-lg whitespace-nowrap">
-              <input
-                type="checkbox"
-                checked={showLowStock}
-                onChange={(e) => setShowLowStock(e.target.checked)}
-                className="rounded border-gray-300 text-primaryColor focus:ring-primaryColor"
-              />
-              <span className="text-sm text-gray-700">Low Stock Only</span>
-            </label>
-          </div>
-
-          {/* Loading */}
-          {loading && <LoadingSpinner />}
-
-          {/* Liquor Items Grid */}
-          {!loading && (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-start">
-              {filteredItems.map((item) => (
-                <LiquorItemCard
-                  key={item._id}
-                  item={item}
-                  onEdit={handleEdit}
-                  onDelete={handleDelete}
-                />
-              ))}
-            </div>
-          )}
-
-          {/* Empty State */}
-          {!loading && filteredItems.length === 0 && (
-            <div className="text-center py-12">
-              <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
-              </svg>
-              <h3 className="mt-2 text-sm font-medium text-gray-900">No liquor items found</h3>
-              <p className="mt-1 text-sm text-gray-500">
-                {searchTerm || typeFilter !== 'all' || showLowStock
-                  ? 'Try adjusting your filters or search term.'
-                  : 'Get started by adding your first liquor item.'}
-              </p>
-            </div>
-          )}
-        </>
-      )}
-
-      {activeTab === 'analytics' && (
-        <div className="bg-white rounded-lg p-6 shadow-sm border">
-          <h2 className="text-xl font-semibold mb-4">Liquor Analytics</h2>
-          <p className="text-gray-600">Analytics dashboard coming soon...</p>
+      {/* Liquor Items Grid */}
+      {!loading && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-start">
+          {filteredItems.map((item) => (
+            <LiquorItemCard
+              key={item._id}
+              item={item}
+              onEdit={handleEdit}
+              onDelete={handleDelete}
+            />
+          ))}
         </div>
       )}
 
-      {activeTab === 'billing' && (
-        <div className="bg-white rounded-lg p-6 shadow-sm border">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-xl font-semibold">Liquor Billing</h2>
-            <button
-              onClick={() => setBillingOpen(true)}
-              className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium"
-            >
-              Process Sale
-            </button>
-          </div>
-          
-          <div className="space-y-4">
-            <p className="text-gray-600">
-              Process liquor sales with automatic stock management and portion tracking.
-              All sales will automatically update inventory levels and track waste.
-            </p>
-            
-            {recentSales.length > 0 && (
-              <div>
-                <h3 className="font-medium mb-2">Recent Sales</h3>
-                <div className="space-y-2">
-                  {recentSales.slice(-5).map((sale, index) => (
-                    <div key={index} className="bg-gray-50 p-3 rounded border text-sm">
-                      <div className="flex justify-between items-center">
-                        <span className="font-medium">{sale.liquorName} - {sale.portionName}</span>
-                        <span className="text-green-600">LKR {sale.totalPrice.toFixed(2)}</span>
-                      </div>
-                      <div className="text-gray-600 text-xs mt-1">
-                        Qty: {sale.quantity} | Consumed: {sale.totalConsumed}ml
-                        {sale.totalWasted > 0 && ` | Wasted: ${sale.totalWasted}ml`}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
+      {/* Empty State */}
+      {!loading && filteredItems.length === 0 && (
+        <div className="text-center py-12">
+          <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+          </svg>
+          <h3 className="mt-2 text-sm font-medium text-gray-900">No liquor items found</h3>
+          <p className="mt-1 text-sm text-gray-500">
+            {searchTerm || typeFilter !== 'all' || showLowStock
+              ? 'Try adjusting your filters or search term.'
+              : 'Get started by adding your first liquor item.'}
+          </p>
         </div>
       )}
 
@@ -377,14 +241,6 @@ export default function LiquorManagerWithAPI() {
         confirmText="Delete"
         confirmButtonClass="bg-red-600 hover:bg-red-700 focus:ring-red-500"
       />
-
-      {billingOpen && (
-        <LiquorBilling
-          isOpen={billingOpen}
-          onClose={() => setBillingOpen(false)}
-          onSaleComplete={handleSaleComplete}
-        />
-      )}
     </div>
   );
 }
