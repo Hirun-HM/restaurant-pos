@@ -7,10 +7,8 @@ import LiquorService from '../../../../services/liquorService';
 
 export default function LiquorMenuCard({ liquorItem, onUpdatePortions, onEdit, onDelete }) {
   const [editingPortions, setEditingPortions] = useState(false);
-  const [editingBeerPrice, setEditingBeerPrice] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState('');
-  const [beerPrice, setBeerPrice] = useState(liquorItem.pricePerBottle || 0);
 
   // Memoize initial portion prices
   const initialPortionPrices = useMemo(() => {
@@ -60,7 +58,19 @@ export default function LiquorMenuCard({ liquorItem, onUpdatePortions, onEdit, o
   }, [liquorItem.type]);
 
   const hasPortions = liquorItem.portions?.length > 0;
-  const portionCount = hasPortions ? liquorItem.portions.length : 0;
+  
+  // Calculate filtered portion count (excluding Quarter, Half, Full bottles)
+  const filteredPortionsCount = useMemo(() => {
+    if (!liquorItem.portions) return 0;
+    return liquorItem.portions.filter(portion => {
+      const isQuarterBottle = portion.volume === 180 && portion.name.toLowerCase().includes('quarter');
+      const isHalfBottle = portion.volume === 375 && portion.name.toLowerCase().includes('half');
+      const isFullBottle = portion.volume === 750 && portion.name.toLowerCase().includes('full');
+      return !(isQuarterBottle || isHalfBottle || isFullBottle);
+    }).length;
+  }, [liquorItem.portions]);
+  
+  const portionCount = filteredPortionsCount;
 
   const handlePriceChange = useCallback((portionId, value) => {
     const numericValue = parseFloat(value) || 0;
@@ -93,25 +103,6 @@ export default function LiquorMenuCard({ liquorItem, onUpdatePortions, onEdit, o
       setSaving(false);
     }
   }, [liquorItem._id, liquorItem.portions, portionPrices, onUpdatePortions]);
-
-  const handleSaveBeerPrice = useCallback(async () => {
-    setSaving(true);
-    setSaveMessage('');
-    
-    try {
-      await LiquorService.updateLiquorPrice(liquorItem._id, { pricePerBottle: beerPrice });
-      setSaveMessage('Price saved successfully!');
-      setEditingBeerPrice(false);
-      onUpdatePortions?.(liquorItem._id);
-      setTimeout(() => setSaveMessage(''), 3000);
-    } catch (error) {
-      console.error('Error saving beer price:', error);
-      setSaveMessage('Error saving price. Please try again.');
-      setTimeout(() => setSaveMessage(''), 5000);
-    } finally {
-      setSaving(false);
-    }
-  }, [liquorItem._id, beerPrice, onUpdatePortions]);
 
   const handleCancelEdit = useCallback(() => {
     setPortionPrices(initialPortionPrices);
@@ -211,7 +202,15 @@ export default function LiquorMenuCard({ liquorItem, onUpdatePortions, onEdit, o
 
             {hasPortions && (editingPortions ? (
               <div className="space-y-3">
-                {liquorItem.portions.map((portion) => (
+                {liquorItem.portions
+                  .filter(portion => {
+                    // Filter out specific bottle portions: Quarter (180ml), Half (375ml), Full (750ml)
+                    const isQuarterBottle = portion.volume === 180 && portion.name.toLowerCase().includes('quarter');
+                    const isHalfBottle = portion.volume === 375 && portion.name.toLowerCase().includes('half');
+                    const isFullBottle = portion.volume === 750 && portion.name.toLowerCase().includes('full');
+                    return !(isQuarterBottle || isHalfBottle || isFullBottle);
+                  })
+                  .map((portion) => (
                   <div key={portion._id} className="flex items-center justify-between bg-white rounded-lg p-3 border">
                     <span className="text-sm font-medium text-gray-700">
                       {portion.name} ({formatVolume(portion.volume)})
@@ -252,7 +251,15 @@ export default function LiquorMenuCard({ liquorItem, onUpdatePortions, onEdit, o
               </div>
             ) : (
               <div className="space-y-2">
-                {liquorItem.portions.map((portion) => (
+                {liquorItem.portions
+                  .filter(portion => {
+                    // Filter out specific bottle portions: Quarter (180ml), Half (375ml), Full (750ml)
+                    const isQuarterBottle = portion.volume === 180 && portion.name.toLowerCase().includes('quarter');
+                    const isHalfBottle = portion.volume === 375 && portion.name.toLowerCase().includes('half');
+                    const isFullBottle = portion.volume === 750 && portion.name.toLowerCase().includes('full');
+                    return !(isQuarterBottle || isHalfBottle || isFullBottle);
+                  })
+                  .map((portion) => (
                   <div key={portion._id} className="flex justify-between items-center bg-white rounded-lg p-3 border">
                     <span className="text-sm text-gray-700">
                       {portion.name} ({formatVolume(portion.volume)})
@@ -267,72 +274,87 @@ export default function LiquorMenuCard({ liquorItem, onUpdatePortions, onEdit, o
           </div>
         ) : liquorItem.type === 'beer' ? (
           <div className="bg-gray-50 rounded-lg p-4">
-            <div className="flex items-center justify-between mb-3">
-              <div>
-                <span className="text-sm font-medium text-gray-700">Beer Price</span>
-                <p className="text-sm text-gray-600">Price per bottle</p>
-              </div>
-              {!editingBeerPrice && (
-                <PrimaryButton
-                  onClick={() => setEditingBeerPrice(true)}
-                  className="text-sm px-3 py-1 flex items-center"
-                >
-                  <FaEdit className="mr-1" />
-                  Edit Price
-                </PrimaryButton>
-              )}
+            <div className="mb-3">
+              <span className="text-sm font-medium text-gray-700">Beer Price</span>
+              <p className="text-sm text-gray-600">Price per bottle</p>
             </div>
 
-            {editingBeerPrice ? (
-              <div className="space-y-3">
-                <div className="flex items-center justify-between bg-white rounded-lg p-3 border">
-                  <span className="text-sm font-medium text-gray-700">Bottle Price</span>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-gray-600">LKR</span>
-                    <InputField
-                      type="number"
-                      value={beerPrice}
-                      onChange={(e) => setBeerPrice(parseFloat(e.target.value) || 0)}
-                      className="w-24 text-right"
-                      placeholder="0.00"
-                      min="0"
-                      step="0.01"
-                    />
+            <div className="bg-white rounded-lg p-3 border">
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-gray-700">Bottle Price</span>
+                <span className="text-sm font-semibold text-green-600">
+                  LKR {liquorItem.pricePerBottle?.toFixed(2) || '0.00'}
+                </span>
+              </div>
+            </div>
+          </div>
+        ) : liquorItem.type === 'cigarettes' ? (
+          <div className="bg-gray-50 rounded-lg p-4">
+            <div className="mb-3">
+              <span className="text-sm font-medium text-gray-700">Cigarette Details</span>
+              <p className="text-sm text-gray-600">Pack and individual pricing</p>
+            </div>
+            
+            <div className="space-y-3">
+              {/* Pack Information */}
+              <div className="bg-white rounded-lg p-3 border">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <span className="text-sm text-gray-600">Cigarettes per Pack</span>
+                    <div className="text-lg font-semibold text-blue-600">
+                      {liquorItem.cigarettesPerPack || 20} pieces
+                    </div>
+                  </div>
+                  <div>
+                    <span className="text-sm text-gray-600">Individual Price</span>
+                    <div className="text-lg font-semibold text-green-600">
+                      LKR {liquorItem.cigaretteIndividualPrice ? Number(liquorItem.cigaretteIndividualPrice).toFixed(2) : 'N/A'}
+                    </div>
                   </div>
                 </div>
-                
-                <div className="flex items-center justify-end gap-2 mt-4">
-                  <SecondaryButton
-                    onClick={() => {
-                      setBeerPrice(liquorItem.pricePerBottle || 0);
-                      setEditingBeerPrice(false);
-                    }}
-                    disabled={saving}
-                    className="px-4 py-2 flex items-center"
-                  >
-                    <FaTimes className="mr-1" />
-                    Cancel
-                  </SecondaryButton>
-                  <PrimaryButton
-                    onClick={handleSaveBeerPrice}
-                    disabled={saving}
-                    className="px-4 py-2 flex items-center"
-                  >
-                    <FaSave className="mr-1" />
-                    {saving ? 'Saving...' : 'Save Price'}
-                  </PrimaryButton>
+              </div>
+
+              {/* Price Comparison */}
+              {liquorItem.pricePerBottle && liquorItem.cigaretteIndividualPrice && liquorItem.cigarettesPerPack && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                  <div className="text-sm text-blue-700">
+                    <div className="flex justify-between items-center mb-2">
+                      <span>Pack price per cigarette:</span>
+                      <span className="font-semibold">
+                        LKR {(liquorItem.pricePerBottle / liquorItem.cigarettesPerPack).toFixed(2)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span>Individual markup:</span>
+                      <span className={`font-semibold ${
+                        liquorItem.cigaretteIndividualPrice > (liquorItem.pricePerBottle / liquorItem.cigarettesPerPack)
+                          ? 'text-green-600' : 'text-red-600'
+                      }`}>
+                        {(((liquorItem.cigaretteIndividualPrice / (liquorItem.pricePerBottle / liquorItem.cigarettesPerPack)) - 1) * 100).toFixed(1)}%
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Total Stock Information */}
+              <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <span className="text-sm text-gray-600">Total Cigarettes</span>
+                    <div className="text-lg font-semibold text-orange-600">
+                      {(liquorItem.bottlesInStock || 0) * (liquorItem.cigarettesPerPack || 20)} pieces
+                    </div>
+                  </div>
+                  <div>
+                    <span className="text-sm text-gray-600">Sales Options</span>
+                    <div className="text-sm font-medium text-gray-700">
+                      Pack or Individual
+                    </div>
+                  </div>
                 </div>
               </div>
-            ) : (
-              <div className="bg-white rounded-lg p-3 border">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-700">Bottle Price</span>
-                  <span className="text-sm font-semibold text-green-600">
-                    LKR {beerPrice.toFixed(2)}
-                  </span>
-                </div>
-              </div>
-            )}
+            </div>
           </div>
         ) : (
           <div className="mt-auto">
@@ -340,8 +362,6 @@ export default function LiquorMenuCard({ liquorItem, onUpdatePortions, onEdit, o
               <span className="text-sm text-gray-600">
                 {liquorItem.type === 'wine' ? (
                   'Sold as whole bottles only'
-                ) : liquorItem.type === 'cigarettes' ? (
-                  'Sold as whole packs only'
                 ) : (
                   'No portion pricing available'
                 )}

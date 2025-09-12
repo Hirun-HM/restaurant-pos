@@ -11,15 +11,11 @@ import LiquorBilling from './components/LiquorBilling';
 
 const LIQUOR_TYPES = [
   { value: 'all', label: 'All Types' },
-  { value: 'whiskey', label: 'Whiskey' },
-  { value: 'vodka', label: 'Vodka' },
-  { value: 'rum', label: 'Rum' },
-  { value: 'gin', label: 'Gin' },
-  { value: 'brandy', label: 'Brandy' },
-  { value: 'tequila', label: 'Tequila' },
-  { value: 'beer', label: 'Beer' },
-  { value: 'wine', label: 'Wine' },
-  { value: 'other', label: 'Other' }
+  { value: 'hard_liquor', label: '🥃 Hard Liquor' },
+  { value: 'beer', label: '🍺 Beer' },
+  { value: 'wine', label: '🍷 Wine' },
+  { value: 'cigarettes', label: '🚬 Cigarettes' },
+  { value: 'other', label: 'ℹ️ Other' }
 ];
 
 export default function LiquorManagerWithAPI() {
