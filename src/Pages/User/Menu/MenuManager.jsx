@@ -48,6 +48,18 @@ export default memo(function MenuManager() {
         setLiquorItemsLoading(true);
         try {
             const response = await LiquorService.getAllLiquors();
+            console.log('Raw liquor API response:', response); // Debug log
+            console.log('Liquor data array:', response.data); // Debug log
+            
+            if (response.data && response.data.length > 0) {
+                const types = [...new Set(response.data.map(item => item.type))];
+                console.log('Liquor types found:', types); // Debug log
+                
+                // Check specifically for cigarettes
+                const cigarettes = response.data.filter(item => item.type === 'cigarettes');
+                console.log('Cigarettes found:', cigarettes.length, cigarettes); // Debug log
+            }
+            
             setLiquorItems(response.data || []);
         } catch (error) {
             console.error('Error fetching liquor items:', error);
@@ -102,12 +114,13 @@ export default memo(function MenuManager() {
             let category;
             if (item.type === 'cigarettes') {
                 category = 'Cigarettes';
-            } else if (item.type === 'beer' || item.type === 'hard_liquor' || item.type === 'wine' || 
-                       item.type === 'whiskey' || item.type === 'vodka' || item.type === 'rum' || 
-                       item.type === 'gin' || item.type === 'brandy' || item.type === 'tequila') {
+            } else if (item.type === 'beer' || item.type === 'hard_liquor' || item.type === 'wine') {
                 category = 'Liquor';
+            } else if (item.type === 'other') {
+                category = 'Others';
             } else {
-                category = 'Others'; // fallback for unknown types
+                // Fallback for any unknown liquor types
+                category = 'Liquor';
             }
             
             return {
@@ -117,14 +130,18 @@ export default memo(function MenuManager() {
                 category: category,
                 type: item.type,
                 description: item.type === 'cigarettes' 
-                    ? `${item.brand} ${item.type}` 
-                    : `${item.brand} ${item.type} - ${item.bottleVolume}ml`,
+                    ? `${item.brand} ${item.name} - Pack of ${item.cigarettesPerPack || 20}` 
+                    : item.type === 'hard_liquor'
+                    ? `${item.brand} ${item.name} - ${item.bottleVolume}ml (${item.alcoholPercentage}% alcohol)`
+                    : `${item.brand} ${item.name}${item.bottleVolume ? ` - ${item.bottleVolume}ml` : ''}`,
                 price: item.pricePerBottle,
-                pricePerBottle: item.pricePerBottle, // Add this for compatibility with LiquorMenuCard
+                pricePerBottle: item.pricePerBottle,
                 bottleVolume: item.bottleVolume,
                 bottlesInStock: item.bottlesInStock,
                 portions: item.portions || [],
                 alcoholPercentage: item.alcoholPercentage,
+                cigarettesPerPack: item.cigarettesPerPack,
+                cigaretteIndividualPrice: item.cigaretteIndividualPrice,
                 totalVolumeRemaining: item.totalVolumeRemaining,
                 totalSoldVolume: item.totalSoldVolume,
                 wastedVolume: item.wastedVolume,
@@ -135,12 +152,32 @@ export default memo(function MenuManager() {
 
         // Combine only API-based items (food items and liquor items)
         const allItems = [...foodMenuItems, ...liquorMenuItems];
+        
+        // Debug logging for cigarettes
+        const cigaretteItems = allItems.filter(item => item.category === 'Cigarettes');
+        console.log('Cigarette menu items:', cigaretteItems); // Debug log
+        
+        console.log('All menu items:', allItems.length); // Debug log
+        console.log('Food items:', foodMenuItems.length); // Debug log  
+        console.log('Liquor items:', liquorMenuItems.length); // Debug log
 
         return allItems.filter(item => {
             const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                                 item.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                                 item.brand?.toLowerCase().includes(searchTerm.toLowerCase());
             const matchesCategory = selectedCategory === 'All' || item.category === selectedCategory;
+            
+            // Debug log for cigarette filtering
+            if (item.category === 'Cigarettes') {
+                console.log('Cigarette filter check:', {
+                    item: item.name,
+                    matchesSearch,
+                    matchesCategory,
+                    selectedCategory,
+                    willShow: matchesSearch && matchesCategory
+                });
+            }
+            
             return matchesSearch && matchesCategory;
         });
     }, [foodItems, liquorItems, searchTerm, selectedCategory]);
@@ -313,7 +350,7 @@ export default memo(function MenuManager() {
                         <div className="grid grid-cols-1 md:grid-cols-3  gap-6 pb-6">
                             {filteredItems.map(item => {
                                 // Use different components based on item type
-                                if (item.isFromAPI && item.category === 'Liquor') {
+                                if (item.isFromAPI && (item.category === 'Liquor' || item.category === 'Cigarettes' || item.category === 'Others')) {
                                     return (
                                         <LiquorMenuCard
                                             key={item.id}
