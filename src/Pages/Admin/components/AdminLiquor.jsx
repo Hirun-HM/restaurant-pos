@@ -1,57 +1,195 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { FaWineBottle } from 'react-icons/fa';
-import { MdLocalBar, MdWarning, MdCheckCircle, MdOutlineWaterDrop } from 'react-icons/md';
-import Select from '../../../components/Select';
+import { MdLocalBar, MdWarning, MdCheckCircle, MdOutlineWaterDrop, MdSmokingRooms } from 'react-icons/md';
 import { InputField } from '../../../components/InputField';
 import AnimatedNumber from '../../../components/AnimatedNumber';
 import LoadingSpinner from '../../../components/LoadingSpinner';
 import AdminService from '../../../services/adminService';
 import { formatQuantity } from '../../../utils/numberFormat';
 
-const LIQUOR_CATEGORIES = ['beer', 'hard_liquor', 'wine', 'cigarettes', 'Other'];
+// Admin Liquor Item Card Component (without edit buttons)
+const AdminLiquorItemCard = React.memo(({ item }) => {
+    // Memoize low stock calculation
+    const isLowStock = useMemo(() => 
+        (item.bottlesInStock || item.quantity || 0) <= 5,
+        [item.bottlesInStock, item.quantity]
+    );
 
-// Generate dummy liquor data for fallback
-const generateDummyLiquors = () => [
-    {
-        id: 1,
-        name: 'Premium Whiskey',
-        brand: 'Premium Brand',
-        type: 'hard_liquor',
-        bottleVolume: 750,
-        alcoholPercentage: 40,
-        bottlesInStock: 6,
-        totalBottles: 10,
-        pricePerBottle: 150.00,
-        portionSize: 30,
-        totalVolumeRemaining: 4650, // 6 full bottles (4500ml) + current bottle (150ml remaining)
-        currentBottleVolume: 650, // Current bottle has 650ml remaining (100ml used from 750ml bottle)
-        totalSoldItems: 100,
-        wastedVolume: 50
-    },
-    {
-        id: 2,
-        name: 'Local Beer',
-        brand: 'Lion Lager',
-        type: 'beer',
-        bottleVolume: 625,
-        alcoholPercentage: 4.8,
-        bottlesInStock: 15,
-        totalBottles: 24,
-        pricePerBottle: 250.00,
-        portionSize: 625,
-        totalVolumeRemaining: 9375, // 15 full bottles remaining
-        currentBottleVolume: 625, // Current bottle is full
-        totalSoldItems: 9,
-        wastedVolume: 0
-    }
-];
+    // Memoize type color calculation
+    const typeColor = useMemo(() => {
+        const type = item.type || item.category || '';
+        switch (type.toLowerCase()) {
+            case 'beer': return 'bg-yellow-100 text-yellow-800';
+            case 'hard_liquor': return 'bg-amber-100 text-amber-800';
+            case 'whiskey': return 'bg-amber-100 text-amber-800';
+            case 'vodka': return 'bg-blue-100 text-blue-800';
+            case 'rum': return 'bg-orange-100 text-orange-800';
+            case 'gin': return 'bg-green-100 text-green-800';
+            case 'wine': return 'bg-purple-100 text-purple-800';
+            case 'cigarettes': case 'cigarette': return 'bg-red-100 text-red-800';
+            default: return 'bg-gray-100 text-gray-800';
+        }
+    }, [item.type, item.category]);
+
+    const itemType = item.type || item.category || 'Other';
+    const bottleVolume = item.bottleVolume || item.volume || 750;
+    const currentStock = item.bottlesInStock || item.quantity || 0;
+    const pricePerUnit = item.pricePerBottle || item.sellingPrice || item.unitPrice || 0;
+
+    return (
+        <div className="bg-white rounded-lg border shadow-sm hover:shadow-md transition-shadow h-[28rem] flex flex-col">
+            {/* Header */}
+            <div className="p-4 border-b">
+                <div className="flex justify-between items-start">
+                    <div className="flex-1">
+                        <h3 className="text-lg font-semibold text-gray-900 line-clamp-1">{item.name}</h3>
+                        <p className="text-sm text-gray-600 line-clamp-1">{item.brand || 'No Brand'}</p>
+                        <div className="flex items-center gap-2 mt-1 flex-wrap">
+                            <span className={`px-2 py-1 text-xs rounded-full font-medium ${typeColor}`}>
+                                {itemType.toUpperCase()}
+                            </span>
+                            {isLowStock && (
+                                <span className="px-2 py-1 text-xs rounded-full font-medium bg-red-100 text-red-800">
+                                    LOW STOCK
+                                </span>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Content */}
+            <div className="flex-1 p-4 overflow-y-auto">
+                {/* Basic Information */}
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <div className="text-sm text-gray-600">Price per {itemType === 'cigarettes' ? 'pack' : 'bottle'}</div>
+                        <div className="text-lg font-semibold text-green-600">
+                            LKR {pricePerUnit.toFixed(2)}
+                        </div>
+                    </div>
+                    <div>
+                        <div className="text-sm text-gray-600">In Stock</div>
+                        <div className={`text-lg font-semibold ${isLowStock ? 'text-red-600' : 'text-gray-900'}`}>
+                            {itemType === 'cigarettes' ? (
+                                <div>
+                                    <div>{currentStock} packs</div>
+                                    <div className="text-sm text-gray-500">
+                                        ({currentStock * 20} individual)
+                                    </div>
+                                </div>
+                            ) : (
+                                `${currentStock} bottles`
+                            )}
+                        </div>
+                    </div>
+                </div>
+
+                {/* Type Specific Information */}
+                {itemType !== 'cigarettes' && (
+                    <div className="grid grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <div className="text-sm text-gray-600">Volume</div>
+                            <div className="text-lg font-semibold text-gray-900">
+                                {formatQuantity(bottleVolume)}ml
+                            </div>
+                        </div>
+                        {(item.alcoholPercentage || item.alcoholContent) && (
+                            <div>
+                                <div className="text-sm text-gray-600">Alcohol %</div>
+                                <div className="text-lg font-semibold text-blue-600">
+                                    {formatQuantity(item.alcoholPercentage || item.alcoholContent)}%
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {/* Category Specific Information */}
+                {itemType === 'cigarettes' && (
+                    <div className="mt-4 p-3 bg-orange-50 rounded-lg">
+                        <div className="grid grid-cols-2 gap-3 mb-3">
+                            <div>
+                                <div className="text-sm text-gray-600">Cigarettes per Pack</div>
+                                <div className="text-lg font-semibold text-orange-600">
+                                    20 pieces
+                                </div>
+                            </div>
+                            <div>
+                                <div className="text-sm text-gray-600">Individual Price</div>
+                                <div className="text-lg font-semibold text-green-600">
+                                    LKR {(pricePerUnit / 20).toFixed(2)}
+                                </div>
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                            <div className="bg-white p-2 rounded border">
+                                <div className="text-sm text-gray-600">Packs Sold</div>
+                                <div className="text-md font-semibold text-purple-600">
+                                    {item.totalSoldItems || 0} packs
+                                </div>
+                            </div>
+                            <div className="bg-white p-2 rounded border">
+                                <div className="text-sm text-gray-600">Individual Sales</div>
+                                <div className="text-md font-semibold text-blue-600">
+                                    {item.individualCigaretteSales || 0} pieces
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Sales and Analytics Information */}
+                {itemType !== 'beer' && itemType !== 'cigarettes' && (
+                    <div className="bg-gray-50 rounded-lg p-3 mt-4">
+                        <div className="grid grid-cols-2 gap-3">
+                            <div className="bg-white p-2 rounded border">
+                                <div className="text-sm text-gray-600">Total Remaining</div>
+                                <div className="text-md font-semibold text-green-600">
+                                    {formatQuantity(item.totalVolumeRemaining || (currentStock * bottleVolume))}ml
+                                </div>
+                            </div>
+                            <div className="bg-white p-2 rounded border">
+                                <div className="text-sm text-gray-600">Current Bottle</div>
+                                <div className="text-md font-semibold text-yellow-600">
+                                    {formatQuantity(item.currentBottleVolume || bottleVolume)}ml
+                                </div>
+                            </div>
+                            <div className="bg-white p-2 rounded border">
+                                <div className="text-sm text-gray-600">Total Sold</div>
+                                <div className="text-md font-semibold text-purple-600">
+                                    {item.totalSoldItems || 0}
+                                </div>
+                            </div>
+                            <div className="bg-white p-2 rounded border">
+                                <div className="text-sm text-gray-600">Total Wasted</div>
+                                <div className="text-md font-semibold text-red-600">
+                                    {formatQuantity(item.wastedVolume || 0)}ml
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </div>
+
+            {/* Footer - Admin view (no edit buttons) */}
+            <div className="p-4 border-t mt-auto bg-gray-50">
+                <div className="flex justify-center items-center text-sm text-gray-500">
+                    <MdLocalBar className="w-4 h-4 mr-1" />
+                    Admin View - Read Only
+                </div>
+            </div>
+        </div>
+    );
+});
+
 
 export default function AdminLiquor() {
     const [liquors, setLiquors] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
-    const [selectedCategory, setSelectedCategory] = useState('All');
+    const [activeTab, setActiveTab] = useState('all'); // 'all', 'liquor', 'beer', 'cigarettes'
 
     // Load liquors from API
     useEffect(() => {
@@ -74,101 +212,64 @@ export default function AdminLiquor() {
         fetchLiquors();
     }, []);
 
-    // Filter liquors based on search and category
+    // Filter liquors based on search and active tab
     const filteredLiquors = useMemo(() => {
         return liquors.filter(liquor => {
+            // Search filter
             const matchesSearch = liquor.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                                 (liquor.brand || '').toLowerCase().includes(searchTerm.toLowerCase());
-            const liquorCategory = liquor.type || liquor.category || 'Other';
-            const matchesCategory = selectedCategory === 'All' || 
-            liquorCategory.toLowerCase() === selectedCategory.toLowerCase();
-            return matchesSearch && matchesCategory;
+            
+            if (!matchesSearch) return false;
+
+            // Tab filter
+            const itemType = (liquor.type || liquor.category || '').toLowerCase();
+            
+            switch (activeTab) {
+                case 'liquor':
+                    return itemType === 'hard_liquor' || itemType === 'wine' || (itemType !== 'beer' && itemType !== 'cigarettes' && itemType !== 'cigarette');
+                case 'beer':
+                    return itemType === 'beer';
+                case 'cigarettes':
+                    return itemType === 'cigarettes' || itemType === 'cigarette';
+                case 'all':
+                default:
+                    return true;
+            }
         });
-    }, [liquors, searchTerm, selectedCategory]);
+    }, [liquors, searchTerm, activeTab]);
 
-    // Calculate liquor stats
-    const calculateLiquorStats = useCallback((liquor) => {
-        // For API data, use bottlesInStock from API response
-        const remainingBottles = liquor.bottlesInStock || liquor.remainingBottles || liquor.currentQuantity || 0;
-        // Better fallback for totalBottles - assume some bottles were consumed if we have remaining bottles
-        const totalBottles = liquor.totalBottles || liquor.maxQuantity || Math.max(remainingBottles + 2, 10);
-        const usedBottles = totalBottles - remainingBottles;
-        
-        // Calculate volume-based usage for current bottle
-        const bottleVolume = liquor.bottleVolume || liquor.volume || 750;
-        const currentBottleVolume = liquor.currentBottleVolume || bottleVolume;
-        const totalVolumeRemaining = liquor.totalVolumeRemaining || (remainingBottles * bottleVolume);
-        
-        // Calculate usage percentage based on current bottle volume consumption
-        let usagePercentage = 0;
-        if (remainingBottles > 0 && currentBottleVolume < bottleVolume) {
-            // If we have a partially used bottle, calculate based on volume consumed from current bottle
-            const volumeConsumed = bottleVolume - currentBottleVolume;
-            usagePercentage = (volumeConsumed / bottleVolume) * 100;
-        } else if (usedBottles > 0) {
-            // If no current bottle info, fall back to bottle-based calculation
-            usagePercentage = (usedBottles / totalBottles) * 100;
-        }
-        
-        // Debug logging
-        console.log('Liquor Stats Debug:', {
-            name: liquor.name,
-            remainingBottles,
-            totalBottles,
-            usedBottles,
-            bottleVolume,
-            currentBottleVolume,
-            volumeConsumed: bottleVolume - currentBottleVolume,
-            usagePercentage
-        });
-        
-        // Calculate portions based on volume
-        const defaultPortionSize = liquor.type === 'beer' ? bottleVolume : 30; // Beer is served as full bottle
-        const portionSize = liquor.portionSize || defaultPortionSize;
-        const portionsPerBottle = liquor.type === 'beer' ? 1 : Math.floor(bottleVolume / portionSize);
-        const totalPortions = totalBottles * portionsPerBottle;
-        const remainingPortions = Math.floor(totalVolumeRemaining / portionSize);
-        
-        return {
-            totalBottles,
-            remainingBottles,
-            usedBottles,
-            usagePercentage,
-            totalPortions,
-            remainingPortions,
-            portionsPerBottle,
-            volumeConsumed: bottleVolume - currentBottleVolume
-        };
-    }, []);
-
-    // Get liquor status
-    const getLiquorStatus = useCallback((liquor) => {
-        const stats = calculateLiquorStats(liquor);
-        if (stats.remainingBottles <= 2) {
-            return { status: 'critical', color: 'text-red-600', icon: MdWarning, bgColor: 'bg-red-50' };
-        } else if (stats.remainingBottles <= 5) {
-            return { status: 'low', color: 'text-orange-600', icon: MdWarning, bgColor: 'bg-orange-50' };
-        } else {
-            return { status: 'good', color: 'text-green-600', icon: MdCheckCircle, bgColor: 'bg-green-50' };
-        }
-    }, [calculateLiquorStats]);
-
-    // Calculate overall stats
+    // Calculate overall stats based on active tab
     const overallStats = useMemo(() => {
-        const totalItems = liquors.length;
-        const lowStockItems = liquors.filter(liquor => {
-            const stats = calculateLiquorStats(liquor);
-            return stats.remainingBottles <= 5;
+        const filteredData = filteredLiquors;
+        
+        const totalItems = filteredData.length;
+        const lowStockItems = filteredData.filter(liquor => {
+            const stock = liquor.bottlesInStock || liquor.quantity || 0;
+            return stock <= 5;
         }).length;
         
-        const totalValue = liquors.reduce((sum, liquor) => {
+        const totalValue = filteredData.reduce((sum, liquor) => {
             const remainingBottles = liquor.bottlesInStock || liquor.remainingBottles || liquor.currentQuantity || 0;
             const price = liquor.pricePerBottle || liquor.sellingPrice || liquor.unitPrice || 0;
             return sum + (remainingBottles * price);
         }, 0);
 
-        const totalPortions = liquors.reduce((sum, liquor) => {
-            return sum + calculateLiquorStats(liquor).remainingPortions;
+        // Calculate portions differently based on type
+        const totalPortions = filteredData.reduce((sum, liquor) => {
+            const itemType = (liquor.type || liquor.category || '').toLowerCase();
+            const stock = liquor.bottlesInStock || liquor.quantity || 0;
+            
+            if (itemType === 'cigarettes' || itemType === 'cigarette') {
+                return sum + (stock * 20); // 20 cigarettes per pack
+            } else if (itemType === 'beer') {
+                return sum + stock; // 1 portion per beer
+            } else {
+                // Hard liquor - calculate based on volume and portion size
+                const bottleVolume = liquor.bottleVolume || liquor.volume || 750;
+                const portionSize = liquor.portionSize || 30;
+                const portionsPerBottle = Math.floor(bottleVolume / portionSize);
+                return sum + (stock * portionsPerBottle);
+            }
         }, 0);
 
         return {
@@ -177,59 +278,75 @@ export default function AdminLiquor() {
             totalValue,
             totalPortions
         };
-    }, [liquors, calculateLiquorStats]);
+    }, [filteredLiquors]);
 
-    // Category options for select
-    const categoryOptions = useMemo(() => [
-        { value: 'All', label: 'All Categories' },
-        { value: 'beer', label: 'Beer' },
-        { value: 'hard_liquor', label: 'Hard Liquor' },
-        { value: 'wine', label: 'Wine' },
-        { value: 'cigarettes', label: 'Cigarettes' },
-        { value: 'Other', label: 'Other' }
-    ], []);
+    // Stats cards configuration based on active tab
+    const statsCards = useMemo(() => {
+        const baseCards = [
+            {
+                id: 'totalItems',
+                title: 'Total Items',
+                value: overallStats.totalItems,
+                icon: MdLocalBar,
+                iconColor: 'text-other1',
+                valueColor: 'text-other1',
+                isNumber: true
+            },
+            {
+                id: 'lowStock',
+                title: 'Low Stock',
+                value: overallStats.lowStockItems,
+                icon: MdWarning,
+                iconColor: 'text-other2',
+                valueColor: 'text-other2',
+                isNumber: true
+            },
+            {
+                id: 'totalValue',
+                title: 'Total Value',
+                value: overallStats.totalValue,
+                icon: FaWineBottle,
+                iconColor: 'text-green',
+                valueColor: 'text-green',
+                isNumber: true,
+                prefix: 'LKR ',
+                formatDecimals: true
+            }
+        ];
 
-    // Stats cards configuration
-    const statsCards = useMemo(() => [
-        {
-            id: 'totalItems',
-            title: 'Total Items',
-            value: overallStats.totalItems,
-            icon: MdLocalBar,
-            iconColor: 'text-other1',
-            valueColor: 'text-other1',
-            isNumber: true
-        },
-        {
-            id: 'lowStock',
-            title: 'Low Stock',
-            value: overallStats.lowStockItems,
-            icon: MdWarning,
-            iconColor: 'text-other2',
-            valueColor: 'text-other2',
-            isNumber: true
-        },
-        {
-            id: 'totalValue',
-            title: 'Total Value',
-            value: overallStats.totalValue,
-            icon: FaWineBottle,
-            iconColor: 'text-green',
-            valueColor: 'text-green',
-            isNumber: true,
-            prefix: 'LKR ',
-            formatDecimals: true
-        },
-        {
-            id: 'totalPortions',
-            title: 'Total Portions',
-            value: overallStats.totalPortions,
-            icon: MdOutlineWaterDrop,
-            iconColor: 'text-primaryColor',
-            valueColor: 'text-primaryColor',
-            isNumber: true
+        // Add different fourth card based on active tab
+        if (activeTab === 'cigarettes') {
+            baseCards.push({
+                id: 'totalCigarettes',
+                title: 'Total Cigarettes',
+                value: overallStats.totalPortions,
+                icon: MdSmokingRooms,
+                iconColor: 'text-red-600',
+                valueColor: 'text-red-600',
+                isNumber: true
+            });
+        } else {
+            baseCards.push({
+                id: 'totalPortions',
+                title: activeTab === 'beer' ? 'Total Bottles' : 'Total Portions',
+                value: overallStats.totalPortions,
+                icon: activeTab === 'beer' ? FaWineBottle : MdOutlineWaterDrop,
+                iconColor: 'text-primaryColor',
+                valueColor: 'text-primaryColor',
+                isNumber: true
+            });
         }
-    ], [overallStats]);
+
+        return baseCards;
+    }, [overallStats, activeTab]);
+
+    // Tab configuration
+    const tabs = [
+        { key: 'all', label: 'All', icon: MdLocalBar },
+        { key: 'liquor', label: 'Liquor', icon: FaWineBottle },
+        { key: 'beer', label: 'Beer', icon: MdLocalBar },
+        { key: 'cigarettes', label: 'Cigarettes', icon: MdLocalBar }
+    ];
 
     // Show loading spinner
     if (loading) {
@@ -257,7 +374,31 @@ export default function AdminLiquor() {
         <div className="h-screen flex flex-col p-3 sm:p-6">
             {/* Fixed Header */}
             <div className="flex items-center justify-between mb-4 sm:mb-6">
-                <h1 className="text-xl sm:text-3xl font-bold text-other1">Liquor Inventory</h1>
+                <div>
+                    <h1 className="text-xl sm:text-3xl font-bold text-other1">Inventory Management</h1>
+                    <p className="text-sm text-gray-600 mt-1">Monitor and track all beverage and tobacco inventory</p>
+                </div>
+            </div>
+
+            {/* Tabs */}
+            <div className="flex border-b border-gray-200 mb-4 sm:mb-6">
+                {tabs.map((tab) => {
+                    const IconComponent = tab.icon;
+                    return (
+                        <button
+                            key={tab.key}
+                            onClick={() => setActiveTab(tab.key)}
+                            className={`flex items-center px-4 py-2 border-b-2 font-medium text-sm transition-colors ${
+                                activeTab === tab.key
+                                    ? 'border-primaryColor text-primaryColor'
+                                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                            }`}
+                        >
+                            <IconComponent className="w-4 h-4 mr-2" />
+                            {tab.label}
+                        </button>
+                    );
+                })}
             </div>
 
             {/* Fixed Stats Cards */}
@@ -295,145 +436,28 @@ export default function AdminLiquor() {
                 })}
             </div>
 
-            {/* Fixed Filters */}
-            <div className="bg-white rounded-lg shadow-md p-3 sm:p-6 border border-gray-200 mb-4 sm:mb-6">
-                <div className="flex flex-col md:justify-between md:flex-row gap-3 sm:gap-4">
-                    <div className="w-full md:w-1/4">
-                        <InputField
-                            type="text"
-                            placeholder="Search liquor items..."
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                        />
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <Select
-                            value={selectedCategory}
-                            onChange={(value) => setSelectedCategory(value)}
-                            options={categoryOptions}
-                            className="min-w-[140px] sm:min-w-[180px]"
-                        />
-                    </div>
-                </div>
-            </div>
-
-            {/* Scrollable Liquor Grid */}
+            {/* Scrollable Items Grid */}
             <div className="flex-1 overflow-y-auto">
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6 pb-4 sm:pb-6">
-                    {filteredLiquors.map((liquor) => {
-                        const status = getLiquorStatus(liquor);
-                        const stats = calculateLiquorStats(liquor);
-                        const StatusIcon = status.icon;
-                        
-                        return (
-                            <div key={liquor.id} className="bg-white rounded-lg shadow-md border border-gray-200 overflow-hidden">
-                                <div className={`p-3 sm:p-4 ${status.bgColor}`}>
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-2 min-w-0 flex-1">
-                                            <MdLocalBar className="h-5 w-5 sm:h-6 sm:w-6 text-primaryColor flex-shrink-0" />
-                                            <div className="min-w-0 flex-1">
-                                                <h3 className="font-semibold text-other1 text-sm sm:text-base truncate">{liquor.name}</h3>
-                                                <p className="text-xs sm:text-sm text-gray-600 truncate">
-                                                    {liquor.type || liquor.category || 'Other'} - {liquor.brand || 'No Brand'}
-                                                </p>
-                                            </div>
-                                        </div>
-                                        <div className={`flex items-center gap-1 ${status.color} flex-shrink-0`}>
-                                            <StatusIcon className="h-4 w-4 sm:h-5 sm:w-5" />
-                                        </div>
-                                    </div>
-                                </div>
-                                
-                                <div className="p-3 sm:p-4 space-y-2 sm:space-y-3">
-                                    <div className="grid grid-cols-2 gap-2 sm:gap-4 text-xs sm:text-sm">
-                                        <div>
-                                            <span className="text-gray-500">Volume:</span>
-                                            <p className="font-medium truncate">{formatQuantity(liquor.bottleVolume || liquor.volume || 750)}ml</p>
-                                        </div>
-                                        <div>
-                                            <span className="text-gray-500">Alcohol %:</span>
-                                            <p className="font-medium">{formatQuantity(liquor.alcoholPercentage || liquor.alcoholContent || 0)}%</p>
-                                        </div>
-                                        <div>
-                                            <span className="text-gray-500">Remaining:</span>
-                                            <p className="font-medium">{stats.remainingBottles} bottles</p>
-                                        </div>
-                                        <div>
-                                            <span className="text-gray-500">Portions Left:</span>
-                                            <p className="font-medium">{stats.remainingPortions}</p>
-                                        </div>
-                                    </div>
-
-                                    {/* Sales and Analytics Information - Same as User Side */}
-                                    {liquor.type !== 'beer' && liquor.type !== 'cigarettes' && (
-                                        <div className="bg-gray-50 rounded-lg p-3 mt-4">
-                                            <div className="grid grid-cols-2 gap-3">
-                                                <div className="bg-white p-2 rounded border">
-                                                    <div className="text-sm text-gray-600">Total Remaining</div>
-                                                    <div className="text-md font-semibold text-green-600">
-                                                        {formatQuantity(liquor.totalVolumeRemaining || (stats.remainingBottles * (liquor.bottleVolume || liquor.volume || 750)))}ml
-                                                    </div>
-                                                </div>
-                                                <div className="bg-white p-2 rounded border">
-                                                    <div className="text-sm text-gray-600">Current Bottle</div>
-                                                    <div className="text-md font-semibold text-yellow-600">
-                                                        {formatQuantity(liquor.currentBottleVolume || (liquor.bottleVolume || liquor.volume || 750))}ml
-                                                    </div>
-                                                </div>
-                                                <div className="bg-white p-2 rounded border">
-                                                    <div className="text-sm text-gray-600">Total Sold</div>
-                                                    <div className="text-md font-semibold text-purple-600">
-                                                        {liquor.totalSoldItems || (stats.totalPortions - stats.remainingPortions) || 0}
-                                                    </div>
-                                                </div>
-                                                <div className="bg-white p-2 rounded border">
-                                                    <div className="text-sm text-gray-600">Total Wasted</div>
-                                                    <div className="text-md font-semibold text-red-600">
-                                                        {formatQuantity(liquor.wastedVolume || 0)}ml
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    {/* Usage Progress Bar */}
-                                    <div>
-                                        <div className="flex justify-between text-xs sm:text-sm text-gray-600 mb-1">
-                                            <span>Current Bottle Usage</span>
-                                            <span>{stats.usagePercentage.toFixed(1)}%</span>
-                                        </div>
-                                        <div className="w-full bg-gray-200 rounded-full h-2">
-                                            <div 
-                                                className="bg-primaryColor h-2 rounded-full transition-all duration-300"
-                                                style={{ width: `${Math.min(stats.usagePercentage, 100)}%` }}
-                                            ></div>
-                                        </div>
-                                        {stats.volumeConsumed > 0 && (
-                                            <div className="text-xs text-gray-500 mt-1">
-                                                {formatQuantity(stats.volumeConsumed)}ml used from current bottle
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    <div className="flex items-center justify-between pt-2">
-                                        <div>
-                                            <span className="text-base sm:text-lg font-bold text-green-600">
-                                                <span className="hidden sm:inline">LKR {(liquor.pricePerBottle || liquor.sellingPrice || liquor.unitPrice || 0).toFixed(2)}</span>
-                                                <span className="sm:hidden">₨{(liquor.pricePerBottle || liquor.sellingPrice || liquor.unitPrice || 0).toFixed(0)}</span>
-                                            </span>
-                                            <p className="text-xs text-gray-500">per bottle</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        );
-                    })}
+                    {filteredLiquors.map((item) => (
+                        <AdminLiquorItemCard
+                            key={item.id || item._id}
+                            item={item}
+                        />
+                    ))}
                 </div>
 
                 {filteredLiquors.length === 0 && (
                     <div className="text-center py-8 sm:py-12">
                         <MdLocalBar className="h-8 w-8 sm:h-12 sm:w-12 text-gray-400 mx-auto mb-3 sm:mb-4" />
-                        <p className="text-gray-500 text-sm sm:text-base">No liquor items found</p>
+                        <p className="text-gray-500 text-sm sm:text-base">
+                            No {activeTab === 'all' ? 'items' : activeTab} found
+                        </p>
+                        <p className="text-gray-400 text-xs sm:text-sm mt-1">
+                            {searchTerm 
+                                ? 'Try adjusting your search term'
+                                : `${activeTab === 'all' ? 'Items' : activeTab.charAt(0).toUpperCase() + activeTab.slice(1)} will appear here when available`}
+                        </p>
                     </div>
                 )}
             </div>
