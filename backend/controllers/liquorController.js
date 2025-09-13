@@ -594,6 +594,10 @@ export const consumeLiquorEnhanced = async (req, res) => {
       const totalVolume = volume * quantity;
       consumptionResult = liquor.consumeLiquor(totalVolume);
       
+    } else if (liquor.type === 'ice_cubes' || liquor.type === 'sandy_bottles') {
+      // Ice cubes and sandy bottles - consume by quantity
+      consumptionResult = liquor.consumeByQuantity(quantity);
+      
     } else {
       // Beer, wine, cigarettes - consume by count
       if (liquor.bottlesInStock < quantity) {
@@ -618,6 +622,10 @@ export const consumeLiquorEnhanced = async (req, res) => {
       unitType = 'portions';
     } else if (liquor.type === 'cigarettes') {
       unitType = 'packs';
+    } else if (liquor.type === 'ice_cubes') {
+      unitType = 'bowls';
+    } else if (liquor.type === 'sandy_bottles') {
+      unitType = 'bottles';
     } else {
       unitType = 'bottles';
     }

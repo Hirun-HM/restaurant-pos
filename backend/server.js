@@ -82,10 +82,36 @@ app.use('*', (req, res) => {
   });
 });
 
+// Graceful shutdown handling
+const gracefulShutdown = (signal) => {
+  console.log(`\nReceived ${signal}. Gracefully shutting down...`);
+  
+  server.close(() => {
+    console.log('HTTP server closed.');
+    
+    // Close database connection
+    mongoose.connection.close(false, () => {
+      console.log('MongoDB connection closed.');
+      process.exit(0);
+    });
+  });
+  
+  // Force close after 10 seconds
+  setTimeout(() => {
+    console.error('Could not close connections in time, forcefully shutting down');
+    process.exit(1);
+  }, 10000);
+};
+
 // Start server
-app.listen(PORT, () => {
+const server = app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server running on port ${PORT}`);
   console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`Server listening on 0.0.0.0:${PORT}`);
 });
+
+// Handle graceful shutdown
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
 export default app;

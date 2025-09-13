@@ -350,9 +350,18 @@ export default function TableManagement({tableList = []}) {
     }, []);
 
     const handleCloseBill = useCallback((tableId) => {
+        // No validation required - cashiers can close bills even without items
+        console.log('🔍 Closing bill for table:', tableId);
+        const bill = bills[tableId];
+        console.log('🔍 Bill details:', {
+            hasItems: bill?.items?.length > 0,
+            itemCount: bill?.items?.length || 0,
+            status: bill?.status
+        });
+        
         setBillToClose(tableId);
         setShowCloseModal(true);
-    }, []);
+    }, [bills]);
 
     const confirmCloseBill = useCallback(async () => {
         if (!billToClose || !bills[billToClose]) return;
@@ -362,19 +371,9 @@ export default function TableManagement({tableList = []}) {
         console.log('🔍 Current bill structure:', JSON.stringify(bill, null, 2));
 
         try {
-            // Validate bill data before sending
-            if (!bill.items || bill.items.length === 0) {
-                showMessage(
-                    'Cannot Close Bill',
-                    'No items in the bill. Please add items before closing.',
-                    'warning'
-                );
-                return;
-            }
-
-            // Process order payment and consume stock
+            // Process order payment and consume stock (allowing empty bills)
             // Enhanced items with proper liquor identification
-            const enhancedItems = bill.items.map(item => {
+            const enhancedItems = (bill.items || []).map(item => {
                 // Check if this is a liquor item
                 const isLiquorItem = item.type && ['hard_liquor', 'beer', 'wine', 'cigarettes'].includes(item.type);
                 
@@ -455,22 +454,35 @@ export default function TableManagement({tableList = []}) {
                 }));
 
                 // Build success message with both stock and liquor consumption details
-                let successMessage = `Payment processed successfully!\n\nOrder ID: ${result.data?.orderId}`;
+                let successMessage;
                 
-                // Add stock consumption info
+                // Check if this is an empty bill
+                const isEmpty = !enhancedItems || enhancedItems.length === 0;
+                
+                // Define stock and liquor counts for use throughout the function
                 const stockCount = result.data?.stockConsumptions || 0;
-                if (stockCount > 0) {
-                    successMessage += `\nFood stock items consumed: ${stockCount}`;
-                }
-                
-                // Add liquor consumption info
                 const liquorCount = result.data?.liquorConsumptions || 0;
-                if (liquorCount > 0) {
-                    successMessage += `\nLiquor items consumed: ${liquorCount}`;
+                
+                if (isEmpty) {
+                    successMessage = `Bill closed successfully!\n\nOrder ID: ${result.data?.orderId}\n\nThis was an empty bill - no items were ordered.\nNo stock consumption or revenue recorded.`;
+                } else {
+                    successMessage = `Payment processed successfully!\n\nOrder ID: ${result.data?.orderId}`;
                 }
                 
-                if (stockCount === 0 && liquorCount === 0) {
-                    successMessage += `\nNo stock consumption required`;
+                // Add stock consumption info (only for non-empty bills)
+                if (!isEmpty) {
+                    if (stockCount > 0) {
+                        successMessage += `\nFood stock items consumed: ${stockCount}`;
+                    }
+                    
+                    // Add liquor consumption info
+                    if (liquorCount > 0) {
+                        successMessage += `\nLiquor items consumed: ${liquorCount}`;
+                    }
+                    
+                    if (stockCount === 0 && liquorCount === 0) {
+                        successMessage += `\nNo stock consumption required`;
+                    }
                 }
                 
                 // Add information about missed ingredients if any
@@ -495,9 +507,10 @@ export default function TableManagement({tableList = []}) {
                 
                 successMessage += `\n\nTable ${selectedTable?.tableNumber || billToClose} is now available.`;
 
-                // Show success modal
+                // Show success modal with appropriate title
+                const modalTitle = isEmpty ? 'Bill Closed' : 'Payment Successful';
                 showMessage(
-                    'Payment Successful',
+                    modalTitle,
                     successMessage,
                     'success'
                 );
@@ -622,7 +635,11 @@ export default function TableManagement({tableList = []}) {
                 onClose={cancelCloseBill}
                 onConfirm={confirmCloseBill}
                 title="Close Bill"
-                message={`Are you sure you want to close the bill for Table ${selectedTable?.tableNumber}? This action cannot be undone and the table will be available for new orders.`}
+                message={`Are you sure you want to close the bill for Table ${selectedTable?.tableNumber}? ${
+                    bills[billToClose]?.items?.length > 0 
+                        ? 'This will process the payment and consume stock. This action cannot be undone and the table will be available for new orders.'
+                        : 'This bill has no items. The table will be available for new orders without any payment or stock consumption.'
+                }`}
                 confirmText="Close Bill"
                 cancelText="Cancel"
                 type="warning"

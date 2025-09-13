@@ -37,6 +37,26 @@ class MenuLiquorService {
           volume: liquor.bottleVolume,
           volumeUnit: 'ml'
         });
+      } else if (liquor.type === 'ice_cubes' || liquor.type === 'sandy_bottles') {
+        // For ice cubes and sandy bottles, create simple menu items
+        menuItems.push({
+          id: `liquor_${liquor._id}`,
+          name: liquor.name,
+          brand: liquor.brand,
+          price: liquor.pricePerBottle,
+          category: liquor.type === 'ice_cubes' ? 'Ice Cubes' : 'Sandy Bottles',
+          type: 'liquor',
+          liquorId: liquor._id,
+          description: `${liquor.brand} ${liquor.name} - ${liquor.type === 'ice_cubes' ? 'Ice Cube Bowls' : 'Sandy Bottles'}`,
+          stockInfo: {
+            bottlesInStock: liquor.bottlesInStock,
+            minimumBottles: liquor.minimumBottles,
+            isLowStock: liquor.bottlesInStock <= liquor.minimumBottles
+          },
+          portionTracking: false,
+          volume: 1,
+          volumeUnit: liquor.type === 'ice_cubes' ? 'bowl' : 'bottle'
+        });
       } else {
         // For hard liquor, create menu items for each portion
         liquor.portions.forEach(portion => {

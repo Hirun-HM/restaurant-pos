@@ -42,7 +42,7 @@ class OrderService {
             const updateData = {
                 items: items.map(item => ({
                     name: item.name,
-                    itemType: item.type === 'liquor' || ['hard_liquor', 'beer', 'wine', 'cigarettes'].includes(item.type) ? 'liquor' : 'food',
+                    itemType: item.type === 'liquor' || ['hard_liquor', 'beer', 'wine', 'cigarettes', 'ice_cubes', 'sandy_bottles'].includes(item.type) ? 'liquor' : 'food',
                     itemId: item.id,
                     quantity: item.quantity,
                     unitPrice: item.price,
@@ -214,7 +214,7 @@ class OrderService {
         try {
             const validationData = {
                 foodItems: items.filter(item => item.ingredients),
-                liquorItems: items.filter(item => item.type && ['hard_liquor', 'beer', 'wine', 'cigarettes'].includes(item.type))
+                liquorItems: items.filter(item => item.type && ['hard_liquor', 'beer', 'wine', 'cigarettes', 'ice_cubes', 'sandy_bottles'].includes(item.type))
             };
 
             const response = await api.post('/orders/validate-stock', validationData);

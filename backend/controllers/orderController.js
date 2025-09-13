@@ -160,13 +160,18 @@ export const processOrderPayment = async (req, res) => {
         console.log('  - items count:', items?.length);
         console.log('  - total:', total);
 
-        // Validate required fields
-        if (!tableId || !items || !Array.isArray(items) || items.length === 0) {
+        // Validate required fields (allow empty items array for empty bills)
+        if (!tableId || !items || !Array.isArray(items)) {
             console.log('❌ Backend: Validation failed - missing required fields');
             return res.status(400).json({
                 success: false,
-                message: 'Missing required fields: tableId and items are required'
+                message: 'Missing required fields: tableId and items array are required'
             });
+        }
+
+        // Log if this is an empty bill
+        if (items.length === 0) {
+            console.log('🔍 Backend: Processing empty bill (no items)');
         }
 
         // If orderId is provided, find and update existing order
@@ -195,7 +200,7 @@ export const processOrderPayment = async (req, res) => {
 
         // Separate food items and liquor items
         const foodItems = items.filter(item => item.ingredients && item.ingredients.length > 0);
-        const liquorItems = items.filter(item => item.type && ['hard_liquor', 'beer', 'wine', 'cigarettes'].includes(item.type));
+        const liquorItems = items.filter(item => item.type && ['hard_liquor', 'beer', 'wine', 'cigarettes', 'ice_cubes', 'sandy_bottles'].includes(item.type));
 
         // Validate and consume stock for food items - GRACEFUL MODE
         // Only reduce stock for ingredients that exist, ignore missing ones
@@ -328,6 +333,27 @@ export const processOrderPayment = async (req, res) => {
                             note: 'Volume successfully deducted from stock'
                         });
                     }
+                    
+                } else if (liquorItem.type === 'ice_cubes' || liquorItem.type === 'sandy_bottles') {
+                    // Ice cubes and sandy bottles: Handle unit-based consumption
+                    const quantityToConsume = liquorItem.quantity;
+                    
+                    console.log(`🧊 Consuming ${quantityToConsume} ${liquorItem.type === 'ice_cubes' ? 'bowls' : 'bottles'} of ${liquorFromDB.name}`);
+                    
+                    // Use the new consumeByQuantity method
+                    consumptionResult = liquorFromDB.consumeByQuantity(quantityToConsume);
+                    
+                    liquorConsumptionResults.push({
+                        itemName: liquorItem.name,
+                        type: liquorItem.type,
+                        liquorId: liquorId,
+                        quantityConsumed: consumptionResult.consumed,
+                        quantity: liquorItem.quantity,
+                        saleType: 'unit_based',
+                        remainingStock: consumptionResult.remainingStock,
+                        unit: liquorItem.type === 'ice_cubes' ? 'bowls' : 'bottles',
+                        note: `${quantityToConsume} ${liquorItem.type === 'ice_cubes' ? 'bowl(s)' : 'bottle(s)'} consumed from stock`
+                    });
                     
                 } else {
                     // Beer, Wine, Cigarettes, Other: Handle unit-based consumption (whole bottles/packs)
@@ -468,7 +494,7 @@ export const processOrderPayment = async (req, res) => {
             // Update existing order
             existingOrder.items = items.map(item => ({
                 name: item.name,
-                itemType: item.type === 'liquor' || ['hard_liquor', 'beer', 'wine', 'cigarettes'].includes(item.type) ? 'liquor' : 'food',
+                itemType: item.type === 'liquor' || ['hard_liquor', 'beer', 'wine', 'cigarettes', 'ice_cubes', 'sandy_bottles'].includes(item.type) ? 'liquor' : 'food',
                 itemId: item.originalItemId || (item.id && item.id.includes('_') ? item.id.split('_')[0] : item.id) || new mongoose.Types.ObjectId(),
                 quantity: item.quantity,
                 unitPrice: item.price,
@@ -492,7 +518,7 @@ export const processOrderPayment = async (req, res) => {
                 tableNumber: tableId,
                 items: items.map(item => ({
                     name: item.name,
-                    itemType: item.type === 'liquor' || ['hard_liquor', 'beer', 'wine', 'cigarettes'].includes(item.type) ? 'liquor' : 'food',
+                    itemType: item.type === 'liquor' || ['hard_liquor', 'beer', 'wine', 'cigarettes', 'ice_cubes', 'sandy_bottles'].includes(item.type) ? 'liquor' : 'food',
                     itemId: item.originalItemId || (item.id && item.id.includes('_') ? item.id.split('_')[0] : item.id) || new mongoose.Types.ObjectId(),
                     quantity: item.quantity,
                     unitPrice: item.price,

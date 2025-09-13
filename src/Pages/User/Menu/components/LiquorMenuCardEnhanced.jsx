@@ -52,6 +52,8 @@ export default function LiquorMenuCard({ liquorItem, onUpdatePortions, onEdit, o
       beer: '🍺',
       wine: '🍷',
       cigarettes: '🚬',
+      ice_cubes: '🧊',
+      sandy_bottles: '🍾',
       other: '📦'
     };
     return icons[liquorItem.type] || '🥃';
@@ -119,7 +121,7 @@ export default function LiquorMenuCard({ liquorItem, onUpdatePortions, onEdit, o
             <span className="text-3xl">{typeIcon}</span>
             <div>
               <h3 className="text-lg font-semibold text-gray-800 line-clamp-1">{liquorItem.name}</h3>
-              <p className="text-sm text-gray-600 line-clamp-1">{liquorItem.brand}</p>
+              <p className="text-sm text-gray-600 line-clamp-1">{liquorItem.brand || 'No brand specified'}</p>
               <div className="flex items-center flex-wrap gap-2 mt-1">
                 <span className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full capitalize">
                   {liquorItem.type === 'cigarettes' ? 'Cigarettes' : liquorItem.type.replace('_', ' ')}
@@ -136,7 +138,11 @@ export default function LiquorMenuCard({ liquorItem, onUpdatePortions, onEdit, o
           {/* Stock Status */}
           <div className={`px-3 py-1 rounded-full text-sm font-medium ${stockStatusColor}`}>
             <FaBoxes className="inline mr-1 text-xs" />
-            {liquorItem.bottlesInStock} {liquorItem.type === 'cigarettes' ? 'packs' : 'bottles'}
+            {liquorItem.bottlesInStock} {
+              liquorItem.type === 'cigarettes' ? 'packs' : 
+              liquorItem.type === 'ice_cubes' ? 'bowls' : 
+              'bottles'
+            }
           </div>
         </div>
       </div>

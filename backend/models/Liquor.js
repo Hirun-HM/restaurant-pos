@@ -31,7 +31,10 @@ const liquorSchema = new mongoose.Schema({
     },
     brand: {
         type: String,
-        required: [true, 'Brand is required'],
+        required: function() {
+            // Brand is optional for ice_cubes and sandy_bottles
+            return !['ice_cubes', 'sandy_bottles'].includes(this.type);
+        },
         trim: true,
         maxlength: [100, 'Brand cannot exceed 100 characters']
     },
@@ -39,7 +42,7 @@ const liquorSchema = new mongoose.Schema({
         type: String,
         required: [true, 'Item type is required'],
         enum: {
-            values: ['hard_liquor', 'beer', 'wine', 'cigarettes', 'other'],
+            values: ['hard_liquor', 'beer', 'wine', 'cigarettes', 'ice_cubes', 'sandy_bottles', 'other'],
             message: '{VALUE} is not a valid item type'
         }
     },
@@ -60,7 +63,10 @@ const liquorSchema = new mongoose.Schema({
             message: 'Bottle volume must be either 750ml or 1000ml for hard liquor items'
         },
         default: function() {
-            return this.type === 'hard_liquor' ? 750 : 330; // 750ml for liquor, 330ml for beer
+            if (this.type === 'hard_liquor') return 750;
+            if (this.type === 'ice_cubes') return 1; // 1 unit per bowl
+            if (this.type === 'sandy_bottles') return 1; // 1 unit per bottle
+            return 330; // 330ml for beer and others
         }
     },
     bottlesInStock: {
@@ -72,7 +78,9 @@ const liquorSchema = new mongoose.Schema({
     currentBottleVolume: {
         type: Number,
         default: function() { 
-            return this.type === 'hard_liquor' ? this.bottleVolume : 0; 
+            if (this.type === 'hard_liquor') return this.bottleVolume;
+            if (this.type === 'ice_cubes' || this.type === 'sandy_bottles') return 1;
+            return 0; 
         },
         min: [0, 'Current volume cannot be negative'],
         validate: {
@@ -401,6 +409,27 @@ liquorSchema.statics.generateStandardPortions = function(bottleVolume) {
         ...portion,
         price: 0 // Price to be set by cashier
     }));
+};
+
+// Method to consume items by quantity (for ice cubes, sandy bottles, etc.)
+liquorSchema.methods.consumeByQuantity = function(quantityToConsume) {
+    if (this.bottlesInStock < quantityToConsume) {
+        throw new Error(`Insufficient stock. Available: ${this.bottlesInStock}, Required: ${quantityToConsume}`);
+    }
+
+    // Simple quantity reduction for ice cubes and sandy bottles
+    this.bottlesInStock -= quantityToConsume;
+    
+    // Update total sold items
+    this.totalSoldItems = (this.totalSoldItems || 0) + quantityToConsume;
+
+    return {
+        consumed: quantityToConsume,
+        wasted: 0,
+        itemsCompleted: quantityToConsume,
+        remainingStock: this.bottlesInStock,
+        remainingVolume: 0 // No volume tracking for these items
+    };
 };
 
 export default mongoose.model('Liquor', liquorSchema);

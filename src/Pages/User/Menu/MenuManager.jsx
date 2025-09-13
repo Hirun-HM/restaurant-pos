@@ -9,7 +9,7 @@ import { InputField } from '../../../components/InputField';
 import LoadingSpinner from '../../../components/LoadingSpinner';
 
 // Allowed categories for Menu Manager (now only API-based items)
-const ALLOWED_CATEGORIES = ['Foods', 'Liquor', 'Cigarettes', 'Bites', 'Others'];
+const ALLOWED_CATEGORIES = ['Foods', 'Liquor', 'Cigarettes', 'Ice Cubes', 'Sandy Bottles', 'Bites', 'Others'];
 
 // Map food item categories to menu categories
 const FOOD_CATEGORY_MAPPING = {
@@ -114,6 +114,10 @@ export default memo(function MenuManager() {
             let category;
             if (item.type === 'cigarettes') {
                 category = 'Cigarettes';
+            } else if (item.type === 'ice_cubes') {
+                category = 'Ice Cubes';
+            } else if (item.type === 'sandy_bottles') {
+                category = 'Sandy Bottles';
             } else if (item.type === 'beer' || item.type === 'hard_liquor' || item.type === 'wine') {
                 category = 'Liquor';
             } else if (item.type === 'other') {
@@ -131,6 +135,10 @@ export default memo(function MenuManager() {
                 type: item.type,
                 description: item.type === 'cigarettes' 
                     ? `${item.brand} ${item.name} - Pack of ${item.cigarettesPerPack || 20}` 
+                    : item.type === 'ice_cubes'
+                    ? `${item.brand} ${item.name} - Ice Cube Bowls`
+                    : item.type === 'sandy_bottles'
+                    ? `${item.brand} ${item.name} - Sandy Bottles`
                     : item.type === 'hard_liquor'
                     ? `${item.brand} ${item.name} - ${item.bottleVolume}ml (${item.alcoholPercentage}% alcohol)`
                     : `${item.brand} ${item.name}${item.bottleVolume ? ` - ${item.bottleVolume}ml` : ''}`,
@@ -153,8 +161,13 @@ export default memo(function MenuManager() {
         // Combine only API-based items (food items and liquor items)
         const allItems = [...foodMenuItems, ...liquorMenuItems];
         
-        // Debug logging for cigarettes
+        // Debug logging for ice cubes and sandy bottles
+        const iceCubesItems = allItems.filter(item => item.category === 'Ice Cubes');
+        const sandyBottlesItems = allItems.filter(item => item.category === 'Sandy Bottles');
         const cigaretteItems = allItems.filter(item => item.category === 'Cigarettes');
+        
+        console.log('Ice Cubes menu items:', iceCubesItems); // Debug log
+        console.log('Sandy Bottles menu items:', sandyBottlesItems); // Debug log
         console.log('Cigarette menu items:', cigaretteItems); // Debug log
         
         console.log('All menu items:', allItems.length); // Debug log
@@ -166,6 +179,18 @@ export default memo(function MenuManager() {
                                 item.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                                 item.brand?.toLowerCase().includes(searchTerm.toLowerCase());
             const matchesCategory = selectedCategory === 'All' || item.category === selectedCategory;
+            
+            // Debug log for ice cubes and sandy bottles filtering
+            if (item.category === 'Ice Cubes' || item.category === 'Sandy Bottles') {
+                console.log(`${item.category} filter check:`, {
+                    item: item.name,
+                    category: item.category,
+                    matchesSearch,
+                    matchesCategory,
+                    selectedCategory,
+                    willShow: matchesSearch && matchesCategory
+                });
+            }
             
             // Debug log for cigarette filtering
             if (item.category === 'Cigarettes') {
@@ -350,7 +375,7 @@ export default memo(function MenuManager() {
                         <div className="grid grid-cols-1 md:grid-cols-3  gap-6 pb-6">
                             {filteredItems.map(item => {
                                 // Use different components based on item type
-                                if (item.isFromAPI && (item.category === 'Liquor' || item.category === 'Cigarettes' || item.category === 'Others')) {
+                                if (item.isFromAPI && (item.category === 'Liquor' || item.category === 'Cigarettes' || item.category === 'Ice Cubes' || item.category === 'Sandy Bottles' || item.category === 'Others')) {
                                     return (
                                         <LiquorMenuCard
                                             key={item.id}

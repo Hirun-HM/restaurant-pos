@@ -13,6 +13,8 @@ const LIQUOR_TYPES_FLAT = [
   { value: 'wine', label: '🍷 Wine' },
   // Other Items
   { value: 'cigarettes', label: '🚬 Cigarettes' },
+  { value: 'ice_cubes', label: '🧊 Ice Cubes' },
+  { value: 'sandy_bottles', label: '🍾 Sandy Bottles' },
   { value: 'other', label: 'ℹ️ Other' }
 ];
 
@@ -78,7 +80,8 @@ export default function LiquorStockForm({ item, onSubmit, onCancel }) {
       newErrors.name = 'Item name is required';
     }
 
-    if (!formData.brand.trim()) {
+    // Brand is optional for ice cubes and sandy bottles
+    if (!formData.brand.trim() && formData.type !== 'ice_cubes' && formData.type !== 'sandy_bottles') {
       newErrors.brand = 'Brand is required';
     }
 
@@ -131,6 +134,23 @@ export default function LiquorStockForm({ item, onSubmit, onCancel }) {
   const isHardLiquor = () => HARD_LIQUOR_TYPES.includes(formData.type);
   const needsBottleVolume = () => BOTTLE_VOLUME_TYPES.includes(formData.type);
   const isCigarettes = () => formData.type === 'cigarettes';
+  const isIceCubes = () => formData.type === 'ice_cubes';
+  const isSandyBottles = () => formData.type === 'sandy_bottles';
+  
+  // Get appropriate unit labels
+  const getUnitLabel = () => {
+    if (isCigarettes()) return 'Pack';
+    if (isIceCubes()) return 'Bowl';
+    if (isSandyBottles()) return 'Bottle';
+    return 'Bottle';
+  };
+  
+  const getUnitsLabel = () => {
+    if (isCigarettes()) return 'Packs';
+    if (isIceCubes()) return 'Bowls';
+    if (isSandyBottles()) return 'Bottles';
+    return 'Bottles';
+  };
 
   const handleInputChange = (field, value) => {
     // For text inputs, keep the value as string but validate numeric inputs
@@ -181,7 +201,7 @@ export default function LiquorStockForm({ item, onSubmit, onCancel }) {
 
       const submitData = {
         name: formData.name.trim(),
-        brand: formData.brand.trim(),
+        brand: formData.brand.trim() || undefined, // Allow empty brand for ice cubes and sandy bottles
         type: formData.type,
         bottleVolume: needsBottleVolume() ? finalBottleVolume : undefined,
         pricePerBottle: parseFloat(formData.pricePerBottle),
@@ -253,13 +273,13 @@ export default function LiquorStockForm({ item, onSubmit, onCancel }) {
               />
 
               <InputField
-                label="Brand"
+                label={`Brand${formData.type === 'ice_cubes' || formData.type === 'sandy_bottles' ? ' (Optional)' : ''}`}
                 id="brand"
                 value={formData.brand}
                 onChange={(e) => handleInputChange('brand', e.target.value)}
                 placeholder="e.g., Jack Daniels, Marlboro"
                 error={errors.brand}
-                required
+                required={formData.type !== 'ice_cubes' && formData.type !== 'sandy_bottles'}
               />
 
               <div className="md:col-span-2">
@@ -400,7 +420,7 @@ export default function LiquorStockForm({ item, onSubmit, onCancel }) {
             
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
               <InputField
-                label={`Buying Price per ${isCigarettes() ? 'Pack' : 'Bottle'}`}
+                label={`Buying Price per ${getUnitLabel()}`}
                 id="buyingPrice"
                 type="text"
                 value={formData.buyingPrice}
@@ -411,7 +431,7 @@ export default function LiquorStockForm({ item, onSubmit, onCancel }) {
               />
 
               <InputField
-                label={`Selling Price per ${isCigarettes() ? 'Pack' : 'Bottle'}`}
+                label={`Selling Price per ${getUnitLabel()}`}
                 id="pricePerBottle"
                 type="text"
                 value={formData.pricePerBottle}
@@ -422,7 +442,7 @@ export default function LiquorStockForm({ item, onSubmit, onCancel }) {
               />
 
               <InputField
-                label={`${isCigarettes() ? 'Packs' : 'Bottles'} in Stock`}
+                label={`${getUnitsLabel()} in Stock`}
                 id="bottlesInStock"
                 type="text"
                 value={formData.bottlesInStock}
@@ -432,7 +452,7 @@ export default function LiquorStockForm({ item, onSubmit, onCancel }) {
               />
 
               <InputField
-                label={`Minimum ${isCigarettes() ? 'Packs' : 'Bottles'}`}
+                label={`Minimum ${getUnitsLabel()}`}
                 id="minimumBottles"
                 type="text"
                 value={formData.minimumBottles}
@@ -452,6 +472,8 @@ export default function LiquorStockForm({ item, onSubmit, onCancel }) {
                     {isHardLiquor() && '🥃'}
                     {(formData.type === 'beer' || formData.type === 'wine') && '🍺'}
                     {isCigarettes() && '🚬'}
+                    {isIceCubes() && '🧊'}
+                    {isSandyBottles() && '🍾'}
                     {formData.type === 'other' && 'ℹ️'}
                   </span>
                 </div>
@@ -459,6 +481,8 @@ export default function LiquorStockForm({ item, onSubmit, onCancel }) {
                   {isHardLiquor() && 'Hard Liquor Configuration'}
                   {(formData.type === 'beer' || formData.type === 'wine') && 'Beer/Wine Configuration'}
                   {isCigarettes() && 'Cigarettes Configuration'}
+                  {isIceCubes() && 'Ice Cubes Configuration'}
+                  {isSandyBottles() && 'Sandy Bottles Configuration'}
                   {formData.type === 'other' && 'Other Item Configuration'}
                 </h4>
               </div>
@@ -468,6 +492,8 @@ export default function LiquorStockForm({ item, onSubmit, onCancel }) {
                   {isHardLiquor() && 'This item will have standard portions (25ml, 50ml, 75ml, 100ml, quarter, half, full bottle) automatically generated. Cashiers can set individual prices for each portion.'}
                   {(formData.type === 'beer' || formData.type === 'wine') && 'This item will be sold as whole bottles only. No portion pricing or bottle volume configuration needed.'}
                   {isCigarettes() && 'This item can be sold both as individual packs or individual cigarettes. The individual cigarette price is typically higher to encourage pack sales. Customers can choose to buy a full pack or individual cigarettes.'}
+                  {isIceCubes() && 'Ice cubes are sold by bowls. The brand field is optional for this item type. Stock will be managed as individual bowls.'}
+                  {isSandyBottles() && 'Sandy bottles are sold as individual bottles. The brand field is optional for this item type. Stock will be managed as individual bottles.'}
                   {formData.type === 'other' && 'This is a miscellaneous item that will be sold as whole units.'}
                 </p>
                 
@@ -475,7 +501,7 @@ export default function LiquorStockForm({ item, onSubmit, onCancel }) {
                 <div className="flex items-center gap-2 text-xs bg-yellow-100 rounded-lg px-3 py-2">
                   <span className="font-semibold text-yellow-800">Required fields:</span>
                   <span className="text-yellow-700">
-                    Name, Brand, Price, Stock
+                    Name{(isIceCubes() || isSandyBottles()) ? ', Brand (Optional)' : ', Brand'}, Price, Stock
                     {needsBottleVolume() && ', Volume'}
                     {isHardLiquor() && ', Alcohol Percentage'}
                     {isCigarettes() && ', Individual Price, Cigarettes per Pack'}

@@ -73,6 +73,7 @@ const OrderSummary = memo(function OrderSummary({
     // Callback for closing bill
     const handleCloseBill = useCallback(() => {
         if (selectedTable) {
+            // Allow closing bills even if no items have been added
             onCloseBill(selectedTable.id);
         }
     }, [selectedTable, onCloseBill]);

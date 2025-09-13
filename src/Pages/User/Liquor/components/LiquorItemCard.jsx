@@ -82,14 +82,20 @@ const LiquorItemCard = React.memo(({
                                     </div>
                                 </div>
                             ) : (
-                                `${item.quantity || item.bottlesInStock || 0} ${item.unit || (item.type === 'hard_liquor' ? 'bottle' : 'unit')}s`
+                                item.type === 'ice_cubes' ? 
+                                    `${item.quantity || item.bottlesInStock || 0} bowls in stock` :
+                                item.type === 'sandy_bottles' ?
+                                    `${item.quantity || item.bottlesInStock || 0} bottles in stock` :
+                                    `${item.quantity || item.bottlesInStock || 0} ${
+                                        item.unit || (item.type === 'hard_liquor' ? 'bottle' : 'unit')
+                                    }s`
                             )}
                         </div>
                     </div>
                 </div>
 
                 {/* Type Specific Information */}
-                {item.category !== 'cigarette' && (
+                {item.category !== 'cigarette' && item.type !== 'ice_cubes' && item.type !== 'sandy_bottles' && item.type !== 'beer' && (
                     <div className="grid grid-cols-2 gap-4 mb-4">
                         <div>
                             <div className="text-sm text-gray-600">Volume</div>
@@ -108,7 +114,7 @@ const LiquorItemCard = React.memo(({
                     </div>
                 )}
 
-                {/* Category Specific Information */}
+              
                 {item.type === 'cigarettes' && (
                     <div className="mt-4 p-3 bg-orange-50 rounded-lg">
                         <div className="grid grid-cols-2 gap-3 mb-3">
@@ -143,7 +149,7 @@ const LiquorItemCard = React.memo(({
                 )}
 
                 {/* Sales and Analytics Information */}
-                {item.type !== 'beer' && item.type !== 'cigarettes' && (
+                {item.type !== 'beer' && item.type !== 'cigarettes' && item.type !== 'ice_cubes' && item.type !== 'sandy_bottles' &&(
                     <>
                         <div className="bg-gray-50 rounded-lg p-3 mt-4">
                             <div className="grid grid-cols-2 gap-3">

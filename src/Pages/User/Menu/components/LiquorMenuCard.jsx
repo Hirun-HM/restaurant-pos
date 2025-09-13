@@ -36,9 +36,11 @@ export default function LiquorMenuCard({ liquorItem, onManagePortions }) {
   const getTypeIcon = (type) => {
     const icons = {
       hard_liquor: '🥃',
-      beer: '�',
-      wine: '�',
+      beer: '🍺',
+      wine: '🍷',
       cigarettes: '🚬',
+      ice_cubes: '🧊',
+      sandy_bottles: '🍾',
       other: '📦'
     };
     return icons[type] || '🥃';
@@ -56,7 +58,7 @@ export default function LiquorMenuCard({ liquorItem, onManagePortions }) {
             <span className="text-3xl">{getTypeIcon(liquorItem.type)}</span>
             <div>
               <h3 className="text-lg font-semibold text-gray-800">{liquorItem.name}</h3>
-              <p className="text-sm text-gray-600">{liquorItem.brand}</p>
+              <p className="text-sm text-gray-600">{liquorItem.brand || 'No brand specified'}</p>
               <div className="flex items-center space-x-2 mt-1">
                 <span className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full capitalize">
                   {liquorItem.type === 'cigarettes' ? 'Cigarettes' : liquorItem.type.replace('_', ' ')}
@@ -74,7 +76,11 @@ export default function LiquorMenuCard({ liquorItem, onManagePortions }) {
           {/* Stock Status */}
           <div className={`px-3 py-1 rounded-full text-sm font-medium ${getStockStatusColor()}`}>
             <FaBoxes className="inline mr-1 text-xs" />
-            {liquorItem.bottlesInStock} {liquorItem.type === 'cigarettes' ? 'packs' : 'bottles'}
+            {liquorItem.bottlesInStock} {
+              liquorItem.type === 'cigarettes' ? 'packs' : 
+              liquorItem.type === 'ice_cubes' ? 'bowls' : 
+              'bottles'
+            }
           </div>
         </div>
       </div>
