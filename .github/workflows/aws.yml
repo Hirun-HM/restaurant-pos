@@ -34,7 +34,8 @@ jobs:
     - name: Build & Push Frontend
       run: |
         docker buildx build --platform linux/amd64 \
-          -t ${{ secrets.ECR_FRONTEND_REPO }}:latest \
+          -t ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/hotel-heaven-frontend-ecr:latest \
+          . \
           --push
 
     # 5. Build and push backend
