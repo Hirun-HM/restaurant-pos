@@ -4,6 +4,7 @@ import TableCard from './Components/TableCard';
 import OrderSummary from './Components/OrderSummary';
 import ConfirmationModal from '../../../components/ConfirmationModal';
 import MessageModal from './Components/MessageModal';
+import PaymentHistory from './Components/PaymentHistory';
 import { useFoodItems } from '../../../hooks/useFoodItems';
 import { useLiquor } from '../../../hooks/useLiquor';
 import { orderService } from '../../../services/orderService';
@@ -119,6 +120,9 @@ export default function TableManagement({tableList = []}) {
         message: '',
         type: 'info'
     });
+    
+    // State for payment history modal
+    const [showPaymentHistory, setShowPaymentHistory] = useState(false);
     
     // Load bills from localStorage on component mount
     const [bills, setBills] = useState(() => {
@@ -622,6 +626,14 @@ export default function TableManagement({tableList = []}) {
         setShowClearAllModal(false);
     }, []);
 
+    const handleShowPaymentHistory = useCallback(() => {
+        setShowPaymentHistory(true);
+    }, []);
+
+    const handleClosePaymentHistory = useCallback(() => {
+        setShowPaymentHistory(false);
+    }, []);
+
 
 
     return (
@@ -631,6 +643,15 @@ export default function TableManagement({tableList = []}) {
                 <div className="flex justify-between items-center mb-4">
                     <h1 className='text-[24px] font-[500] text-other1'>Table List</h1>
                     <div className="flex gap-2">
+                        {/* Payment History Button */}
+                        <button 
+                            onClick={handleShowPaymentHistory}
+                            className="text-sm bg-green-500 text-white px-3 py-2 rounded-lg hover:bg-green-600 transition-colors flex items-center gap-2"
+                            title="View payment history"
+                        >
+                            <span>📊</span>
+                            History
+                        </button>
                         {/* Development helper - remove in production */}
                         <button 
                             onClick={clearAllBills}
@@ -706,6 +727,12 @@ export default function TableManagement({tableList = []}) {
                 title={messageModal.title}
                 message={messageModal.message}
                 type={messageModal.type}
+            />
+
+            {/* Payment History Modal */}
+            <PaymentHistory
+                isOpen={showPaymentHistory}
+                onClose={handleClosePaymentHistory}
             />
         </div>
     )

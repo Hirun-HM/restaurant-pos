@@ -13,7 +13,8 @@ import {
     getFoodLiquorBreakdown,
     getActiveTableCount,
     getActiveBillsCount,
-    getDebugOrders
+    getDebugOrders,
+    getCompletedOrders
 } from '../controllers/orderController.js';
 
 const router = express.Router();
@@ -40,6 +41,9 @@ router.get('/breakdown', getFoodLiquorBreakdown);
 // Active table and bills count endpoints
 router.get('/active-table-count', getActiveTableCount);
 router.get('/active-bills-count', getActiveBillsCount);
+
+// Get completed orders for history
+router.get('/completed', getCompletedOrders);
 
 // Debug endpoint to see all orders
 router.get('/debug', getDebugOrders);

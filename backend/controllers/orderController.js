@@ -550,7 +550,7 @@ export const processOrderPayment = async (req, res) => {
             existingOrder.serviceCharge = serviceCharge ? Math.round(total * 0.1) : 0;
             existingOrder.total = serviceCharge ? total + Math.round(total * 0.1) : total;
             existingOrder.paymentMethod = paymentMethod;
-            existingOrder.status = 'paid';
+            existingOrder.status = 'completed';
             existingOrder.paymentStatus = 'paid';
             existingOrder.paidAt = new Date();
 
@@ -575,7 +575,7 @@ export const processOrderPayment = async (req, res) => {
                 total: serviceCharge ? total + Math.round(total * 0.1) : total,
                 paymentMethod,
                 customerId,
-                status: 'paid',
+                status: 'completed',
                 paymentStatus: 'paid',
                 createdAt: new Date(),
                 paidAt: new Date()
@@ -1276,5 +1276,72 @@ export async function getDebugOrders(req, res) {
         });
     } catch (error) {
         res.status(500).json({ error: 'Failed to fetch debug orders' });
+    }
+}
+
+// Get completed orders (paid orders only) for history view
+export async function getCompletedOrders(req, res) {
+    try {
+        const { page = 1, limit = 50 } = req.query;
+        const skip = (page - 1) * limit;
+        
+        // Fetch only completed/paid orders, sorted by completion date (newest first)
+        const completedOrders = await Order.find({
+            $or: [
+                { status: 'completed', paymentStatus: 'paid' },
+                { status: 'paid' } // Include orders with old status format for backward compatibility
+            ]
+        }, {
+            tableNumber: 1,
+            items: 1,
+            subtotal: 1,
+            total: 1,
+            status: 1,
+            paymentStatus: 1,
+            createdAt: 1,
+            updatedAt: 1
+        })
+        .sort({ updatedAt: -1 }) // Sort by last updated (payment completion time)
+        .skip(skip)
+        .limit(parseInt(limit));
+        
+        // Get total count for pagination
+        const totalCount = await Order.countDocuments({
+            $or: [
+                { status: 'completed', paymentStatus: 'paid' },
+                { status: 'paid' } // Include orders with old status format for backward compatibility
+            ]
+        });
+        
+        res.json({
+            success: true,
+            data: {
+                orders: completedOrders.map(order => ({
+                    id: order._id,
+                    tableNumber: order.tableNumber,
+                    items: order.items || [],
+                    subtotal: order.subtotal || 0,
+                    total: order.total || 0,
+                    status: order.status,
+                    paymentStatus: order.paymentStatus,
+                    completedAt: order.updatedAt, // This is when payment was completed
+                    createdAt: order.createdAt
+                })),
+                pagination: {
+                    currentPage: parseInt(page),
+                    totalPages: Math.ceil(totalCount / limit),
+                    totalOrders: totalCount,
+                    hasNextPage: skip + completedOrders.length < totalCount,
+                    hasPrevPage: page > 1
+                }
+            }
+        });
+    } catch (error) {
+        console.error('Error fetching completed orders:', error);
+        res.status(500).json({ 
+            success: false,
+            message: 'Failed to fetch completed orders',
+            error: error.message 
+        });
     }
 }

@@ -185,11 +185,6 @@ class OrderService {
     }
 
     /**
-     * Create a new order record (duplicate method removed)
-     * This functionality is handled by the first createOrder method above
-     */
-
-    /**
      * Update order status
      * @param {String} orderId - Order ID
      * @param {String} status - New status
@@ -201,6 +196,23 @@ class OrderService {
             return response.data;
         } catch (error) {
             console.error('Error updating order status:', error);
+            throw this.handleError(error);
+        }
+    }
+
+    /**
+     * Get completed orders for history view
+     * @param {Number} page - Page number (default: 1)
+     * @param {Number} limit - Items per page (default: 50)
+     * @returns {Promise} - Promise resolving to completed orders data
+     */
+    async getCompletedOrders(page = 1, limit = 50) {
+        try {
+            console.log('🔍 OrderService: Fetching completed orders - page:', page, 'limit:', limit);
+            const response = await api.get(`/orders/completed?page=${page}&limit=${limit}`);
+            return response;
+        } catch (error) {
+            console.error('❌ OrderService: Get completed orders error:', error);
             throw this.handleError(error);
         }
     }
