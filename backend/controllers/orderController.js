@@ -550,7 +550,7 @@ export const processOrderPayment = async (req, res) => {
             existingOrder.serviceCharge = serviceCharge ? Math.round(total * 0.1) : 0;
             existingOrder.total = serviceCharge ? total + Math.round(total * 0.1) : total;
             existingOrder.paymentMethod = paymentMethod;
-            existingOrder.status = 'completed';
+            existingOrder.status = 'paid';
             existingOrder.paymentStatus = 'paid';
             existingOrder.paidAt = new Date();
 
@@ -575,7 +575,7 @@ export const processOrderPayment = async (req, res) => {
                 total: serviceCharge ? total + Math.round(total * 0.1) : total,
                 paymentMethod,
                 customerId,
-                status: 'completed',
+                status: 'paid',
                 paymentStatus: 'paid',
                 createdAt: new Date(),
                 paidAt: new Date()

@@ -24,7 +24,18 @@ export const api = {
         body: JSON.stringify(data),
       });
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        // Try to get error details from response body
+        let errorMessage = `HTTP error! status: ${response.status}`;
+        try {
+          const errorData = await response.json();
+          if (errorData.message) {
+            errorMessage = errorData.message;
+          }
+        } catch (parseError) {
+          // If can't parse response, use default message
+          console.warn('Could not parse error response:', parseError);
+        }
+        throw new Error(errorMessage);
       }
       return await response.json();
     } catch (error) {
