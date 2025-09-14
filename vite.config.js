@@ -7,11 +7,8 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
   
   return {
-    base: '/',
-    plugins: [react({
-      jsxImportSource: 'react',
-      jsxRuntime: 'automatic'
-    })],
+    base: env.VITE_BASE_PATH || '/',
+    plugins: [react()],
     server: {
       port: 5000,
     },
