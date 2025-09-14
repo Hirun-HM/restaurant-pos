@@ -24,6 +24,11 @@ export default function LiquorMenuCard({ liquorItem, onManagePortions }) {
   };
 
   const getStockStatusColor = () => {
+    // For ice cubes and bites, don't show stock status colors since they don't track stock
+    if (['ice_cubes', 'bites'].includes(liquorItem.type)) {
+      return 'text-blue-600 bg-blue-50';
+    }
+    
     if (liquorItem.bottlesInStock <= liquorItem.minimumBottles) {
       return 'text-red-600 bg-red-50';
     }
@@ -76,11 +81,18 @@ export default function LiquorMenuCard({ liquorItem, onManagePortions }) {
           {/* Stock Status */}
           <div className={`px-3 py-1 rounded-full text-sm font-medium ${getStockStatusColor()}`}>
             <FaBoxes className="inline mr-1 text-xs" />
-            {liquorItem.bottlesInStock} {
-              liquorItem.type === 'cigarettes' ? 'packs' : 
-              liquorItem.type === 'ice_cubes' ? 'bowls' : 
-              'bottles'
-            }
+            {['ice_cubes', 'bites'].includes(liquorItem.type) ? (
+              'Available'
+            ) : (
+              <>
+                {liquorItem.bottlesInStock} {
+                  liquorItem.type === 'cigarettes' ? 'packs' : 
+                  liquorItem.type === 'ice_cubes' ? 'bowls' : 
+                  liquorItem.type === 'bites' ? 'plates' :
+                  'bottles'
+                }
+              </>
+            )}
           </div>
         </div>
       </div>

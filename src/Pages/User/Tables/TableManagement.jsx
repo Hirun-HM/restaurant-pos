@@ -64,7 +64,7 @@ export default function TableManagement({tableList = []}) {
                     category = 'Other';
             }
 
-            // For bites items, use plate-based pricing and stock
+            // For bites items, use plate-based pricing but no stock tracking
             if (item.type === 'bites') {
                 return {
                     id: item._id,
@@ -74,9 +74,25 @@ export default function TableManagement({tableList = []}) {
                     category: category,
                     type: item.type,
                     stock: {
-                        platesInStock: item.platesInStock || 0
+                        platesInStock: 'Not tracked'
                     },
-                    isAvailable: (item.platesInStock || 0) > 0
+                    isAvailable: true // Always available since no stock tracking
+                };
+            }
+
+            // For ice cubes, use bowl-based pricing but no stock tracking
+            if (item.type === 'ice_cubes') {
+                return {
+                    id: item._id,
+                    name: item.name,
+                    brand: item.brand,
+                    price: item.pricePerBottle || 0,
+                    category: category,
+                    type: item.type,
+                    stock: {
+                        bottlesInStock: 'Not tracked'
+                    },
+                    isAvailable: true // Always available since no stock tracking
                 };
             }
 
@@ -438,20 +454,19 @@ export default function TableManagement({tableList = []}) {
                 }
                 
                 if (isBitesItem) {
-                    // For bites items, return with proper structure for stock consumption
+                    // For bites items, return with proper structure (no stock tracking)
                     const enhancedBitesItem = {
                         ...item,
                         originalItemId: item.id, // Use the ID directly for bites
-                        type: 'bites',
-                        // Bites are sold by plate count
-                        platesInStock: item.stock?.platesInStock || item.platesInStock || 0
+                        type: 'bites'
+                        // No stock tracking for bites
                     };
                     
                     console.log(`🍽️ Enhanced bites item: ${item.name}`, {
                         originalId: item.id,
                         type: item.type,
                         quantity: item.quantity,
-                        platesInStock: enhancedBitesItem.platesInStock
+                        stockTracking: 'Not tracked'
                     });
                     
                     return enhancedBitesItem;

@@ -27,6 +27,11 @@ export default function LiquorMenuCard({ liquorItem, onUpdatePortions }) {
   };
 
   const getStockStatusColor = () => {
+    // For ice cubes and bites, don't show stock status colors since they don't track stock
+    if (['ice_cubes', 'bites'].includes(liquorItem.type)) {
+      return 'text-blue-600 bg-blue-50';
+    }
+    
     if (liquorItem.bottlesInStock <= liquorItem.minimumBottles) {
       return 'text-red-600 bg-red-50';
     }

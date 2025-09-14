@@ -21,6 +21,9 @@ const MenuItem = memo(function MenuItem({item, onAddItem, selectedTable}) {
     // Check if this is bites
     const isBites = item.category === 'Bites' || (item.type && item.type === 'bites');
     
+    // Check if this is ice cubes
+    const isIceCubes = item.type === 'ice_cubes';
+    
     // Debug logging for new liquor items
     if (item.type && (item.type === 'hard_liquor' || item.type === 'beer' || item.type === 'cigarettes')) {
         console.log('MenuItem - Database item:', {
@@ -155,11 +158,12 @@ const MenuItem = memo(function MenuItem({item, onAddItem, selectedTable}) {
 
     // Check if item has stock and display stock info
     const getStockDisplay = () => {
-        if (isBites && item.stock && item.stock.platesInStock !== undefined) {
-            // For bites, show plates in stock
-            const plates = item.stock.platesInStock || 0;
-            return `${plates} plates in stock`;
-        } else if (item.stock && (item.stock.bottlesInStock !== undefined || item.stock.millilitersRemaining !== undefined)) {
+        // Don't show stock for bites and ice cubes as they don't have stock tracking
+        if (isBites || isIceCubes) {
+            return null;
+        }
+        
+        if (item.stock && (item.stock.bottlesInStock !== undefined || item.stock.millilitersRemaining !== undefined)) {
             const bottles = item.stock.bottlesInStock || 0;
             const ml = item.stock.millilitersRemaining || 0;
             
@@ -179,10 +183,12 @@ const MenuItem = memo(function MenuItem({item, onAddItem, selectedTable}) {
 
     // Check if item is out of stock
     const isOutOfStock = () => {
-        if (isBites && item.stock) {
-            const plates = item.stock.platesInStock || 0;
-            return plates === 0;
-        } else if (item.stock) {
+        // Bites and ice cubes don't have stock tracking, so they're always available
+        if (isBites || isIceCubes) {
+            return false;
+        }
+        
+        if (item.stock) {
             const bottles = item.stock.bottlesInStock || 0;
             const ml = item.stock.millilitersRemaining || 0;
             return bottles === 0 && ml === 0;
@@ -210,6 +216,7 @@ const MenuItem = memo(function MenuItem({item, onAddItem, selectedTable}) {
                         {isHardLiquor && <span className="text-xs text-gray-500"> (bottle)</span>}
                         {isCigarettes && <span className="text-xs text-gray-500"> (pack)</span>}
                         {isBites && <span className="text-xs text-gray-500"> (per plate)</span>}
+                        {isIceCubes && <span className="text-xs text-gray-500"> (per bowl)</span>}
                     </span>
                     <PrimaryButton
                         onClick={handleAddItem}
