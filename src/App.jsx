@@ -6,7 +6,7 @@ import AdminDashboard from './Pages/Admin/Dashboard'
 
 export default function App() {
   return (
-    <BrowserRouter basename={import.meta.env.VITE_BASE_PATH || '/'}>
+    <BrowserRouter basename="">
       <Routes>
         <Route path='/' element={<Welcome />} />
         <Route path='/user/dashboard' element={<UserDashboard />} />
