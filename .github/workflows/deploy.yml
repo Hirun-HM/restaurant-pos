@@ -1,25 +1,17 @@
-name: Deploy to GitHub Pages
+name: Deploy to AWS Server
 
 on:
   push:
     branches: [ main ]
+  workflow_dispatch:
 
-# Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
-permissions:
-  contents: read
-  pages: write
-  id-token: write
-
-# Allow only one concurrent deployment, skipping runs queued between the run in-progress and latest queued.
+# Allow only one concurrent deployment
 concurrency:
-  group: "pages"
+  group: "aws-deployment"
   cancel-in-progress: false
 
 jobs:
   build-and-deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     
     steps:
@@ -32,20 +24,122 @@ jobs:
         node-version: '18'
         cache: 'npm'
 
-    - name: Install dependencies
+    # Build Frontend
+    - name: Install frontend dependencies
       run: npm ci
 
-    - name: Build
-      run: npm run build
+    - name: Create production environment file
+      run: |
+        cp .env.production .env.production.tmp
+        sed -i "s/AWS_SERVER_IP/${{ secrets.AWS_SERVER_IP }}/g" .env.production.tmp
+        mv .env.production.tmp .env.production
 
-    - name: Setup Pages
-      uses: actions/configure-pages@v4
+    - name: Build frontend
+      run: |
+        cp .env.production .env.local
+        npm run build
 
-    - name: Upload artifact
-      uses: actions/upload-pages-artifact@v3
-      with:
-        path: './dist'
+    # Prepare SSH
+    - name: Setup SSH
+      run: |
+        mkdir -p ~/.ssh
+        echo "${{ secrets.AWS_PEM_KEY }}" > ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
+        ssh-keyscan -H ${{ secrets.AWS_SERVER_IP }} >> ~/.ssh/known_hosts
 
-    - name: Deploy to GitHub Pages
-      id: deployment
-      uses: actions/deploy-pages@v4
+    # Deploy to AWS Server
+    - name: Deploy to AWS Server
+      run: |
+        # Create deployment directory structure on server
+        ssh -i ~/.ssh/id_rsa ubuntu@${{ secrets.AWS_SERVER_IP }} "
+          sudo mkdir -p /var/www/restaurant-pos
+          sudo chown -R ubuntu:ubuntu /var/www/restaurant-pos
+          mkdir -p /var/www/restaurant-pos/frontend
+          mkdir -p /var/www/restaurant-pos/backend
+        "
+
+        # Upload frontend build
+        scp -i ~/.ssh/id_rsa -r dist/* ubuntu@${{ secrets.AWS_SERVER_IP }}:/var/www/restaurant-pos/frontend/
+
+        # Upload backend files
+        scp -i ~/.ssh/id_rsa -r backend/* ubuntu@${{ secrets.AWS_SERVER_IP }}:/var/www/restaurant-pos/backend/
+
+        # Upload environment files
+        scp -i ~/.ssh/id_rsa .env.production ubuntu@${{ secrets.AWS_SERVER_IP }}:/var/www/restaurant-pos/backend/.env
+
+        # Upload docker files
+        scp -i ~/.ssh/id_rsa docker-compose.yml ubuntu@${{ secrets.AWS_SERVER_IP }}:/var/www/restaurant-pos/
+        scp -i ~/.ssh/id_rsa docker-compose.dev.yml ubuntu@${{ secrets.AWS_SERVER_IP }}:/var/www/restaurant-pos/
+        scp -i ~/.ssh/id_rsa nginx.conf ubuntu@${{ secrets.AWS_SERVER_IP }}:/var/www/restaurant-pos/
+
+    # Install dependencies and restart services
+    - name: Install dependencies and restart services
+      run: |
+        ssh -i ~/.ssh/id_rsa ubuntu@${{ secrets.AWS_SERVER_IP }} "
+          cd /var/www/restaurant-pos/backend
+          
+          # Install Node.js if not present
+          if ! command -v node &> /dev/null; then
+            curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+            sudo apt-get install -y nodejs
+          fi
+          
+          # Install Docker if not present
+          if ! command -v docker &> /dev/null; then
+            sudo apt-get update
+            sudo apt-get install -y apt-transport-https ca-certificates curl gnupg lsb-release
+            curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
+            echo \"deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu \$(lsb_release -cs) stable\" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+            sudo apt-get update
+            sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
+            sudo usermod -aG docker ubuntu
+          fi
+          
+          # Install Docker Compose if not present
+          if ! command -v docker-compose &> /dev/null; then
+            sudo curl -L \"https://github.com/docker/compose/releases/download/v2.20.2/docker-compose-\$(uname -s)-\$(uname -m)\" -o /usr/local/bin/docker-compose
+            sudo chmod +x /usr/local/bin/docker-compose
+          fi
+          
+          # Install backend dependencies
+          npm install --production
+          
+          cd /var/www/restaurant-pos
+          
+          # Stop existing containers
+          sudo docker-compose down || true
+          
+          # Start services with Docker Compose
+          sudo docker-compose up -d --build
+          
+          # Setup Nginx if not configured
+          if [ ! -f /etc/nginx/sites-available/restaurant-pos ]; then
+            sudo apt-get install -y nginx
+            sudo cp nginx.conf /etc/nginx/sites-available/restaurant-pos
+            sudo ln -sf /etc/nginx/sites-available/restaurant-pos /etc/nginx/sites-enabled/
+            sudo rm -f /etc/nginx/sites-enabled/default
+            sudo systemctl restart nginx
+            sudo systemctl enable nginx
+          else
+            sudo cp nginx.conf /etc/nginx/sites-available/restaurant-pos
+            sudo systemctl reload nginx
+          fi
+        "
+
+    # Health Check
+    - name: Health Check
+      run: |
+        sleep 30
+        response=$(curl -s -o /dev/null -w "%{http_code}" http://${{ secrets.AWS_SERVER_IP }})
+        if [ $response -eq 200 ]; then
+          echo "Deployment successful! Application is running."
+        else
+          echo "Deployment may have issues. HTTP status: $response"
+          exit 1
+        fi
+
+    # Cleanup
+    - name: Cleanup SSH
+      if: always()
+      run: |
+        rm -f ~/.ssh/id_rsa
