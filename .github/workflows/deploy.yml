@@ -44,7 +44,7 @@ jobs:
       run: |
         mkdir -p ~/.ssh
         echo "${{ secrets.AWS_PEM_KEY }}" | tr -d '\r' > ~/.ssh/id_rsa
-        chmod 600 ~/.ssh/id_rsa
+        chmod 400 ~/.ssh/id_rsa
         ssh-keyscan -H ${{ secrets.AWS_SERVER_IP }} >> ~/.ssh/known_hosts
         
         # Test SSH connection with proper user
