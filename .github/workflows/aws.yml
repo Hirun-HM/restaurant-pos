@@ -31,13 +31,12 @@ jobs:
         | docker login --username AWS --password-stdin ${{ secrets.ECR_BACKEND_REPO }}
 
     # 4. Build and push frontend
-    - name: Build and Push Docker Image (Frontend)
+    - name: Build and Push Frontend Image
       run: |
         docker buildx build --platform linux/amd64 \
           -t ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/hotel-heaven-frontend-ecr:latest \
           . \
           --push
-
 
     # 5. Build and push backend
     - name: Build & Push Backend
