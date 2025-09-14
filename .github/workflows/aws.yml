@@ -58,7 +58,7 @@ jobs:
           docker pull ${{ secrets.ECR_BACKEND_REPO }}:latest
 
           # Navigate to compose directory
-          cd ~/restaurant-pos
+          #cd ~/restaurant-pos
 
           # Stop old containers and run new ones
           docker-compose down
