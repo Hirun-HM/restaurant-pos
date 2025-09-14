@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import React, { useEffect } from 'react';
 
 export default function PopupComponent({ isOpen, onClose, title, children }) {
     // Close popup when pressing Escape key

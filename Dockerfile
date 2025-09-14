@@ -10,10 +10,16 @@ COPY package*.json ./
 # Install ALL dependencies (including devDependencies for build)
 RUN npm ci && npm cache clean --force
 
+# Copy environment files
+COPY .env* ./
+
 # Copy source code
 COPY . .
 
-# Build the application
+# Set production environment
+ENV NODE_ENV=production
+
+# Build the application with production environment
 RUN npm run build
 
 # Stage 2: Serve the application with nginx

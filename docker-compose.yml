@@ -36,7 +36,7 @@ services:
       MONGODB_URI: mongodb://mongodb:27017/${MONGO_DATABASE:-restaurant_pos}
       MONGO_ROOT_USERNAME: ${MONGO_ROOT_USERNAME:-admin}
       MONGO_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:-password}
-      FRONTEND_URL: http://localhost:3000
+      FRONTEND_URL: http://3.142.250.63:3000
     ports:
       - "5000:5000"
     depends_on:
@@ -61,14 +61,14 @@ services:
     container_name: restaurant-pos-frontend
     restart: unless-stopped
     ports:
-      - "3000:3000"
+      - "3000:80"
     depends_on:
       backend:
         condition: service_healthy
     networks:
       - restaurant-pos-network
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:3000/"]
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:80/"]
       interval: 30s
       timeout: 10s
       retries: 3
