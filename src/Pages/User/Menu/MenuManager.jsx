@@ -58,6 +58,10 @@ export default memo(function MenuManager() {
                 // Check specifically for cigarettes
                 const cigarettes = response.data.filter(item => item.type === 'cigarettes');
                 console.log('Cigarettes found:', cigarettes.length, cigarettes); // Debug log
+                
+                // Check specifically for bites
+                const bites = response.data.filter(item => item.type === 'bites');
+                console.log('Bites found:', bites.length, bites); // Debug log
             }
             
             setLiquorItems(response.data || []);
@@ -110,6 +114,11 @@ export default memo(function MenuManager() {
 
         // Convert liquor items to menu format
         const liquorMenuItems = liquorItems.map(item => {
+            // Debug log for bites items specifically
+            if (item.type === 'bites') {
+                console.log('Processing bites item:', item);
+            }
+            
             // Map item types to appropriate categories
             let category;
             if (item.type === 'cigarettes') {
@@ -118,6 +127,8 @@ export default memo(function MenuManager() {
                 category = 'Ice Cubes';
             } else if (item.type === 'sandy_bottles') {
                 category = 'Sandy Bottles';
+            } else if (item.type === 'bites') {
+                category = 'Bites';
             } else if (item.type === 'beer' || item.type === 'hard_liquor' || item.type === 'wine') {
                 category = 'Liquor';
             } else if (item.type === 'other') {
@@ -127,7 +138,7 @@ export default memo(function MenuManager() {
                 category = 'Liquor';
             }
             
-            return {
+            const menuItem = {
                 id: `liquor_${item._id}`,
                 name: item.name,
                 brand: item.brand,
@@ -139,13 +150,17 @@ export default memo(function MenuManager() {
                     ? `${item.brand} ${item.name} - Ice Cube Bowls`
                     : item.type === 'sandy_bottles'
                     ? `${item.brand} ${item.name} - Sandy Bottles`
+                    : item.type === 'bites'
+                    ? `${item.name} - Plates available`
                     : item.type === 'hard_liquor'
                     ? `${item.brand} ${item.name} - ${item.bottleVolume}ml (${item.alcoholPercentage}% alcohol)`
-                    : `${item.brand} ${item.name}${item.bottleVolume ? ` - ${item.bottleVolume}ml` : ''}`,
-                price: item.pricePerBottle,
+                    : `${item.brand} ${item.name}` + (item.bottleVolume ? ` - ${item.bottleVolume}ml` : ''),
+                price: item.type === 'bites' ? item.pricePerPlate : item.pricePerBottle,
                 pricePerBottle: item.pricePerBottle,
+                pricePerPlate: item.pricePerPlate,
                 bottleVolume: item.bottleVolume,
                 bottlesInStock: item.bottlesInStock,
+                platesInStock: item.platesInStock,
                 portions: item.portions || [],
                 alcoholPercentage: item.alcoholPercentage,
                 cigarettesPerPack: item.cigarettesPerPack,
@@ -156,6 +171,16 @@ export default memo(function MenuManager() {
                 isFromAPI: true,
                 _id: item._id
             };
+            
+            // Debug log for converted bites item
+            if (item.type === 'bites') {
+                console.log('Converted bites menu item:', {
+                    original: item,
+                    converted: menuItem
+                });
+            }
+            
+            return menuItem;
         });
 
         // Combine only API-based items (food items and liquor items)
@@ -165,10 +190,12 @@ export default memo(function MenuManager() {
         const iceCubesItems = allItems.filter(item => item.category === 'Ice Cubes');
         const sandyBottlesItems = allItems.filter(item => item.category === 'Sandy Bottles');
         const cigaretteItems = allItems.filter(item => item.category === 'Cigarettes');
+        const bitesItems = allItems.filter(item => item.category === 'Bites');
         
         console.log('Ice Cubes menu items:', iceCubesItems); // Debug log
         console.log('Sandy Bottles menu items:', sandyBottlesItems); // Debug log
         console.log('Cigarette menu items:', cigaretteItems); // Debug log
+        console.log('Bites menu items:', bitesItems); // Debug log
         
         console.log('All menu items:', allItems.length); // Debug log
         console.log('Food items:', foodMenuItems.length); // Debug log  
@@ -195,6 +222,17 @@ export default memo(function MenuManager() {
             // Debug log for cigarette filtering
             if (item.category === 'Cigarettes') {
                 console.log('Cigarette filter check:', {
+                    item: item.name,
+                    matchesSearch,
+                    matchesCategory,
+                    selectedCategory,
+                    willShow: matchesSearch && matchesCategory
+                });
+            }
+            
+            // Debug log for bites filtering
+            if (item.category === 'Bites') {
+                console.log('Bites filter check:', {
                     item: item.name,
                     matchesSearch,
                     matchesCategory,
@@ -375,7 +413,7 @@ export default memo(function MenuManager() {
                         <div className="grid grid-cols-1 md:grid-cols-3  gap-6 pb-6">
                             {filteredItems.map(item => {
                                 // Use different components based on item type
-                                if (item.isFromAPI && (item.category === 'Liquor' || item.category === 'Cigarettes' || item.category === 'Ice Cubes' || item.category === 'Sandy Bottles' || item.category === 'Others')) {
+                                if (item.isFromAPI && (item.category === 'Liquor' || item.category === 'Cigarettes' || item.category === 'Ice Cubes' || item.category === 'Sandy Bottles' || item.category === 'Bites' || item.category === 'Others')) {
                                     return (
                                         <LiquorMenuCard
                                             key={item.id}

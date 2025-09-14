@@ -56,10 +56,30 @@ export default function TableManagement({tableList = []}) {
                 case 'cigarettes':
                     category = 'Cigarettes';
                     break;
+                case 'bites':
+                    category = 'Bites';
+                    break;
                 default:
                     category = 'Other';
             }
 
+            // For bites items, use plate-based pricing and stock
+            if (item.type === 'bites') {
+                return {
+                    id: item._id,
+                    name: item.name,
+                    brand: item.brand,
+                    price: item.pricePerPlate || 0,
+                    category: category,
+                    type: item.type,
+                    stock: {
+                        platesInStock: item.platesInStock || 0
+                    },
+                    isAvailable: (item.platesInStock || 0) > 0
+                };
+            }
+
+            // For other liquor items, use bottle-based pricing and stock
             return {
                 id: item._id,
                 name: item.name,
@@ -372,10 +392,12 @@ export default function TableManagement({tableList = []}) {
 
         try {
             // Process order payment and consume stock (allowing empty bills)
-            // Enhanced items with proper liquor identification
+            // Enhanced items with proper liquor and bites identification
             const enhancedItems = (bill.items || []).map(item => {
                 // Check if this is a liquor item
                 const isLiquorItem = item.type && ['hard_liquor', 'beer', 'wine', 'cigarettes'].includes(item.type);
+                // Check if this is a bites item
+                const isBitesItem = item.type === 'bites';
                 
                 if (isLiquorItem) {
                     // For liquor items, ensure we have all necessary properties
@@ -409,6 +431,26 @@ export default function TableManagement({tableList = []}) {
                     });
                     
                     return enhancedItem;
+                }
+                
+                if (isBitesItem) {
+                    // For bites items, return with proper structure for stock consumption
+                    const enhancedBitesItem = {
+                        ...item,
+                        originalItemId: item.id, // Use the ID directly for bites
+                        type: 'bites',
+                        // Bites are sold by plate count
+                        platesInStock: item.stock?.platesInStock || item.platesInStock || 0
+                    };
+                    
+                    console.log(`🍽️ Enhanced bites item: ${item.name}`, {
+                        originalId: item.id,
+                        type: item.type,
+                        quantity: item.quantity,
+                        platesInStock: enhancedBitesItem.platesInStock
+                    });
+                    
+                    return enhancedBitesItem;
                 }
                 
                 // For food items, return as-is

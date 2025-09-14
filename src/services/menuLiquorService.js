@@ -57,6 +57,27 @@ class MenuLiquorService {
           volume: 1,
           volumeUnit: liquor.type === 'ice_cubes' ? 'bowl' : 'bottle'
         });
+      } else if (liquor.type === 'bites') {
+        // For bites, create a simple menu item
+        menuItems.push({
+          id: `liquor_${liquor._id}`,
+          name: liquor.name,
+          price: liquor.pricePerPlate || liquor.pricePerBottle,
+          category: 'Bites',
+          type: 'bites',
+          liquorId: liquor._id,
+          description: `${liquor.name} - ${liquor.servingSize} serving` + (liquor.spiceLevel ? `, ${liquor.spiceLevel} spice` : ''),
+          stockInfo: {
+            platesInStock: liquor.platesInStock || liquor.bottlesInStock,
+            minimumPlates: liquor.minimumBottles || 2,
+            isLowStock: (liquor.platesInStock || liquor.bottlesInStock) <= (liquor.minimumBottles || 2)
+          },
+          portionTracking: false,
+          servingSize: liquor.servingSize,
+          ingredients: liquor.ingredients,
+          spiceLevel: liquor.spiceLevel,
+          unit: 'plate'
+        });
       } else {
         // For hard liquor, create menu items for each portion
         liquor.portions.forEach(portion => {

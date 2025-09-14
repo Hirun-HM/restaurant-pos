@@ -32,8 +32,8 @@ const liquorSchema = new mongoose.Schema({
     brand: {
         type: String,
         required: function() {
-            // Brand is optional for ice_cubes and sandy_bottles
-            return !['ice_cubes', 'sandy_bottles'].includes(this.type);
+            // Brand is optional for ice_cubes, sandy_bottles, and bites
+            return !['ice_cubes', 'sandy_bottles', 'bites'].includes(this.type);
         },
         trim: true,
         maxlength: [100, 'Brand cannot exceed 100 characters']
@@ -42,7 +42,7 @@ const liquorSchema = new mongoose.Schema({
         type: String,
         required: [true, 'Item type is required'],
         enum: {
-            values: ['hard_liquor', 'beer', 'wine', 'cigarettes', 'ice_cubes', 'sandy_bottles', 'other'],
+            values: ['hard_liquor', 'beer', 'wine', 'cigarettes', 'ice_cubes', 'sandy_bottles', 'bites', 'other'],
             message: '{VALUE} is not a valid item type'
         }
     },
@@ -66,12 +66,15 @@ const liquorSchema = new mongoose.Schema({
             if (this.type === 'hard_liquor') return 750;
             if (this.type === 'ice_cubes') return 1; // 1 unit per bowl
             if (this.type === 'sandy_bottles') return 1; // 1 unit per bottle
+            if (this.type === 'bites') return 1; // 1 unit per plate
             return 330; // 330ml for beer and others
         }
     },
     bottlesInStock: {
         type: Number,
-        required: [true, 'Number of bottles is required'],
+        required: function() {
+            return this.type !== 'bites'; // Not required for bites
+        },
         min: [0, 'Cannot have negative bottles'],
         default: 0
     },
@@ -79,7 +82,7 @@ const liquorSchema = new mongoose.Schema({
         type: Number,
         default: function() { 
             if (this.type === 'hard_liquor') return this.bottleVolume;
-            if (this.type === 'ice_cubes' || this.type === 'sandy_bottles') return 1;
+            if (this.type === 'ice_cubes' || this.type === 'sandy_bottles' || this.type === 'bites') return 1;
             return 0; 
         },
         min: [0, 'Current volume cannot be negative'],
@@ -115,12 +118,16 @@ const liquorSchema = new mongoose.Schema({
     portions: [liquorPortionSchema],
     pricePerBottle: {
         type: Number,
-        required: [true, 'Price per bottle is required'],
+        required: function() {
+            return this.type !== 'bites'; // Not required for bites
+        },
         min: [0, 'Price cannot be negative']
     },
     buyingPrice: {
         type: Number,
-        required: [true, 'Buying price is required'],
+        required: function() {
+            return this.type !== 'bites'; // Not required for bites
+        },
         min: [0, 'Buying price cannot be negative']
     },
     // Cigarette-specific fields
@@ -164,6 +171,21 @@ const liquorSchema = new mongoose.Schema({
         type: Number,
         default: 0,
         min: [0, 'Individual cigarette sales cannot be negative']
+    },
+    // Bites-specific fields
+    platesInStock: {
+        type: Number,
+        default: function() {
+            return this.type === 'bites' ? 0 : undefined;
+        },
+        min: [0, 'Plates in stock cannot be negative']
+    },
+    pricePerPlate: {
+        type: Number,
+        required: function() {
+            return this.type === 'bites';
+        },
+        min: [0, 'Price per plate cannot be negative']
     },
     description: {
         type: String,

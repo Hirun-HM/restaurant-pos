@@ -200,7 +200,7 @@ export const processOrderPayment = async (req, res) => {
 
         // Separate food items and liquor items
         const foodItems = items.filter(item => item.ingredients && item.ingredients.length > 0);
-        const liquorItems = items.filter(item => item.type && ['hard_liquor', 'beer', 'wine', 'cigarettes', 'ice_cubes', 'sandy_bottles'].includes(item.type));
+        const liquorItems = items.filter(item => item.type && ['hard_liquor', 'beer', 'wine', 'cigarettes', 'ice_cubes', 'sandy_bottles', 'bites'].includes(item.type));
 
         // Validate and consume stock for food items - GRACEFUL MODE
         // Only reduce stock for ingredients that exist, ignore missing ones
@@ -254,9 +254,18 @@ export const processOrderPayment = async (req, res) => {
                     throw new Error(`Liquor item not found in database: ${liquorId}`);
                 }
 
-                // Check if we have enough stock
-                if (liquorFromDB.bottlesInStock <= 0) {
-                    throw new Error(`No stock available for ${liquorFromDB.name}`);
+                // Check if we have enough stock based on item type
+                if (liquorItem.type === 'bites') {
+                    // For bites, check plates in stock
+                    const platesInStock = liquorFromDB.platesInStock || 0;
+                    if (platesInStock <= 0) {
+                        throw new Error(`No plates available for ${liquorFromDB.name}`);
+                    }
+                } else {
+                    // For other liquor items, check bottles in stock
+                    if (liquorFromDB.bottlesInStock <= 0) {
+                        throw new Error(`No stock available for ${liquorFromDB.name}`);
+                    }
                 }
 
                 let consumptionResult;
@@ -353,6 +362,42 @@ export const processOrderPayment = async (req, res) => {
                         remainingStock: consumptionResult.remainingStock,
                         unit: liquorItem.type === 'ice_cubes' ? 'bowls' : 'bottles',
                         note: `${quantityToConsume} ${liquorItem.type === 'ice_cubes' ? 'bowl(s)' : 'bottle(s)'} consumed from stock`
+                    });
+                    
+                } else if (liquorItem.type === 'bites') {
+                    // Bites: Handle plate-based consumption
+                    const quantityToConsume = liquorItem.quantity;
+                    
+                    console.log(`🍽️ Consuming ${quantityToConsume} plates of ${liquorFromDB.name}`);
+                    
+                    // Check if we have enough plates in stock
+                    const platesInStock = liquorFromDB.platesInStock || liquorFromDB.bottlesInStock || 0;
+                    if (platesInStock < quantityToConsume) {
+                        throw new Error(`Insufficient plates for ${liquorFromDB.name}. Required: ${quantityToConsume}, Available: ${platesInStock}`);
+                    }
+                    
+                    // Consume plates
+                    if (liquorFromDB.platesInStock !== undefined) {
+                        liquorFromDB.platesInStock -= quantityToConsume;
+                    } else {
+                        liquorFromDB.bottlesInStock -= quantityToConsume; // Fallback to bottlesInStock
+                    }
+                    liquorFromDB.totalSoldItems += quantityToConsume;
+                    
+                    consumptionResult = {
+                        consumed: quantityToConsume,
+                        remainingPlates: liquorFromDB.platesInStock || liquorFromDB.bottlesInStock
+                    };
+                    
+                    liquorConsumptionResults.push({
+                        itemName: liquorItem.name,
+                        type: liquorItem.type,
+                        liquorId: liquorId,
+                        platesConsumed: quantityToConsume,
+                        quantity: liquorItem.quantity,
+                        saleType: 'plate_based',
+                        remainingPlates: liquorFromDB.platesInStock || liquorFromDB.bottlesInStock,
+                        note: `${quantityToConsume} plate(s) of ${liquorFromDB.name} sold`
                     });
                     
                 } else {
@@ -494,7 +539,7 @@ export const processOrderPayment = async (req, res) => {
             // Update existing order
             existingOrder.items = items.map(item => ({
                 name: item.name,
-                itemType: item.type === 'liquor' || ['hard_liquor', 'beer', 'wine', 'cigarettes', 'ice_cubes', 'sandy_bottles'].includes(item.type) ? 'liquor' : 'food',
+                itemType: item.type === 'liquor' || ['hard_liquor', 'beer', 'wine', 'cigarettes', 'ice_cubes', 'sandy_bottles', 'bites'].includes(item.type) ? 'liquor' : 'food',
                 itemId: item.originalItemId || (item.id && item.id.includes('_') ? item.id.split('_')[0] : item.id) || new mongoose.Types.ObjectId(),
                 quantity: item.quantity,
                 unitPrice: item.price,

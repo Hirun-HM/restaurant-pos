@@ -8,8 +8,10 @@ export default function LiquorManager() {
         { id: 2, name: 'Corona Extra', category: 'beer', quantity: 24, unit: 'bottle', pricePerUnit: 4.25, volume: 355, volumeUnit: 'ml' },
         { id: 3, name: 'Jack Daniels', category: 'hard_liquor', quantity: 6, unit: 'bottle', pricePerUnit: 45.99, volume: 750, volumeUnit: 'ml' },
         { id: 4, name: 'Johnnie Walker Black', category: 'hard_liquor', quantity: 3, unit: 'bottle', pricePerUnit: 65.00, volume: 750, volumeUnit: 'ml' },
-        { id: 6, name: 'John Player Gold Leaf (12)', category: 'cigarette', cigaretteType: 'john_player_gold_leaf_12', quantity: 15, unit: 'pack', pricePerUnit: 920.00 },
-        { id: 7, name: 'John Player Gold Leaf (20)', category: 'cigarette', cigaretteType: 'john_player_gold_leaf_20', quantity: 0, unit: 'pack', pricePerUnit: 900.00 }
+        { id: 5, name: 'Chicken Wings', category: 'bites', type: 'bites', servingSize: 'medium', platesInStock: 20, pricePerPlate: 850.00, ingredients: 'Chicken wings, spices, sauce', spiceLevel: 'medium' },
+        { id: 6, name: 'Fish Fingers', category: 'bites', type: 'bites', servingSize: 'small', platesInStock: 15, pricePerPlate: 650.00, ingredients: 'Fish fillets, breadcrumbs, herbs', spiceLevel: 'mild' },
+        { id: 7, name: 'John Player Gold Leaf (12)', category: 'cigarette', cigaretteType: 'john_player_gold_leaf_12', quantity: 15, unit: 'pack', pricePerUnit: 920.00 },
+        { id: 8, name: 'John Player Gold Leaf (20)', category: 'cigarette', cigaretteType: 'john_player_gold_leaf_20', quantity: 0, unit: 'pack', pricePerUnit: 900.00 }
     ]);
 
     const [editingItem, setEditingItem] = useState(null);
@@ -47,6 +49,12 @@ export default function LiquorManager() {
             key: 'hard_liquor', 
             name: 'Hard Liquor', 
             items: getItemsByCategory('hard_liquor'),
+            type: 'regular'
+        },
+        { 
+            key: 'bites', 
+            name: 'Bites', 
+            items: getItemsByCategory('bites'),
             type: 'regular'
         },
         { 

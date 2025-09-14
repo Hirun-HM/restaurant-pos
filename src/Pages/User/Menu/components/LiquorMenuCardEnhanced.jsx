@@ -54,6 +54,7 @@ export default function LiquorMenuCard({ liquorItem, onUpdatePortions, onEdit, o
       cigarettes: '🚬',
       ice_cubes: '🧊',
       sandy_bottles: '🍾',
+      bites: '🍽️',
       other: '📦'
     };
     return icons[liquorItem.type] || '🥃';
@@ -124,7 +125,9 @@ export default function LiquorMenuCard({ liquorItem, onUpdatePortions, onEdit, o
               <p className="text-sm text-gray-600 line-clamp-1">{liquorItem.brand || 'No brand specified'}</p>
               <div className="flex items-center flex-wrap gap-2 mt-1">
                 <span className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full capitalize">
-                  {liquorItem.type === 'cigarettes' ? 'Cigarettes' : liquorItem.type.replace('_', ' ')}
+                  {liquorItem.type === 'cigarettes' ? 'Cigarettes' : 
+                   liquorItem.type === 'bites' ? 'Bites' : 
+                   liquorItem.type.replace('_', ' ')}
                 </span>
                 {liquorItem.type === 'hard_liquor' && liquorItem.bottleVolume && (
                   <span className="px-2 py-1 text-xs font-medium bg-gray-100 text-gray-700 rounded-full">
@@ -138,9 +141,10 @@ export default function LiquorMenuCard({ liquorItem, onUpdatePortions, onEdit, o
           {/* Stock Status */}
           <div className={`px-3 py-1 rounded-full text-sm font-medium ${stockStatusColor}`}>
             <FaBoxes className="inline mr-1 text-xs" />
-            {liquorItem.bottlesInStock} {
+            {liquorItem.platesInStock || liquorItem.bottlesInStock} {
               liquorItem.type === 'cigarettes' ? 'packs' : 
               liquorItem.type === 'ice_cubes' ? 'bowls' : 
+              liquorItem.type === 'bites' ? 'plates' :
               'bottles'
             }
           </div>
@@ -152,9 +156,13 @@ export default function LiquorMenuCard({ liquorItem, onUpdatePortions, onEdit, o
         {/* Price and Info Grid */}
         <div className="grid grid-cols-2 gap-4 mb-4">
           <div>
-            <span className="text-sm font-medium text-gray-700">Price per {liquorItem.type === 'cigarettes' ? 'Pack' : 'Bottle'}</span>
+            <span className="text-sm font-medium text-gray-700">Price per {
+              liquorItem.type === 'cigarettes' ? 'Pack' : 
+              liquorItem.type === 'bites' ? 'Plate' : 
+              'Bottle'
+            }</span>
             <p className="text-lg font-semibold text-green-600">
-              LKR {liquorItem.pricePerBottle?.toFixed(2) || '0.00'}
+              LKR {(liquorItem.pricePerPlate || liquorItem.pricePerBottle)?.toFixed(2) || '0.00'}
             </p>
           </div>
           {liquorItem.type === 'hard_liquor' ? (
@@ -357,6 +365,30 @@ export default function LiquorMenuCard({ liquorItem, onUpdatePortions, onEdit, o
                     <div className="text-sm font-medium text-gray-700">
                       Pack or Individual
                     </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : liquorItem.type === 'bites' ? (
+          <div className="bg-gray-50 rounded-lg p-4">
+            <div className="mb-3">
+              <span className="text-sm font-medium text-gray-700">Bites Information</span>
+            </div>
+            
+            {/* Plates Stock Information */}
+            <div className="bg-purple-50 border border-purple-200 rounded-lg p-3">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <span className="text-sm text-gray-600">Plates Available</span>
+                  <div className="text-lg font-semibold text-purple-600">
+                    {liquorItem.platesInStock || liquorItem.bottlesInStock || 0} plates
+                  </div>
+                </div>
+                <div>
+                  <span className="text-sm text-gray-600">Total Sold</span>
+                  <div className="text-lg font-semibold text-green-600">
+                    {liquorItem.totalSoldItems || 0} plates
                   </div>
                 </div>
               </div>

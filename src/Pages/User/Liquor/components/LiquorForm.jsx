@@ -14,6 +14,7 @@ const LIQUOR_TYPES = [
   { value: 'tequila', label: 'Tequila' },
   { value: 'beer', label: 'Beer' },
   { value: 'wine', label: 'Wine' },
+  { value: 'bites', label: 'Bites' },
   { value: 'other', label: 'Other' }
 ];
 
@@ -47,7 +48,10 @@ export default function LiquorForm({ item, onSubmit, onCancel }) {
     supplier: '',
     alcoholPercentage: '',
     description: '',
-    portions: []
+    portions: [],
+    // Bites-specific fields
+    platesInStock: 0,
+    pricePerPlate: ''
   });
 
   const [errors, setErrors] = useState({});
@@ -69,7 +73,10 @@ export default function LiquorForm({ item, onSubmit, onCancel }) {
         supplier: item.supplier || '',
         alcoholPercentage: item.alcoholPercentage?.toString() || '',
         description: item.description || '',
-        portions: item.portions || []
+        portions: item.portions || [],
+        // Bites-specific fields
+        platesInStock: item.platesInStock || 0,
+        pricePerPlate: item.pricePerPlate?.toString() || ''
       });
     } else {
       const initialPortions = generateStandardPortions(750);
@@ -85,7 +92,10 @@ export default function LiquorForm({ item, onSubmit, onCancel }) {
         supplier: '',
         alcoholPercentage: '',
         description: '',
-        portions: initialPortions
+        portions: initialPortions,
+        // Bites-specific fields
+        platesInStock: 0,
+        pricePerPlate: ''
       });
     }
     setErrors({});
@@ -110,16 +120,32 @@ export default function LiquorForm({ item, onSubmit, onCancel }) {
       newErrors.name = 'Name is required';
     }
 
-    if (!formData.brand.trim()) {
+    // Brand is not required for bites
+    if (formData.type !== 'bites' && !formData.brand.trim()) {
       newErrors.brand = 'Brand is required';
     }
 
-    if (!formData.pricePerBottle || parseFloat(formData.pricePerBottle) <= 0) {
-      newErrors.pricePerBottle = 'Price per bottle must be greater than 0';
-    }
+    // Different validation for bites vs other items
+    if (formData.type === 'bites') {
+      if (!formData.pricePerPlate || parseFloat(formData.pricePerPlate) <= 0) {
+        newErrors.pricePerPlate = 'Price per plate must be greater than 0';
+      }
 
-    if (formData.bottlesInStock < 0) {
-      newErrors.bottlesInStock = 'Bottles in stock cannot be negative';
+      if (formData.platesInStock < 0) {
+        newErrors.platesInStock = 'Plates in stock cannot be negative';
+      }
+
+      if (!formData.ingredients.trim()) {
+        newErrors.ingredients = 'Ingredients are required for bites';
+      }
+    } else {
+      if (!formData.pricePerBottle || parseFloat(formData.pricePerBottle) <= 0) {
+        newErrors.pricePerBottle = 'Price per bottle must be greater than 0';
+      }
+
+      if (formData.bottlesInStock < 0) {
+        newErrors.bottlesInStock = 'Bottles in stock cannot be negative';
+      }
     }
 
     if (formData.minimumBottles < 0) {
@@ -130,8 +156,8 @@ export default function LiquorForm({ item, onSubmit, onCancel }) {
       newErrors.alcoholPercentage = 'Alcohol percentage must be between 0 and 100';
     }
 
-    // For non-beer items, validate portion prices
-    if (formData.type !== 'beer') {
+    // For non-beer and non-bites items, validate portion prices
+    if (formData.type !== 'beer' && formData.type !== 'bites') {
       const invalidPortions = formData.portions.filter(portion => 
         !portion.price || parseFloat(portion.price) <= 0
       );
@@ -221,15 +247,17 @@ export default function LiquorForm({ item, onSubmit, onCancel }) {
             required
           />
 
-          <InputField
-            label="Brand"
-            id="brand"
-            value={formData.brand}
-            onChange={(e) => handleInputChange('brand', e.target.value)}
-            placeholder="e.g., Jack Daniels"
-            error={errors.brand}
-            required
-          />
+          {formData.type !== 'bites' && (
+            <InputField
+              label="Brand"
+              id="brand"
+              value={formData.brand}
+              onChange={(e) => handleInputChange('brand', e.target.value)}
+              placeholder="e.g., Jack Daniels"
+              error={errors.brand}
+              required
+            />
+          )}
 
           <SelectField
             label="Liquor Type"
@@ -244,42 +272,89 @@ export default function LiquorForm({ item, onSubmit, onCancel }) {
             ))}
           </SelectField>
 
-          <SelectField
-            label="Bottle Volume"
-            id="bottleVolume"
-            value={formData.bottleVolume}
-            onChange={(value) => handleInputChange('bottleVolume', parseInt(value))}
-            error={errors.bottleVolume}
-            required
-          >
-            {BOTTLE_VOLUMES.map(vol => (
-              <option key={vol.value} value={vol.value}>{vol.label}</option>
-            ))}
-          </SelectField>
+          {/* Bites-specific fields */}
+          {formData.type === 'bites' && (
+            <>
+              <InputField
+                label="Price per Plate (LKR)"
+                id="pricePerPlate"
+                type="number"
+                step="0.01"
+                min="0"
+                value={formData.pricePerPlate}
+                onChange={(e) => handleInputChange('pricePerPlate', e.target.value)}
+                placeholder="500.00"
+                error={errors.pricePerPlate}
+                required
+              />
 
-          <InputField
-            label="Price per Bottle (LKR)"
-            id="pricePerBottle"
-            type="number"
-            step="0.01"
-            min="0"
-            value={formData.pricePerBottle}
-            onChange={(e) => handleInputChange('pricePerBottle', e.target.value)}
-            placeholder="45.99"
-            error={errors.pricePerBottle}
-            required
-          />
+              <InputField
+                label="Plates in Stock"
+                id="platesInStock"
+                type="number"
+                min="0"
+                value={formData.platesInStock}
+                onChange={(e) => handleInputChange('platesInStock', parseInt(e.target.value) || 0)}
+                error={errors.platesInStock}
+                required
+              />
+            </>
+          )}
 
-          <InputField
-            label="Bottles in Stock"
-            id="bottlesInStock"
-            type="number"
-            min="0"
-            value={formData.bottlesInStock}
-            onChange={(e) => handleInputChange('bottlesInStock', parseInt(e.target.value) || 0)}
-            error={errors.bottlesInStock}
-            required
-          />
+          {/* Regular liquor fields (not for bites) */}
+          {formData.type !== 'bites' && (
+            <>
+              <SelectField
+                label="Bottle Volume"
+                id="bottleVolume"
+                value={formData.bottleVolume}
+                onChange={(value) => handleInputChange('bottleVolume', parseInt(value))}
+                error={errors.bottleVolume}
+                required
+              >
+                {BOTTLE_VOLUMES.map(vol => (
+                  <option key={vol.value} value={vol.value}>{vol.label}</option>
+                ))}
+              </SelectField>
+
+              <InputField
+                label="Price per Bottle (LKR)"
+                id="pricePerBottle"
+                type="number"
+                step="0.01"
+                min="0"
+                value={formData.pricePerBottle}
+                onChange={(e) => handleInputChange('pricePerBottle', e.target.value)}
+                placeholder="45.99"
+                error={errors.pricePerBottle}
+                required
+              />
+
+              <InputField
+                label="Bottles in Stock"
+                id="bottlesInStock"
+                type="number"
+                min="0"
+                value={formData.bottlesInStock}
+                onChange={(e) => handleInputChange('bottlesInStock', parseInt(e.target.value) || 0)}
+                error={errors.bottlesInStock}
+                required
+              />
+
+              <InputField
+                label="Alcohol Percentage"
+                id="alcoholPercentage"
+                type="number"
+                step="0.1"
+                min="0"
+                max="100"
+                value={formData.alcoholPercentage}
+                onChange={(e) => handleInputChange('alcoholPercentage', e.target.value)}
+                placeholder="40"
+                error={errors.alcoholPercentage}
+              />
+            </>
+          )}
 
           <InputField
             label="Minimum Bottles"
@@ -291,30 +366,39 @@ export default function LiquorForm({ item, onSubmit, onCancel }) {
             error={errors.minimumBottles}
             required
           />
-
-          <InputField
-            label="Alcohol Percentage"
-            id="alcoholPercentage"
-            type="number"
-            step="0.1"
-            min="0"
-            max="100"
-            value={formData.alcoholPercentage}
-            onChange={(e) => handleInputChange('alcoholPercentage', e.target.value)}
-            placeholder="40"
-            error={errors.alcoholPercentage}
-          />
         </div>
 
         {/* Optional Fields */}
         <div className="space-y-4">
-          <InputField
-            label="Supplier (Optional)"
-            id="supplier"
-            value={formData.supplier}
-            onChange={(e) => handleInputChange('supplier', e.target.value)}
-            placeholder="Supplier name"
-          />
+          {formData.type !== 'bites' && (
+            <InputField
+              label="Supplier (Optional)"
+              id="supplier"
+              value={formData.supplier}
+              onChange={(e) => handleInputChange('supplier', e.target.value)}
+              placeholder="Supplier name"
+            />
+          )}
+
+          {formData.type === 'bites' && (
+            <div>
+              <label htmlFor="ingredients" className="block text-sm font-medium text-gray-700 mb-1">
+                Ingredients <span className="text-red-500">*</span>
+              </label>
+              <textarea
+                id="ingredients"
+                rows={3}
+                value={formData.ingredients}
+                onChange={(e) => handleInputChange('ingredients', e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                placeholder="List main ingredients..."
+                required
+              />
+              {errors.ingredients && (
+                <p className="text-red-500 text-sm mt-1">{errors.ingredients}</p>
+              )}
+            </div>
+          )}
 
           <div>
             <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
@@ -326,13 +410,13 @@ export default function LiquorForm({ item, onSubmit, onCancel }) {
               value={formData.description}
               onChange={(e) => handleInputChange('description', e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              placeholder="Additional details about this liquor..."
+              placeholder={formData.type === 'bites' ? 'Additional details about this dish...' : 'Additional details about this liquor...'}
             />
           </div>
         </div>
 
         {/* Standard Portions Section */}
-        {formData.type !== 'beer' && (
+        {formData.type !== 'beer' && formData.type !== 'bites' && (
           <div className="border-t pt-6">
             <div className="mb-4">
               <h3 className="text-lg font-medium text-gray-900">Standard Portion Prices</h3>

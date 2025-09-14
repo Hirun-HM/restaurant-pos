@@ -23,6 +23,7 @@ const LiquorItemCard = React.memo(({
             case 'vodka': return 'bg-blue-100 text-blue-800';
             case 'rum': return 'bg-orange-100 text-orange-800';
             case 'gin': return 'bg-green-100 text-green-800';
+            case 'bites': return 'bg-purple-100 text-purple-800';
             default: return 'bg-gray-100 text-gray-800';
         }
     }, [item.type]);
@@ -63,10 +64,12 @@ const LiquorItemCard = React.memo(({
                 {/* Basic Information */}
                 <div className="grid grid-cols-2 gap-4 mb-4">
                     <div>
-                        <div className="text-sm text-gray-600">Price per {item.unit || 'unit'}</div>
+                        <div className="text-sm text-gray-600">Price per {item.type === 'bites' ? 'plate' : item.unit || 'unit'}</div>
                         <div className="text-lg font-semibold text-green-600">
                             LKR {typeof item.pricePerUnit === 'number' ? 
                                 Number(item.pricePerUnit).toFixed(2) : 
+                                typeof item.pricePerPlate === 'number' ? 
+                                Number(item.pricePerPlate).toFixed(2) :
                                 (item.pricePerBottle || 0).toFixed(2)}
                         </div>
                     </div>
@@ -81,21 +84,23 @@ const LiquorItemCard = React.memo(({
                                         ({((item.quantity || item.bottlesInStock || 0) * (item.cigarettesPerPack || 20))} individual)
                                     </div>
                                 </div>
+                            ) : item.type === 'bites' ? (
+                                `${item.platesInStock || item.quantity || 0} plates in stock`
+                            ) : item.type === 'ice_cubes' ? (
+                                `${item.quantity || item.bottlesInStock || 0} bowls in stock`
+                            ) : item.type === 'sandy_bottles' ? (
+                                `${item.quantity || item.bottlesInStock || 0} bottles in stock`
                             ) : (
-                                item.type === 'ice_cubes' ? 
-                                    `${item.quantity || item.bottlesInStock || 0} bowls in stock` :
-                                item.type === 'sandy_bottles' ?
-                                    `${item.quantity || item.bottlesInStock || 0} bottles in stock` :
-                                    `${item.quantity || item.bottlesInStock || 0} ${
-                                        item.unit || (item.type === 'hard_liquor' ? 'bottle' : 'unit')
-                                    }s`
+                                `${item.quantity || item.bottlesInStock || 0} ${
+                                    item.unit || (item.type === 'hard_liquor' ? 'bottle' : 'unit')
+                                }s`
                             )}
                         </div>
                     </div>
                 </div>
 
                 {/* Type Specific Information */}
-                {item.category !== 'cigarette' && item.type !== 'ice_cubes' && item.type !== 'sandy_bottles' && item.type !== 'beer' && (
+                {item.category !== 'cigarette' && item.type !== 'ice_cubes' && item.type !== 'sandy_bottles' && item.type !== 'beer' && item.type !== 'bites' && (
                     <div className="grid grid-cols-2 gap-4 mb-4">
                         <div>
                             <div className="text-sm text-gray-600">Volume</div>
@@ -111,6 +116,26 @@ const LiquorItemCard = React.memo(({
                                 </div>
                             </div>
                         )}
+                    </div>
+                )}
+
+                {/* Bites Specific Information */}
+                {item.type === 'bites' && (
+                    <div className="mt-4 p-3 bg-purple-50 rounded-lg">
+                        <div className="grid grid-cols-2 gap-3">
+                            <div className="bg-white p-2 rounded border">
+                                <div className="text-sm text-gray-600">Plates Sold</div>
+                                <div className="text-md font-semibold text-purple-600">
+                                    {item.totalSoldItems || 0} plates
+                                </div>
+                            </div>
+                            <div className="bg-white p-2 rounded border">
+                                <div className="text-sm text-gray-600">Revenue</div>
+                                <div className="text-md font-semibold text-green-600">
+                                    LKR {((item.totalSoldItems || 0) * (item.pricePerPlate || 0)).toFixed(2)}
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 )}
 
@@ -149,7 +174,7 @@ const LiquorItemCard = React.memo(({
                 )}
 
                 {/* Sales and Analytics Information */}
-                {item.type !== 'beer' && item.type !== 'cigarettes' && item.type !== 'ice_cubes' && item.type !== 'sandy_bottles' &&(
+                {item.type !== 'beer' && item.type !== 'cigarettes' && item.type !== 'ice_cubes' && item.type !== 'sandy_bottles' && item.type !== 'bites' &&(
                     <>
                         <div className="bg-gray-50 rounded-lg p-3 mt-4">
                             <div className="grid grid-cols-2 gap-3">

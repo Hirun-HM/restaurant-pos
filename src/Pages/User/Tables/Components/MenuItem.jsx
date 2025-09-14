@@ -18,6 +18,9 @@ const MenuItem = memo(function MenuItem({item, onAddItem, selectedTable}) {
     // Check if this is beer or wine
     const isBeerOrWine = item.type === 'beer' || item.type === 'wine';
     
+    // Check if this is bites
+    const isBites = item.category === 'Bites' || (item.type && item.type === 'bites');
+    
     // Debug logging for new liquor items
     if (item.type && (item.type === 'hard_liquor' || item.type === 'beer' || item.type === 'cigarettes')) {
         console.log('MenuItem - Database item:', {
@@ -75,10 +78,10 @@ const MenuItem = memo(function MenuItem({item, onAddItem, selectedTable}) {
             setCigaretteQuantity(1);
             setShowCigaretteModal(true);
         } else {
-            // For beer, wine, and other liquor types
+            // For beer, wine, bites, and other items
             const itemToAdd = {
                 ...item,
-                type: item.type // Ensure type is passed for liquor items
+                type: item.type // Ensure type is passed for all items including bites
             };
             onAddItem(selectedTable.id, itemToAdd);
         }
@@ -152,7 +155,11 @@ const MenuItem = memo(function MenuItem({item, onAddItem, selectedTable}) {
 
     // Check if item has stock and display stock info
     const getStockDisplay = () => {
-        if (item.stock && (item.stock.bottlesInStock !== undefined || item.stock.millilitersRemaining !== undefined)) {
+        if (isBites && item.stock && item.stock.platesInStock !== undefined) {
+            // For bites, show plates in stock
+            const plates = item.stock.platesInStock || 0;
+            return `${plates} plates in stock`;
+        } else if (item.stock && (item.stock.bottlesInStock !== undefined || item.stock.millilitersRemaining !== undefined)) {
             const bottles = item.stock.bottlesInStock || 0;
             const ml = item.stock.millilitersRemaining || 0;
             
@@ -172,7 +179,10 @@ const MenuItem = memo(function MenuItem({item, onAddItem, selectedTable}) {
 
     // Check if item is out of stock
     const isOutOfStock = () => {
-        if (item.stock) {
+        if (isBites && item.stock) {
+            const plates = item.stock.platesInStock || 0;
+            return plates === 0;
+        } else if (item.stock) {
             const bottles = item.stock.bottlesInStock || 0;
             const ml = item.stock.millilitersRemaining || 0;
             return bottles === 0 && ml === 0;
@@ -199,6 +209,7 @@ const MenuItem = memo(function MenuItem({item, onAddItem, selectedTable}) {
                         LKR {item.price}
                         {isHardLiquor && <span className="text-xs text-gray-500"> (bottle)</span>}
                         {isCigarettes && <span className="text-xs text-gray-500"> (pack)</span>}
+                        {isBites && <span className="text-xs text-gray-500"> (per plate)</span>}
                     </span>
                     <PrimaryButton
                         onClick={handleAddItem}

@@ -15,8 +15,8 @@ const LIQUOR_TYPES = [
   { value: 'beer', label: '🍺 Beer' },
   { value: 'cigarettes', label: '🚬 Cigarettes' },
   { value: 'ice_cubes', label: '🧊 Ice Cubes' },
-  { value: 'sandy_bottles', label: '🍾 Sandy Bottles' }
-  
+  { value: 'sandy_bottles', label: '🍾 Sandy Bottles' },
+  { value: 'bites', label: '🍽️ Bites' }
 ];
 
 export default function LiquorManagerWithAPI() {
