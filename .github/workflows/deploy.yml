@@ -47,8 +47,8 @@ jobs:
         chmod 600 ~/.ssh/id_rsa
         ssh-keyscan -H ${{ secrets.AWS_SERVER_IP }} >> ~/.ssh/known_hosts
         
-        # Test SSH connection
-        ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no ubuntu@${{ secrets.AWS_SERVER_IP }} "echo 'SSH connection successful'"
+        # Test SSH connection with proper user
+        ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no ubuntu@${{ secrets.AWS_SERVER_IP }} "whoami && echo 'SSH connection successful'"
 
     # Deploy to AWS Server
     - name: Deploy to AWS Server
@@ -79,54 +79,94 @@ jobs:
     - name: Install dependencies and restart services
       run: |
         ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no ubuntu@${{ secrets.AWS_SERVER_IP }} "
-          cd /var/www/restaurant-pos/backend
+          set -e  # Exit on any error
+          
+          echo 'Starting server setup...'
+          
+          # Update package list
+          sudo apt-get update
           
           # Install Node.js if not present
           if ! command -v node &> /dev/null; then
+            echo 'Installing Node.js...'
             curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
             sudo apt-get install -y nodejs
+          else
+            echo 'Node.js already installed: '$(node --version)
           fi
           
           # Install Docker if not present
           if ! command -v docker &> /dev/null; then
-            sudo apt-get update
+            echo 'Installing Docker...'
             sudo apt-get install -y apt-transport-https ca-certificates curl gnupg lsb-release
             curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
             echo \"deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu \$(lsb_release -cs) stable\" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
             sudo apt-get update
             sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
             sudo usermod -aG docker ubuntu
+            
+            # Start and enable Docker
+            sudo systemctl start docker
+            sudo systemctl enable docker
+          else
+            echo 'Docker already installed: '$(docker --version)
           fi
           
           # Install Docker Compose if not present
           if ! command -v docker-compose &> /dev/null; then
+            echo 'Installing Docker Compose...'
             sudo curl -L \"https://github.com/docker/compose/releases/download/v2.20.2/docker-compose-\$(uname -s)-\$(uname -m)\" -o /usr/local/bin/docker-compose
             sudo chmod +x /usr/local/bin/docker-compose
+          else
+            echo 'Docker Compose already installed: '$(docker-compose --version)
           fi
           
-          # Install backend dependencies
+          # Navigate to backend directory and install dependencies
+          cd /var/www/restaurant-pos/backend
+          echo 'Installing backend dependencies...'
           npm install --production
           
+          # Navigate to project root
           cd /var/www/restaurant-pos
           
           # Stop existing containers
-          sudo docker-compose down || true
+          echo 'Stopping existing containers...'
+          sudo docker-compose down 2>/dev/null || echo 'No existing containers to stop'
           
-          # Start services with Docker Compose
+          # Build and start services with Docker Compose
+          echo 'Starting services with Docker Compose...'
           sudo docker-compose up -d --build
           
-          # Setup Nginx if not configured
-          if [ ! -f /etc/nginx/sites-available/restaurant-pos ]; then
+          # Wait for services to start
+          echo 'Waiting for services to start...'
+          sleep 10
+          
+          # Check if containers are running
+          sudo docker-compose ps
+          
+          # Install and configure Nginx
+          if ! command -v nginx &> /dev/null; then
+            echo 'Installing Nginx...'
             sudo apt-get install -y nginx
-            sudo cp nginx.conf /etc/nginx/sites-available/restaurant-pos
-            sudo ln -sf /etc/nginx/sites-available/restaurant-pos /etc/nginx/sites-enabled/
-            sudo rm -f /etc/nginx/sites-enabled/default
-            sudo systemctl restart nginx
-            sudo systemctl enable nginx
-          else
-            sudo cp nginx.conf /etc/nginx/sites-available/restaurant-pos
-            sudo systemctl reload nginx
           fi
+          
+          # Setup Nginx configuration
+          echo 'Configuring Nginx...'
+          sudo cp nginx.conf /etc/nginx/sites-available/restaurant-pos
+          sudo ln -sf /etc/nginx/sites-available/restaurant-pos /etc/nginx/sites-enabled/
+          sudo rm -f /etc/nginx/sites-enabled/default
+          
+          # Test nginx configuration
+          sudo nginx -t
+          
+          # Restart and enable Nginx
+          sudo systemctl restart nginx
+          sudo systemctl enable nginx
+          
+          # Check Nginx status
+          sudo systemctl status nginx --no-pager
+          
+          echo 'Deployment completed successfully!'
         "
 
     # Health Check
