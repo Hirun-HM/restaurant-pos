@@ -637,20 +637,21 @@ export default function TableManagement({tableList = []}) {
 
 
     return (
-        <div className='flex flex-col md:flex-row gap-2 h-full md:h-[78vh] mt-5'>
+        <div className='flex flex-col lg:flex-row gap-3 sm:gap-4 h-full lg:h-[78vh] mt-3 sm:mt-5'>
             {/* for tables */}
-            <div className='p-6 w-full md:w-1/3 overflow-y-auto bg-fourthColor rounded-[32px]'>
-                <div className="flex justify-between items-center mb-4">
-                    <h1 className='text-[24px] font-[500] text-other1'>Table List</h1>
-                    <div className="flex gap-2">
+            <div className='p-3 sm:p-4 lg:p-6 w-full lg:w-1/3 overflow-y-auto bg-fourthColor rounded-2xl sm:rounded-[32px]'>
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-3 sm:mb-4 gap-3 sm:gap-0">
+                    <h1 className='text-lg sm:text-xl lg:text-[24px] font-[500] text-other1'>Table List</h1>
+                    <div className="flex flex-wrap gap-2">
                         {/* Payment History Button */}
                         <button 
                             onClick={handleShowPaymentHistory}
-                            className="text-sm bg-green-500 text-white px-3 py-2 rounded-lg hover:bg-green-600 transition-colors flex items-center gap-2"
+                            className="text-xs sm:text-sm bg-green-500 text-white px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg hover:bg-green-600 transition-colors flex items-center gap-1 sm:gap-2"
                             title="View payment history"
                         >
                             <span>📊</span>
-                            History
+                            <span className="hidden sm:inline">History</span>
+                            <span className="sm:hidden">📊</span>
                         </button>
                         {/* Development helper - remove in production */}
                         <button 
@@ -662,7 +663,7 @@ export default function TableManagement({tableList = []}) {
                         </button>
                     </div>
                 </div>
-                <div className='grid grid-cols-1 gap-2 md:grid-cols-2'>
+                <div className='grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-2 xl:grid-cols-3 gap-2'>
                     {
                         tableList.map((table) => (
                             <TableCard
@@ -678,7 +679,7 @@ export default function TableManagement({tableList = []}) {
             </div>
 
             {/* for order summary */}
-            <div className='p-6 w-full md:flex-1 overflow-hidden bg-fourthColor rounded-[32px]'>
+            <div className='p-3 sm:p-4 lg:p-6 w-full lg:flex-1 overflow-hidden bg-fourthColor rounded-2xl sm:rounded-[32px]'>
                 <OrderSummary
                     selectedTable={selectedTable}
                     bill={currentBill}

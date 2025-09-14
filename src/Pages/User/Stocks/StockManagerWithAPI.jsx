@@ -122,23 +122,23 @@ export default function StockManagerWithAPI() {
     }
 
     return (
-        <div className="p-6 space-y-6">
+        <div className="p-3 sm:p-4 lg:p-6 space-y-4 sm:space-y-6">
             {/* Header */}
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                <h1 className="text-2xl font-bold text-other1">Stock & Food Management</h1>
-                <div className="text-sm text-text space-y-1">
-                    <div>Total Items: {totals.totalItems}</div>
-                    <div>Total Value: LKR {totals.totalValue.toFixed(2)}</div>
-                    <div>Low Stock: {totals.lowStockCount}</div>
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 sm:gap-4">
+                <h1 className="text-lg sm:text-xl lg:text-2xl font-bold text-other1">Stock & Food Management</h1>
+                <div className="text-xs sm:text-sm text-text space-y-1 bg-gray-50 p-2 sm:p-3 rounded-lg">
+                    <div>Total Items: <span className="font-medium">{totals.totalItems}</span></div>
+                    <div>Total Value: <span className="font-medium">LKR {totals.totalValue.toFixed(2)}</span></div>
+                    <div>Low Stock: <span className="font-medium text-red-600">{totals.lowStockCount}</span></div>
                 </div>
             </div>
 
             {/* Tab Navigation */}
             <div className="border-b border-gray-200">
-                <nav className="flex space-x-8">
+                <nav className="flex space-x-4 sm:space-x-8 overflow-x-auto">
                     <button
                         onClick={() => setActiveTab('stock')}
-                        className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                        className={`py-2 px-1 border-b-2 font-medium text-xs sm:text-sm whitespace-nowrap ${
                             activeTab === 'stock'
                                 ? 'border-yellow-500 text-yellow-600'
                                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -148,7 +148,7 @@ export default function StockManagerWithAPI() {
                     </button>
                     <button
                         onClick={() => setActiveTab('food-items')}
-                        className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                        className={`py-2 px-1 border-b-2 font-medium text-xs sm:text-sm whitespace-nowrap ${
                             activeTab === 'food-items'
                                 ? 'border-yellow-500 text-yellow-600'
                                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -161,33 +161,38 @@ export default function StockManagerWithAPI() {
 
             {/* Tab Content */}
             {activeTab === 'stock' ? (
-                <div className="space-y-6">
+                <div className="space-y-4 sm:space-y-6">
                     {/* Search, Filter Controls and Add Button */}
-                    <div className="flex flex-col md:flex-row gap-4 mb-6">
-                        <div className="flex-1">
-                            <input
-                                type="text"
-                                placeholder="Search stock items..."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            />
+                    <div className="flex flex-col gap-3 sm:gap-4 mb-4 sm:mb-6">
+                        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
+                            <div className="flex-1">
+                                <input
+                                    type="text"
+                                    placeholder="Search stock items..."
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                />
+                            </div>
+                            <div className="w-full sm:w-auto">
+                                <select
+                                    value={categoryFilter}
+                                    onChange={(e) => setCategoryFilter(e.target.value)}
+                                    className="w-full sm:w-auto px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                >
+                                    <option value="all">All Categories</option>
+                                    <option value="ingredients">Ingredients</option>
+                                    <option value="food">Food Items</option>
+                                    <option value="drinks">Drinks & Beverages</option>
+                                    <option value="supplies">Kitchen Supplies</option>
+                                </select>
+                            </div>
                         </div>
-                        <div>
-                            <select
-                                value={categoryFilter}
-                                onChange={(e) => setCategoryFilter(e.target.value)}
-                                className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        <div className="w-full sm:w-auto">
+                            <PrimaryButton 
+                                onClick={handleAddNewStock}
+                                className="w-full sm:w-auto text-sm sm:text-base px-3 sm:px-4 py-2"
                             >
-                                <option value="all">All Categories</option>
-                                <option value="ingredients">Ingredients</option>
-                                <option value="food">Food Items</option>
-                                <option value="drinks">Drinks & Beverages</option>
-                                <option value="supplies">Kitchen Supplies</option>
-                            </select>
-                        </div>
-                        <div>
-                            <PrimaryButton onClick={handleAddNewStock}>
                                 + Add New Stock Item
                             </PrimaryButton>
                         </div>
@@ -215,16 +220,16 @@ export default function StockManagerWithAPI() {
                     )}
 
                     {/* Stock Items Display */}
-                    <div className="space-y-6">
+                    <div className="space-y-4 sm:space-y-6">
                         {categoryFilter === 'all' ? (
                             // Show all categories
                             categories.map(category => (
                                 category.items.length > 0 && (
                                     <div key={category.key}>
-                                        <h2 className="text-lg font-semibold text-gray-800 mb-3 capitalize">
+                                        <h2 className="text-base sm:text-lg font-semibold text-gray-800 mb-2 sm:mb-3 capitalize">
                                             {category.name} ({category.items.length})
                                         </h2>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
                                             {category.items.map(item => (
                                                 <StockItemCard
                                                     key={item._id}
@@ -240,10 +245,10 @@ export default function StockManagerWithAPI() {
                         ) : (
                             // Show filtered category
                             <div>
-                                <h2 className="text-lg font-semibold text-gray-800 mb-3 capitalize">
+                                <h2 className="text-base sm:text-lg font-semibold text-gray-800 mb-2 sm:mb-3 capitalize">
                                     {categories.find(c => c.key === categoryFilter)?.name} ({filteredItems.length})
                                 </h2>
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
                                     {filteredItems.map(item => (
                                         <StockItemCard
                                             key={item._id}
@@ -259,14 +264,14 @@ export default function StockManagerWithAPI() {
 
                     {/* Empty State */}
                     {filteredItems.length === 0 && !loading && (
-                        <div className="text-center py-12">
-                            <div className="text-gray-400 mb-4">
-                                <div className="text-6xl">📦</div>
+                        <div className="text-center py-8 sm:py-12">
+                            <div className="text-gray-400 mb-3 sm:mb-4">
+                                <div className="text-4xl sm:text-6xl">📦</div>
                             </div>
-                            <h3 className="text-lg font-semibold text-gray-600 mb-2">
+                            <h3 className="text-base sm:text-lg font-semibold text-gray-600 mb-1 sm:mb-2">
                                 {searchTerm || categoryFilter !== 'all' ? 'No Matching Items' : 'No Stock Items'}
                             </h3>
-                            <p className="text-gray-500">
+                            <p className="text-sm sm:text-base text-gray-500 px-4">
                                 {searchTerm || categoryFilter !== 'all' 
                                     ? 'Try adjusting your search or filter criteria.'
                                     : 'Start by adding your first stock item above.'

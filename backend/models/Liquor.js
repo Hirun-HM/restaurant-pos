@@ -73,10 +73,13 @@ const liquorSchema = new mongoose.Schema({
     bottlesInStock: {
         type: Number,
         required: function() {
-            return this.type !== 'bites'; // Not required for bites
+            return !['bites', 'ice_cubes'].includes(this.type); // Not required for bites and ice_cubes
         },
         min: [0, 'Cannot have negative bottles'],
-        default: 0
+        default: function() {
+            // Don't set default stock for ice cubes and bites
+            return ['bites', 'ice_cubes'].includes(this.type) ? undefined : 0;
+        }
     },
     currentBottleVolume: {
         type: Number,
@@ -102,7 +105,10 @@ const liquorSchema = new mongoose.Schema({
     },
     minimumBottles: {
         type: Number,
-        default: 2,
+        default: function() {
+            // Don't set minimum for ice cubes and bites
+            return ['ice_cubes', 'bites'].includes(this.type) ? undefined : 2;
+        },
         min: [0, 'Minimum bottles cannot be negative']
     },
     supplier: {
@@ -126,7 +132,7 @@ const liquorSchema = new mongoose.Schema({
     buyingPrice: {
         type: Number,
         required: function() {
-            return this.type !== 'bites'; // Not required for bites
+            return !['bites', 'ice_cubes'].includes(this.type); // Not required for bites and ice_cubes
         },
         min: [0, 'Buying price cannot be negative']
     },
@@ -176,7 +182,8 @@ const liquorSchema = new mongoose.Schema({
     platesInStock: {
         type: Number,
         default: function() {
-            return this.type === 'bites' ? 0 : undefined;
+            // Don't set for bites - they don't track stock
+            return undefined;
         },
         min: [0, 'Plates in stock cannot be negative']
     },
@@ -435,6 +442,19 @@ liquorSchema.statics.generateStandardPortions = function(bottleVolume) {
 
 // Method to consume items by quantity (for ice cubes, sandy bottles, etc.)
 liquorSchema.methods.consumeByQuantity = function(quantityToConsume) {
+    // Handle cases where stock is not tracked (bottlesInStock is undefined or 0)
+    if (this.bottlesInStock === undefined || this.bottlesInStock === null) {
+        // Stock not tracked - just record the sale
+        this.totalSoldItems = (this.totalSoldItems || 0) + quantityToConsume;
+        return {
+            consumed: quantityToConsume,
+            wasted: 0,
+            itemsCompleted: quantityToConsume,
+            remainingStock: 'Not tracked',
+            remainingVolume: 0
+        };
+    }
+
     if (this.bottlesInStock < quantityToConsume) {
         throw new Error(`Insufficient stock. Available: ${this.bottlesInStock}, Required: ${quantityToConsume}`);
     }

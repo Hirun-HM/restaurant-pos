@@ -45,8 +45,7 @@ export default function LiquorStockForm({ item, onSubmit, onCancel }) {
     // Cigarette-specific fields
     cigaretteIndividualPrice: '',
     cigarettesPerPack: '20',
-    // Bites-specific fields
-    platesInStock: '0',
+    // Bites-specific fields (no stock fields)
     pricePerPlate: ''
   });
 
@@ -69,8 +68,7 @@ export default function LiquorStockForm({ item, onSubmit, onCancel }) {
         // Cigarette-specific fields
         cigaretteIndividualPrice: (item.cigaretteIndividualPrice || '').toString(),
         cigarettesPerPack: (item.cigarettesPerPack || 20).toString(),
-        // Bites-specific fields
-        platesInStock: (item.platesInStock || 0).toString(),
+        // Bites-specific fields (no stock fields for ice cubes and bites)
         pricePerPlate: (item.pricePerPlate || '').toString()
       });
     }
@@ -92,17 +90,19 @@ export default function LiquorStockForm({ item, onSubmit, onCancel }) {
       newErrors.brand = 'Brand is required';
     }
 
-    // Different validation for bites vs other items
+    // Different validation for bites and ice cubes vs other items
     if (formData.type === 'bites') {
       if (!formData.pricePerPlate || parseFloat(formData.pricePerPlate) <= 0) {
         newErrors.pricePerPlate = 'Valid price per plate is required';
       }
-
-      if (parseInt(formData.platesInStock) < 0) {
-        newErrors.platesInStock = 'Plates in stock cannot be negative';
+      // No stock validation required for bites - stock count is optional
+    } else if (formData.type === 'ice_cubes') {
+      if (!formData.pricePerBottle || parseFloat(formData.pricePerBottle) <= 0) {
+        newErrors.pricePerBottle = 'Valid price per bowl is required';
       }
+      // No stock validation required for ice cubes - stock count is optional
     } else {
-      // Validation for non-bites items
+      // Validation for other items (hard liquor, beer, wine, cigarettes, etc.)
       if (!formData.pricePerBottle || parseFloat(formData.pricePerBottle) <= 0) {
         newErrors.pricePerBottle = 'Valid price per bottle is required';
       }
@@ -116,8 +116,11 @@ export default function LiquorStockForm({ item, onSubmit, onCancel }) {
       }
     }
 
-    if (parseInt(formData.minimumBottles) < 0) {
-      newErrors.minimumBottles = 'Minimum items cannot be negative';
+    // Only validate minimum bottles for items that track stock
+    if (!['ice_cubes', 'bites'].includes(formData.type)) {
+      if (parseInt(formData.minimumBottles) < 0) {
+        newErrors.minimumBottles = 'Minimum items cannot be negative';
+      }
     }
 
     // Only validate alcohol percentage for hard liquor
@@ -178,7 +181,7 @@ export default function LiquorStockForm({ item, onSubmit, onCancel }) {
     let processedValue = value;
     
     // For numeric fields, ensure we don't allow invalid characters but keep as string for display
-    const numericFields = ['bottlesInStock', 'minimumBottles', 'pricePerBottle', 'buyingPrice', 'alcoholPercentage', 'customBottleVolume', 'cigaretteIndividualPrice', 'cigarettesPerPack', 'platesInStock', 'pricePerPlate'];
+    const numericFields = ['bottlesInStock', 'minimumBottles', 'pricePerBottle', 'buyingPrice', 'alcoholPercentage', 'customBottleVolume', 'cigaretteIndividualPrice', 'cigarettesPerPack', 'pricePerPlate'];
     
     if (numericFields.includes(field)) {
       // Allow empty string, numbers, and decimal points
@@ -225,16 +228,25 @@ export default function LiquorStockForm({ item, onSubmit, onCancel }) {
         brand: formData.brand.trim() || undefined, // Allow empty brand for ice cubes, sandy bottles, and bites
         type: formData.type,
         bottleVolume: needsBottleVolume() ? finalBottleVolume : undefined,
-        minimumBottles: parseInt(formData.minimumBottles),
         alcoholPercentage: isHardLiquor() && formData.alcoholPercentage ? parseFloat(formData.alcoholPercentage) : undefined,
         cigaretteIndividualPrice: isCigarettes() && formData.cigaretteIndividualPrice ? parseFloat(formData.cigaretteIndividualPrice) : undefined,
         cigarettesPerPack: isCigarettes() && formData.cigarettesPerPack ? parseInt(formData.cigarettesPerPack) : undefined
       };
 
+      // Only add minimum bottles for items that track stock
+      if (!['ice_cubes', 'bites'].includes(formData.type)) {
+        submitData.minimumBottles = parseInt(formData.minimumBottles);
+      }
+
       // Add type-specific fields
       if (formData.type === 'bites') {
         submitData.pricePerPlate = parseFloat(formData.pricePerPlate);
-        submitData.platesInStock = parseInt(formData.platesInStock);
+        // Don't include stock count or buying price for bites
+        submitData.buyingPrice = undefined;
+      } else if (formData.type === 'ice_cubes') {
+        submitData.pricePerBottle = parseFloat(formData.pricePerBottle);
+        // Don't include stock count or buying price for ice cubes
+        submitData.buyingPrice = undefined;
       } else {
         submitData.pricePerBottle = parseFloat(formData.pricePerBottle);
         submitData.buyingPrice = parseFloat(formData.buyingPrice);
@@ -450,9 +462,9 @@ export default function LiquorStockForm({ item, onSubmit, onCancel }) {
               <h4 className="text-lg font-semibold text-gray-800">Stock & Pricing</h4>
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {/* Only show buying price for non-bites items */}
-              {formData.type !== 'bites' && (
+            <div className={`grid grid-cols-1 ${['ice_cubes', 'bites'].includes(formData.type) ? 'md:grid-cols-1' : 'md:grid-cols-3'} gap-6`}>
+              {/* Only show buying price for items other than bites and ice cubes */}
+              {!['bites', 'ice_cubes'].includes(formData.type) && (
                 <InputField
                   label={`Buying Price per ${getUnitLabel()}`}
                   id="buyingPrice"
@@ -476,25 +488,32 @@ export default function LiquorStockForm({ item, onSubmit, onCancel }) {
                 required
               />
 
-              <InputField
-                label={`${getUnitsLabel()} in Stock`}
-                id={formData.type === 'bites' ? 'platesInStock' : 'bottlesInStock'}
-                type="text"
-                value={formData.type === 'bites' ? formData.platesInStock : formData.bottlesInStock}
-                onChange={(e) => handleInputChange(formData.type === 'bites' ? 'platesInStock' : 'bottlesInStock', e.target.value)}
-                error={formData.type === 'bites' ? errors.platesInStock : errors.bottlesInStock}
-                required
-              />
+              {/* Hide stock count field for ice cubes and bites */}
+              {!['ice_cubes', 'bites'].includes(formData.type) && (
+                <InputField
+                  label={`${getUnitsLabel()} in Stock`}
+                  id={formData.type === 'bites' ? 'platesInStock' : 'bottlesInStock'}
+                  type="text"
+                  value={formData.type === 'bites' ? formData.platesInStock : formData.bottlesInStock}
+                  onChange={(e) => handleInputChange(formData.type === 'bites' ? 'platesInStock' : 'bottlesInStock', e.target.value)}
+                  error={formData.type === 'bites' ? errors.platesInStock : errors.bottlesInStock}
+                  required
+                  placeholder="0"
+                />
+              )}
 
-              <InputField
-                label={`Minimum ${getUnitsLabel()}`}
-                id="minimumBottles"
-                type="text"
-                value={formData.minimumBottles}
-                onChange={(e) => handleInputChange('minimumBottles', e.target.value)}
-                error={errors.minimumBottles}
-                required
-              />
+              {/* Hide minimum field for ice cubes and bites */}
+              {!['ice_cubes', 'bites'].includes(formData.type) && (
+                <InputField
+                  label={`Minimum ${getUnitsLabel()}`}
+                  id="minimumBottles"
+                  type="text"
+                  value={formData.minimumBottles}
+                  onChange={(e) => handleInputChange('minimumBottles', e.target.value)}
+                  error={errors.minimumBottles}
+                  required
+                />
+              )}
             </div>
           </div>
 
@@ -531,9 +550,9 @@ export default function LiquorStockForm({ item, onSubmit, onCancel }) {
                   {isHardLiquor() && 'This item will have standard portions (25ml, 50ml, 75ml, 100ml, quarter, half, full bottle) automatically generated. Cashiers can set individual prices for each portion.'}
                   {(formData.type === 'beer' || formData.type === 'wine') && 'This item will be sold as whole bottles only. No portion pricing or bottle volume configuration needed.'}
                   {isCigarettes() && 'This item can be sold both as individual packs or individual cigarettes. The individual cigarette price is typically higher to encourage pack sales. Customers can choose to buy a full pack or individual cigarettes.'}
-                  {isIceCubes() && 'Ice cubes are sold by bowls. The brand field is optional for this item type. Stock will be managed as individual bowls.'}
+                  {isIceCubes() && 'Ice cubes are sold by bowls. The brand field is optional for this item type. No stock tracking required - only selling price needed.'}
                   {isSandyBottles() && 'Sandy bottles are sold as individual bottles. The brand field is optional for this item type. Stock will be managed as individual bottles.'}
-                  {formData.type === 'bites' && 'Bites are food items sold by plates. Simple stock management - just set the number of plates available and price per plate.'}
+                  {formData.type === 'bites' && 'Bites are food items sold by plates. No stock tracking required - only selling price per plate needed.'}
                   {formData.type === 'other' && 'This is a miscellaneous item that will be sold as whole units.'}
                 </p>
                 
@@ -541,7 +560,7 @@ export default function LiquorStockForm({ item, onSubmit, onCancel }) {
                 <div className="flex items-center gap-2 text-xs bg-yellow-100 rounded-lg px-3 py-2">
                   <span className="font-semibold text-yellow-800">Required fields:</span>
                   <span className="text-yellow-700">
-                    Name{(isIceCubes() || isSandyBottles() || formData.type === 'bites') ? ', Brand (Optional)' : ', Brand'}, Price, Stock
+                    Name{(isIceCubes() || isSandyBottles() || formData.type === 'bites') ? ', Brand (Optional)' : ', Brand'}, Price{!isIceCubes() && formData.type !== 'bites' ? ', Stock, Minimum Stock' : ''}
                     {needsBottleVolume() && ', Volume'}
                     {isHardLiquor() && ', Alcohol Percentage'}
                     {isCigarettes() && ', Individual Price, Cigarettes per Pack'}

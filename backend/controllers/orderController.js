@@ -254,13 +254,13 @@ export const processOrderPayment = async (req, res) => {
                     throw new Error(`Liquor item not found in database: ${liquorId}`);
                 }
 
-                // Check if we have enough stock based on item type
+                // Skip stock checking for ice cubes and bites as they don't track stock
                 if (liquorItem.type === 'bites') {
-                    // For bites, check plates in stock
-                    const platesInStock = liquorFromDB.platesInStock || 0;
-                    if (platesInStock <= 0) {
-                        throw new Error(`No plates available for ${liquorFromDB.name}`);
-                    }
+                    // For bites, no stock checking needed
+                    console.log(`🍽️ Bites item - no stock tracking required for ${liquorFromDB.name}`);
+                } else if (liquorItem.type === 'ice_cubes') {
+                    // For ice cubes, no stock checking needed
+                    console.log(`🧊 Ice cubes item - no stock tracking required for ${liquorFromDB.name}`);
                 } else {
                     // For other liquor items, check bottles in stock
                     if (liquorFromDB.bottlesInStock <= 0) {
@@ -344,50 +344,53 @@ export const processOrderPayment = async (req, res) => {
                     }
                     
                 } else if (liquorItem.type === 'ice_cubes' || liquorItem.type === 'sandy_bottles') {
-                    // Ice cubes and sandy bottles: Handle unit-based consumption
+                    // Ice cubes and sandy bottles: No stock deduction for ice cubes, normal handling for sandy bottles
                     const quantityToConsume = liquorItem.quantity;
                     
-                    console.log(`🧊 Consuming ${quantityToConsume} ${liquorItem.type === 'ice_cubes' ? 'bowls' : 'bottles'} of ${liquorFromDB.name}`);
-                    
-                    // Use the new consumeByQuantity method
-                    consumptionResult = liquorFromDB.consumeByQuantity(quantityToConsume);
-                    
-                    liquorConsumptionResults.push({
-                        itemName: liquorItem.name,
-                        type: liquorItem.type,
-                        liquorId: liquorId,
-                        quantityConsumed: consumptionResult.consumed,
-                        quantity: liquorItem.quantity,
-                        saleType: 'unit_based',
-                        remainingStock: consumptionResult.remainingStock,
-                        unit: liquorItem.type === 'ice_cubes' ? 'bowls' : 'bottles',
-                        note: `${quantityToConsume} ${liquorItem.type === 'ice_cubes' ? 'bowl(s)' : 'bottle(s)'} consumed from stock`
-                    });
+                    if (liquorItem.type === 'ice_cubes') {
+                        console.log(`🧊 Processing ${quantityToConsume} bowls of ${liquorFromDB.name} - no stock deduction`);
+                        
+                        // For ice cubes, just record the sale without stock deduction
+                        liquorFromDB.totalSoldItems = (liquorFromDB.totalSoldItems || 0) + quantityToConsume;
+                        
+                        liquorConsumptionResults.push({
+                            itemName: liquorItem.name,
+                            type: liquorItem.type,
+                            liquorId: liquorId,
+                            quantityConsumed: quantityToConsume,
+                            quantity: liquorItem.quantity,
+                            saleType: 'price_only',
+                            remainingStock: 'Not tracked',
+                            unit: 'bowls',
+                            note: `${quantityToConsume} bowl(s) sold - stock not tracked`
+                        });
+                    } else {
+                        // Sandy bottles - normal stock handling
+                        console.log(`🍾 Consuming ${quantityToConsume} bottles of ${liquorFromDB.name}`);
+                        
+                        consumptionResult = liquorFromDB.consumeByQuantity(quantityToConsume);
+                        
+                        liquorConsumptionResults.push({
+                            itemName: liquorItem.name,
+                            type: liquorItem.type,
+                            liquorId: liquorId,
+                            quantityConsumed: consumptionResult.consumed,
+                            quantity: liquorItem.quantity,
+                            saleType: 'unit_based',
+                            remainingStock: consumptionResult.remainingStock,
+                            unit: 'bottles',
+                            note: `${quantityToConsume} bottle(s) consumed from stock`
+                        });
+                    }
                     
                 } else if (liquorItem.type === 'bites') {
-                    // Bites: Handle plate-based consumption
+                    // Bites: No stock deduction - just record the sale
                     const quantityToConsume = liquorItem.quantity;
                     
-                    console.log(`🍽️ Consuming ${quantityToConsume} plates of ${liquorFromDB.name}`);
+                    console.log(`🍽️ Processing ${quantityToConsume} plates of ${liquorFromDB.name} - no stock deduction`);
                     
-                    // Check if we have enough plates in stock
-                    const platesInStock = liquorFromDB.platesInStock || liquorFromDB.bottlesInStock || 0;
-                    if (platesInStock < quantityToConsume) {
-                        throw new Error(`Insufficient plates for ${liquorFromDB.name}. Required: ${quantityToConsume}, Available: ${platesInStock}`);
-                    }
-                    
-                    // Consume plates
-                    if (liquorFromDB.platesInStock !== undefined) {
-                        liquorFromDB.platesInStock -= quantityToConsume;
-                    } else {
-                        liquorFromDB.bottlesInStock -= quantityToConsume; // Fallback to bottlesInStock
-                    }
-                    liquorFromDB.totalSoldItems += quantityToConsume;
-                    
-                    consumptionResult = {
-                        consumed: quantityToConsume,
-                        remainingPlates: liquorFromDB.platesInStock || liquorFromDB.bottlesInStock
-                    };
+                    // Just record the sale without any stock deduction
+                    liquorFromDB.totalSoldItems = (liquorFromDB.totalSoldItems || 0) + quantityToConsume;
                     
                     liquorConsumptionResults.push({
                         itemName: liquorItem.name,
@@ -395,9 +398,9 @@ export const processOrderPayment = async (req, res) => {
                         liquorId: liquorId,
                         platesConsumed: quantityToConsume,
                         quantity: liquorItem.quantity,
-                        saleType: 'plate_based',
-                        remainingPlates: liquorFromDB.platesInStock || liquorFromDB.bottlesInStock,
-                        note: `${quantityToConsume} plate(s) of ${liquorFromDB.name} sold`
+                        saleType: 'price_only',
+                        remainingPlates: 'Not tracked',
+                        note: `${quantityToConsume} plate(s) sold - stock not tracked`
                     });
                     
                 } else {

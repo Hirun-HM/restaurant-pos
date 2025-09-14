@@ -114,9 +114,9 @@ export default function Welcome() {
     return (
         <div className="font-poppins min-h-screen">
             {/* Header */}
-            <div className="flex items-center justify-center pt-8 pb-6 px-4">
-                <div className='flex gap-6 items-center'>
-                    <div className='h-40 w-40'>
+            <div className="flex items-center justify-center pt-4 sm:pt-8 pb-4 sm:pb-6 px-4">
+                <div className='flex gap-4 sm:gap-6 items-center'>
+                    <div className='h-24 w-24 sm:h-32 sm:w-32 lg:h-40 lg:w-40'>
                         <img src={logo} alt="logo" className='h-full w-full' />
                     </div>
                 </div>
@@ -124,7 +124,7 @@ export default function Welcome() {
 
             {/* Main Content */}
             <div className="flex items-center justify-center min-h-[60vh] px-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 sm:gap-8 lg:gap-12 w-full max-w-4xl">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 lg:gap-8 xl:gap-12 w-full max-w-5xl">
                     {userTypes.map((userType) => (
                         <UserCard key={userType.id} userType={userType} />
                     ))}
@@ -139,15 +139,16 @@ export default function Welcome() {
             >
                 {selectedCard && (
                     <div className="text-center">
-                        <div className={`mb-6 text-primaryColor flex justify-center`}>
-                            <selectedCard.icon size={64} />
+                        <div className={`mb-4 sm:mb-6 text-primaryColor flex justify-center`}>
+                            <selectedCard.icon size={48} className="sm:hidden" />
+                            <selectedCard.icon size={64} className="hidden sm:block" />
                         </div>
-                        <p className="text-gray-700 mb-6 leading-relaxed">
+                        <p className="text-sm sm:text-base text-gray-700 mb-4 sm:mb-6 leading-relaxed px-2">
                             {selectedCard.description}
                         </p>
                         
                         {/* Password Input */}
-                        <div className="mb-6">
+                        <div className="mb-4 sm:mb-6">
                             <InputField
                                 type="password"
                                 placeholder="Enter your password"
@@ -157,6 +158,7 @@ export default function Welcome() {
                                 error={passwordError}
                                 required
                                 disabled={isLoading}
+                                className="text-sm sm:text-base"
                                 onKeyPress={(e) => {
                                     if (e.key === 'Enter') {
                                         handlePasswordSubmit(password);
@@ -165,18 +167,18 @@ export default function Welcome() {
                             />
                         </div>
 
-                        <div className="flex flex-col sm:flex-row gap-3">
+                        <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
                             <PrimaryButton 
                                 onClick={() => handlePasswordSubmit(password)}
                                 disabled={isLoading || !password.trim()}
-                                className="flex-1"
+                                className="flex-1 text-sm sm:text-base py-2.5 sm:py-3"
                             >
                                 {isLoading ? 'Authenticating...' : 'Enter Password'}
                             </PrimaryButton>
                             <SecondaryButton 
                                 onClick={handleClosePopup}
                                 disabled={isLoading}
-                                className="flex-1"
+                                className="flex-1 text-sm sm:text-base py-2.5 sm:py-3"
                             >
                                 Cancel
                             </SecondaryButton>

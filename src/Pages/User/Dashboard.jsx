@@ -29,7 +29,7 @@ export default function UserDashboard() {
     };
 
     return (
-        <div className="min-h-screen font-poppins p-6">
+        <div className="min-h-screen font-poppins p-3 sm:p-4 md:p-6">
             <div className='flex items-center justify-center'>
                 <Header active={active} setActive={setActive}/>
             </div>

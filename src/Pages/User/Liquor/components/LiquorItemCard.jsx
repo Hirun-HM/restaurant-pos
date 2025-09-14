@@ -38,15 +38,15 @@ const LiquorItemCard = React.memo(({
     }, [item, onDelete]);
     
     return (
-        <div className="bg-white rounded-lg border shadow-sm hover:shadow-md transition-shadow h-[28rem] flex flex-col">
+        <div className="bg-white rounded-lg border shadow-sm hover:shadow-md transition-shadow h-auto sm:h-[28rem] flex flex-col">
             {/* Header */}
-            <div className="p-4 border-b">
+            <div className="p-3 sm:p-4 border-b">
                 <div className="flex justify-between items-start">
                     <div className="flex-1">
-                        <h3 className="text-lg font-semibold text-gray-900 line-clamp-1">{item.name}</h3>
-                        <p className="text-sm text-gray-600 line-clamp-1">{item.brand}</p>
-                        <div className="flex items-center gap-2 mt-1 flex-wrap">
-                            <span className={`px-2 py-1 text-xs rounded-full font-medium ${typeColor}`}>
+                        <h3 className="text-base sm:text-lg font-semibold text-gray-900 line-clamp-1">{item.name}</h3>
+                        <p className="text-xs sm:text-sm text-gray-600 line-clamp-1">{item.brand}</p>
+                        <div className="flex items-center gap-1 sm:gap-2 mt-1 flex-wrap">
+                            <span className={`px-1.5 sm:px-2 py-0.5 sm:py-1 text-xs rounded-full font-medium ${typeColor}`}>
                                 {item.type.toUpperCase()}
                             </span>
                             {isLowStock && (

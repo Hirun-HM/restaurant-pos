@@ -340,12 +340,12 @@ const OrderSummary = memo(function OrderSummary({
 
     return (
         <div className="h-full flex flex-col">
-            <div className="flex justify-between items-center mb-4">
-                <h1 className="text-[24px] font-[500] text-other1">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-3 sm:mb-4 gap-2 sm:gap-0">
+                <h1 className="text-lg sm:text-xl lg:text-[24px] font-[500] text-other1">
                     Table {selectedTable.tableNumber} - Order Summary
                 </h1>
                 {billStatus.hasActiveBill && (
-                    <SecondaryButton onClick={handleCloseBill}>
+                    <SecondaryButton onClick={handleCloseBill} className="text-sm sm:text-base px-3 sm:px-4 py-2">
                         Close Bill
                     </SecondaryButton>
                 )}
@@ -356,18 +356,18 @@ const OrderSummary = memo(function OrderSummary({
                 noActiveBillContent
             ) : (
                 // Active bill exists - show order management
-                <div className="flex-1 flex flex-col md:flex-row gap-4 overflow-hidden">
+                <div className="flex-1 flex flex-col lg:flex-row gap-3 sm:gap-4 overflow-hidden">
                     {/* Menu Items Section */}
-                    <div className="flex-1 flex flex-col">
-                        <h3 className="text-lg font-semibold text-other1 mb-3">Menu Items</h3>
+                    <div className="flex-1 flex flex-col min-h-0">
+                        <h3 className="text-base sm:text-lg font-semibold text-other1 mb-2 sm:mb-3">Menu Items</h3>
                         
                         {/* Category Filter */}
-                        <div className="flex gap-2 mb-4 overflow-x-auto">
+                        <div className="flex gap-1 sm:gap-2 mb-3 sm:mb-4 overflow-x-auto scrollbar-hide">
                             {categories.map(category => (
                                 <button
                                     key={category}
                                     onClick={() => handleCategorySelect(category)}
-                                    className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap ${
+                                    className={`px-2 sm:px-3 lg:px-4 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-medium whitespace-nowrap flex-shrink-0 ${
                                         selectedCategory === category
                                             ? 'bg-primaryColor text-white'
                                             : 'bg-white text-other1 hover:bg-gray-100'
@@ -387,7 +387,7 @@ const OrderSummary = memo(function OrderSummary({
                                     </div>
                                 </div>
                             ) : (
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2 sm:gap-3">
                                     {filteredMenuItems.map(item => (
                                         <MenuItem 
                                             key={item.id}
@@ -402,9 +402,9 @@ const OrderSummary = memo(function OrderSummary({
                     </div>
 
                     {/* Current Bill Section */}
-                    <div className="w-full overflow-y-auto md:w-80 bg-white rounded-lg p-4 border border-gray-200 flex flex-col">
-                        <div className="flex justify-between items-center mb-3">
-                            <h3 className="text-lg font-semibold text-other1">Current Bill</h3>
+                    <div className="w-full lg:w-80 bg-white rounded-lg p-3 sm:p-4 border border-gray-200 flex flex-col order-first lg:order-last">
+                        <div className="flex justify-between items-center mb-2 sm:mb-3">
+                            <h3 className="text-base sm:text-lg font-semibold text-other1">Current Bill</h3>
                         </div>
                         
                         {!billStatus.hasItems ? (
@@ -412,11 +412,11 @@ const OrderSummary = memo(function OrderSummary({
                         ) : (
                             <>
                                 {/* Bill Items */}
-                                <div className="flex-1 overflow-y-auto mb-4">
+                                <div className="flex-1 overflow-y-auto mb-3 sm:mb-4 max-h-48 lg:max-h-none">
                                     {bill.items.map(item => (
-                                        <div key={item.id} className="flex justify-between items-center py-2 border-b border-gray-100">
-                                            <div className="flex-1">
-                                                <h5 className="font-medium text-other1 text-sm">{item.name}</h5>
+                                        <div key={item.id} className="flex justify-between items-center py-1.5 sm:py-2 border-b border-gray-100">
+                                            <div className="flex-1 min-w-0 pr-2">
+                                                <h5 className="font-medium text-other1 text-xs sm:text-sm truncate">{item.name}</h5>
                                                 <p className="text-xs text-gray-600">
                                                     LKR {item.price} each
                                                 </p>
@@ -427,21 +427,21 @@ const OrderSummary = memo(function OrderSummary({
                                 </div>
 
                                 {/* Bill Total */}
-                                <div className="border-t border-gray-200 pt-4">
-                                    <div className="flex justify-between items-center mb-2">
-                                        <span className="text-sm text-gray-600">Subtotal:</span>
-                                        <span className="font-medium text-other1">LKR {billCalculations.subtotal.toFixed(2)}</span>
+                                <div className="border-t border-gray-200 pt-3 sm:pt-4">
+                                    <div className="flex justify-between items-center mb-1 sm:mb-2">
+                                        <span className="text-xs sm:text-sm text-gray-600">Subtotal:</span>
+                                        <span className="font-medium text-other1 text-sm">LKR {billCalculations.subtotal.toFixed(2)}</span>
                                     </div>
                                     
                                     {/* Service Charge Toggle */}
-                                    <div className="flex justify-between items-center mb-2">
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-sm text-gray-600">Service Charge (10%):</span>
+                                    <div className="flex justify-between items-center mb-1 sm:mb-2">
+                                        <div className="flex items-center gap-1 sm:gap-2">
+                                            <span className="text-xs sm:text-sm text-gray-600">Service Charge (10%):</span>
                                             <input
                                                 type="checkbox"
                                                 checked={bill.serviceCharge}
                                                 onChange={handleToggleServiceCharge}
-                                                className="w-4 h-4 appearance-none rounded 
+                                                className="w-3 h-3 sm:w-4 sm:h-4 appearance-none rounded 
                                                             border border-gray-300 bg-white
                                                             checked:bg-primaryColor checked:border-primaryColor
                                                             focus:ring-0 focus:outline-none
@@ -458,12 +458,12 @@ const OrderSummary = memo(function OrderSummary({
                                                             checked:after:-translate-y-1/2"
                                                 />                                            
                                         </div>
-                                        <span className="font-medium text-other1">
+                                        <span className="font-medium text-other1 text-sm">
                                             LKR {billCalculations.serviceCharge.toFixed(2)}
                                         </span>
                                     </div>
                                     
-                                    <div className="flex justify-between items-center text-lg font-bold border-t border-gray-200 pt-2">
+                                    <div className="flex justify-between items-center text-base sm:text-lg font-bold border-t border-gray-200 pt-2">
                                         <span>Total:</span>
                                         <span className="text-primaryColor">
                                             LKR {billCalculations.total.toFixed(2)}
@@ -472,30 +472,32 @@ const OrderSummary = memo(function OrderSummary({
                                 </div>
 
                                 {/* Action Buttons */}
-                                <div className="mt-4 space-y-2">
+                                <div className="mt-3 sm:mt-4 space-y-2">
                                     <PrimaryButton 
                                         onClick={() => handlePrintBill()}
-                                        className="w-full flex items-center justify-center gap-2"
+                                        className="w-full flex items-center justify-center gap-2 text-sm sm:text-base py-2 sm:py-3"
                                     >
                                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a1 1 0 001-1v-4a1 1 0 00-1-1H9a1 1 0 00-1 1v4a1 1 0 001 1zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
                                         </svg>
-                                        Print Receipt
+                                        <span className="hidden sm:inline">Print Receipt</span>
+                                        <span className="sm:hidden">Print</span>
                                     </PrimaryButton>
                                     
                                     <SecondaryButton 
                                         onClick={() => handlePaymentComplete()}
-                                        className="w-full flex items-center justify-center gap-2 bg-green-500 hover:bg-green-600 border-green-500 hover:border-green-600"
+                                        className="w-full flex items-center justify-center gap-2 text-sm sm:text-base py-2 sm:py-3 bg-green-500 hover:bg-green-600 border-green-500 hover:border-green-600"
                                     >
                                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                                         </svg>
-                                        Payment Complete
+                                        <span className="hidden sm:inline">Payment Complete</span>
+                                        <span className="sm:hidden">Pay</span>
                                     </SecondaryButton>
                                 </div>
 
                                 {/* Bill Info */}
-                                <div className="mt-4 text-xs text-gray-500">
+                                <div className="mt-3 sm:mt-4 text-xs text-gray-500">
                                     <p>Bill Created: {formatBillDate(bill.createdAt)}</p>
                                     <p>Items: {billCalculations.itemCount}</p>
                                 </div>

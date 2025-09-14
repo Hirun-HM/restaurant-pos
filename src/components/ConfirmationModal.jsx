@@ -64,50 +64,52 @@ export default function ConfirmationModal({
             />
             
             {/* Modal Container */}
-            <div className="flex min-h-full items-center justify-center p-4">
-                {/* Modal Content with w-1/2 */}
+            <div className="flex min-h-full items-center justify-center p-3 sm:p-4">
+                {/* Modal Content - responsive width */}
                 <div 
-                    className="relative bg-white rounded-2xl shadow-xl w-1/2 max-h-[90vh] overflow-hidden"
+                    className="relative bg-white rounded-xl sm:rounded-2xl shadow-xl w-full max-w-md sm:max-w-lg max-h-[90vh] overflow-hidden"
                     onClick={(e) => e.stopPropagation()}
                 >
                     {/* Header */}
-                    <div className="flex items-center justify-between p-6 border-b border-border">
-                        <h2 className="text-xl font-semibold text-other1">
+                    <div className="flex items-center justify-between p-4 sm:p-6 border-b border-border">
+                        <h2 className="text-lg sm:text-xl font-semibold text-other1">
                             {title}
                         </h2>
                         <button
                             onClick={onClose}
-                            className="p-2 hover:bg-bgsecond rounded-full transition-colors"
+                            className="p-1.5 sm:p-2 hover:bg-bgsecond rounded-full transition-colors"
                             type="button"
                         >
-                            <FaTimes size={16} className="text-darkGray" />
+                            <FaTimes size={14} className="sm:hidden text-darkGray" />
+                            <FaTimes size={16} className="hidden sm:block text-darkGray" />
                         </button>
                     </div>
                     
                     {/* Body */}
-                    <div className="p-6 text-center">
-                        <div className={`mx-auto mb-4 w-16 h-16 rounded-full bg-fourthColor flex items-center justify-center ${getIconColor()}`}>
-                            <FaExclamationTriangle size={32} />
+                    <div className="p-4 sm:p-6 text-center">
+                        <div className={`mx-auto mb-3 sm:mb-4 w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-fourthColor flex items-center justify-center ${getIconColor()}`}>
+                            <FaExclamationTriangle size={24} className="sm:hidden" />
+                            <FaExclamationTriangle size={32} className="hidden sm:block" />
                         </div>
                         
-                        <h3 className="text-xl font-semibold text-other1 mb-2">
+                        <h3 className="text-lg sm:text-xl font-semibold text-other1 mb-2">
                             {title}
                         </h3>
                         
-                        <p className="text-text mb-6 leading-relaxed">
+                        <p className="text-sm sm:text-base text-text mb-4 sm:mb-6 leading-relaxed px-2">
                             {message}
                         </p>
                         
-                        <div className="flex gap-3 justify-center">
+                        <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 justify-center">
                             <SecondaryButton 
                                 onClick={onClose}
-                                className="px-6 py-2"
+                                className="w-full sm:w-auto px-4 sm:px-6 py-2 text-sm sm:text-base"
                             >
                                 {cancelText}
                             </SecondaryButton>
                             <PrimaryButton 
                                 onClick={handleConfirm}
-                                className="px-6 py-2"
+                                className="w-full sm:w-auto px-4 sm:px-6 py-2 text-sm sm:text-base"
                             >
                                 {confirmText}
                             </PrimaryButton>

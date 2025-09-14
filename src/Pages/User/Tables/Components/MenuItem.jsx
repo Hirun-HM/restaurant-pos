@@ -192,9 +192,9 @@ const MenuItem = memo(function MenuItem({item, onAddItem, selectedTable}) {
 
     return (
         <>
-            <div key={item.id} className={`bg-white p-4 rounded-lg border border-gray-200 ${isOutOfStock() ? 'opacity-50' : ''}`}>
-                <h4 className="font-semibold text-other1">{item.name}</h4>
-                <p className="text-sm text-gray-600">{item.brand ? `${item.brand} - ` : ''}{item.category}</p>
+            <div key={item.id} className={`bg-white p-3 sm:p-4 rounded-lg border border-gray-200 ${isOutOfStock() ? 'opacity-50' : ''}`}>
+                <h4 className="font-semibold text-other1 text-sm sm:text-base">{item.name}</h4>
+                <p className="text-xs sm:text-sm text-gray-600">{item.brand ? `${item.brand} - ` : ''}{item.category}</p>
                 
                 {/* Stock Information */}
                 {getStockDisplay() && (
@@ -204,8 +204,8 @@ const MenuItem = memo(function MenuItem({item, onAddItem, selectedTable}) {
                     <p className="text-xs text-red-500 mt-1">Out of Stock</p>
                 )}
                 
-                <div className="flex justify-between items-center mt-2">
-                    <span className="font-medium text-gray-800">
+                <div className="flex justify-between items-center mt-2 gap-2">
+                    <span className="font-medium text-gray-800 text-sm sm:text-base">
                         LKR {item.price}
                         {isHardLiquor && <span className="text-xs text-gray-500"> (bottle)</span>}
                         {isCigarettes && <span className="text-xs text-gray-500"> (pack)</span>}
@@ -213,39 +213,46 @@ const MenuItem = memo(function MenuItem({item, onAddItem, selectedTable}) {
                     </span>
                     <PrimaryButton
                         onClick={handleAddItem}
-                        className="flex items-center text-sm py-1 px-3"
+                        className="flex items-center text-xs sm:text-sm py-1.5 sm:py-1 px-2 sm:px-3 flex-shrink-0"
                         disabled={isOutOfStock()}
                     >
-                        <FaPlus className="mr-1" size={12} />
-                        {isHardLiquor ? 'Select' : isCigarettes ? 'Choose' : 'Add'}
+                        <FaPlus className="mr-1" size={10} />
+                        <span className="hidden sm:inline">
+                            {(() => {
+                                if (isHardLiquor) return 'Select';
+                                if (isCigarettes) return 'Choose';
+                                return 'Add';
+                            })()}
+                        </span>
+                        <span className="sm:hidden">+</span>
                     </PrimaryButton>
                 </div>
             </div>
 
             {/* Hard Liquor Sale Type Selection Modal */}
             {showFullBottleModal && (
-                <div className="fixed inset-0 bg-other1 bg-opacity-50 flex items-center justify-center z-50">
-                    <div className="bg-white rounded-lg p-6 w-96 max-w-90vw">
+                <div className="fixed inset-0 bg-other1 bg-opacity-50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-lg p-4 sm:p-6 w-full max-w-md">
                         <div className="flex justify-between items-center mb-4">
-                            <h3 className="text-lg font-semibold text-other1">Choose Sale Type - {item.name}</h3>
+                            <h3 className="text-base sm:text-lg font-semibold text-other1">Choose Sale Type - {item.name}</h3>
                             <button 
                                 onClick={closeModal}
-                                className="text-gray-500 hover:text-gray-700"
+                                className="text-gray-500 hover:text-gray-700 p-1"
                             >
-                                <FaTimes />
+                                <FaTimes size={16} />
                             </button>
                         </div>
                         
-                        <div className="space-y-3">
+                        <div className="space-y-2 sm:space-y-3">
                             {/* Portion Sale Option */}
                             <button
                                 onClick={() => handleFullBottleSelect({ type: 'portion' })}
-                                className="w-full p-4 text-left border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-primaryColor transition-colors"
+                                className="w-full p-3 sm:p-4 text-left border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-primaryColor transition-colors"
                             >
                                 <div className="flex justify-between items-center">
                                     <div>
-                                        <span className="font-medium text-other1">Sell by Portion</span>
-                                        <div className="text-sm text-gray-600 mt-1">
+                                        <span className="font-medium text-other1 text-sm sm:text-base">Sell by Portion</span>
+                                        <div className="text-xs sm:text-sm text-gray-600 mt-1">
                                             25ml, 50ml, 75ml, 100ml shots
                                         </div>
                                         <div className="text-xs text-blue-600 mt-1">
