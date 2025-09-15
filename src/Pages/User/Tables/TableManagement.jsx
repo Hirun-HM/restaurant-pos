@@ -10,6 +10,7 @@ import { useLiquor } from '../../../hooks/useLiquor';
 import { orderService } from '../../../services/orderService';
 
 export default function TableManagement({tableList = []}) {
+    const API_BASE_URL = import.meta.env.VITE_API_URL;
     // Use custom hooks to fetch real menu data from API
     const { 
         getTransformedFoodItemsForMenu, 
@@ -166,7 +167,7 @@ export default function TableManagement({tableList = []}) {
                         if (bill.orderId) {
                             try {
                                 // Try to fetch the order from database
-                                const response = await fetch(`http://localhost:3001/api/orders/${bill.orderId}`);
+                                const response = await fetch(`${API_BASE_URL}/api/orders/${bill.orderId}`);
                                 if (!response.ok) {
                                     console.log(`⚠️ Order ${bill.orderId} not found in database, removing from cache`);
                                     // Remove invalid bill from cache
