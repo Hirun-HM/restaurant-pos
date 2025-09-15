@@ -666,20 +666,20 @@ export default function TableManagement({tableList = []}) {
                             title="View payment history"
                         >
                             <span>📊</span>
-                            <span className="hidden sm:inline">History</span>
+                            <span className="hidden sm:inline text-other1">History</span>
                             <span className="sm:hidden">📊</span>
                         </button>
                         {/* Development helper - remove in production */}
                         <button 
                             onClick={clearAllBills}
-                            className="text-xs bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600"
+                            className="text-xs bg-red-500 text-other1 px-2 py-1 rounded hover:bg-red-600"
                             title="Clear all bills (Development only)"
                         >
                             Clear All
                         </button>
                     </div>
                 </div>
-                <div className='grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-2 xl:grid-cols-3 gap-2'>
+                <div className='grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-2 xl:grid-cols-2 gap-2'>
                     {
                         tableList.map((table) => (
                             <TableCard
