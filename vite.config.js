@@ -7,7 +7,7 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
   
   return {
-    base: './',
+    base: '/restaurant-pos/',
     plugins: [react()],
     server: {
       port: 5000,
