@@ -55,9 +55,7 @@ services:
 
   # Frontend
   frontend:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: ${ECR_FRONTEND_REPO:-restaurant-pos-frontend}:latest
     container_name: restaurant-pos-frontend
     restart: unless-stopped
     ports:
