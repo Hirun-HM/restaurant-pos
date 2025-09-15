@@ -167,7 +167,7 @@ export default function TableManagement({tableList = []}) {
                         if (bill.orderId) {
                             try {
                                 // Try to fetch the order from database
-                                const response = await fetch(`${API_BASE_URL}/api/orders/${bill.orderId}`);
+                                const response = await fetch(`${API_BASE_URL}/orders/${bill.orderId}`);
                                 if (!response.ok) {
                                     console.log(`⚠️ Order ${bill.orderId} not found in database, removing from cache`);
                                     // Remove invalid bill from cache
