@@ -8,7 +8,7 @@ export default defineConfig({
     port: 3000,
     host: true, // Allow external connections
     proxy: {
-      '/api': 'http://3.142.250.63:5000'
+      '/api': 'http://3.142.250.63:5000/api/'
     }
 
   },
