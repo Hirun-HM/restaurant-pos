@@ -7,6 +7,10 @@ export default defineConfig({
   server: {
     port: 3000,
     host: true, // Allow external connections
+    proxy: {
+      '/api': 'http://3.142.250.63:5000'
+    }
+
   },
   preview: {
     port: 3000,
