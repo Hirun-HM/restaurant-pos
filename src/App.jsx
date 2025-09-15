@@ -5,6 +5,7 @@ import UserDashboard from './Pages/User/Dashboard'
 import AdminDashboard from './Pages/Admin/Dashboard'
 
 export default function App() {
+  // Fixed: Removed basename to prevent routing conflicts
   return (
     <BrowserRouter>
       <Routes>
