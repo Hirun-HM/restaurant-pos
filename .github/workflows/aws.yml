@@ -3,7 +3,7 @@ name: Deploy MERN to EC2
 on:
   push:
     branches:
-      - hirun-dev
+      - main
 
 jobs:
   build-and-deploy:
